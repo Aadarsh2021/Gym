@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /fitness/
+Allow: /exercises/
+Allow: /nutrition/
+
+Sitemap: https://fitness-ai-app.web.app/sitemap.xml

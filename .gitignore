@@ -1,0 +1,57 @@
+# Environment and Secret Files - STRICTLY FORBIDDEN FROM GIT
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Credentials & Service Accounts
+credentials/
+secrets/
+private/
+certificates/
+service-account*.json
+firebase-adminsdk*.json
+
+# Dependencies
+node_modules/
+
+# Production Builds
+dist/
+dist-ssr/
+build/
+.firebase/
+
+# Cache & Coverage
+.cache/
+coverage/
+*.lcov
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# IDE & Editor Files
+.idea/
+*.sublime-project
+*.sublime-workspace
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Local Testing / Database
+*.local
+supabase/.branches/
+supabase/.temp/
