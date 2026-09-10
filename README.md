@@ -36,23 +36,23 @@ The application follows a **Server-Authoritative, Local-First Modular Architectu
 
 ```mermaid
 graph TD
-    User([User Browser / Client])
+    User["User Browser / Client"]
     
     subgraph Frontend Delivery
-        FB[Firebase Hosting CDN]
-        App[React 18 + Vite SPA]
+        FB["Firebase Hosting CDN"]
+        App["React 18 + Vite SPA"]
     end
 
     subgraph Supabase Cloud
-        Auth[Supabase Auth (Sole Identity Provider)]
-        PG[(PostgreSQL Database)]
-        RLS{Row-Level Security Policies}
-        RPC[Stored Procedures & Triggers]
-        Edge[Supabase Edge Functions]
+        Auth["Supabase Auth (Sole Identity Provider)"]
+        PG["PostgreSQL Database"]
+        RLS["Row-Level Security Policies"]
+        RPC["Stored Procedures & Triggers"]
+        Edge["Supabase Edge Functions"]
     end
 
     subgraph External Services
-        AI[AI Provider Gateway]
+        AI["AI Provider Gateway"]
     end
 
     User -->|Static Assets| FB
