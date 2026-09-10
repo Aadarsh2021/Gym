@@ -1,6 +1,7 @@
 import React from 'react';
-import { Flame, Coins, User, LogOut, Dumbbell, Sparkles } from 'lucide-react';
+import { Flame, Coins, User, LogOut, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { BrandLogo } from '@/components/common/BrandLogo';
 
 interface HeaderProps {
   currentStreak?: number;
@@ -48,36 +49,10 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Brand Logo & Desktop Nav */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-6)' }}>
         <div
-          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}
+          style={{ cursor: 'pointer' }}
           onClick={() => onNavigateTab?.('dashboard')}
         >
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: 'var(--radius-xs)',
-              background: 'var(--accent-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent-primary-text)',
-            }}
-          >
-            <Dumbbell size={18} strokeWidth={2.5} />
-          </div>
-          <div>
-            <span
-              style={{
-                fontFamily: 'var(--font-heading)',
-                fontWeight: 800,
-                fontSize: '1.15rem',
-                letterSpacing: '-0.02em',
-                color: 'var(--text-primary)',
-              }}
-            >
-              APEX<span style={{ color: 'var(--accent-primary)' }}>FIT</span>
-            </span>
-          </div>
+          <BrandLogo size="md" />
         </div>
 
         {/* Desktop Navigation Links */}

@@ -59,7 +59,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
           {isWorkoutSwapMode && onSwapInWorkout && (
             <div style={{
               background: 'var(--accent-primary-muted)',
-              border: '1px solid rgba(199, 240, 0, 0.3)',
+              border: '1px solid var(--border-medium)',
               borderRadius: 'var(--radius-sm)',
               padding: 'var(--space-3) var(--space-4)',
               marginBottom: 'var(--space-5)',

@@ -1,18 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl =
-  import.meta.env.VITE_SUPABASE_URL || 'https://zmfwtidtilghminwirjx.supabase.co';
-
-const supabasePublishableKey =
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  'sb_publishable_qhgrBeVEFS70VsXUrQ-8XA_Ds2w8hxu';
+  '';
 
-export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
+if (!isSupabaseConfigured && import.meta.env.DEV) {
+  console.warn(
+    '[Supabase Configuration Error] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing. Database and Auth operations will be disabled.'
+  );
+}
+
+export const supabase = createClient(
+  supabaseUrl || 'https://unconfigured.supabase.co',
+  supabaseAnonKey || 'unconfigured-key',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  }
+);

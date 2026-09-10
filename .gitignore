@@ -15,6 +15,10 @@ private/
 certificates/
 service-account*.json
 firebase-adminsdk*.json
+scripts/test-*.js
+scripts/verify-*.js
+scripts/check-*.js
+scripts/diagnose-*.js
 
 # Dependencies
 node_modules/

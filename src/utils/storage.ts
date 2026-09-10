@@ -34,3 +34,34 @@ export function clearActiveSessionDraft(): void {
     logger.warn('Failed to clear workout draft from local storage', { err });
   }
 }
+
+const DRAFT_PLAN_KEY = 'fitness_draft_plan_review';
+const LEGACY_DRAFT_PLAN_KEY = 'apexfit_draft_plan_review';
+
+export function saveDraftPlan(plan: any): void {
+  try {
+    sessionStorage.setItem(DRAFT_PLAN_KEY, JSON.stringify(plan));
+  } catch (err) {
+    logger.warn('Failed to save draft plan to session storage', { err });
+  }
+}
+
+export function loadDraftPlan(): any | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_PLAN_KEY) || sessionStorage.getItem(LEGACY_DRAFT_PLAN_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    logger.warn('Failed to load draft plan from session storage', { err });
+    return null;
+  }
+}
+
+export function clearDraftPlan(): void {
+  try {
+    sessionStorage.removeItem(DRAFT_PLAN_KEY);
+    sessionStorage.removeItem(LEGACY_DRAFT_PLAN_KEY);
+  } catch (err) {
+    logger.warn('Failed to clear draft plan from session storage', { err });
+  }
+}

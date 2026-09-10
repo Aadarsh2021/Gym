@@ -21,8 +21,9 @@ import { WorkoutSummaryModal } from './WorkoutSummaryModal';
 
 interface WorkoutTrackerViewProps {
   session: WorkoutSession;
-  onFinish: (summary: any) => void;
+  onFinish: (summary?: any) => void;
   onCancel: () => void;
+  onViewProgress?: () => void;
 }
 
 const RPE_DESCRIPTIONS: Record<number, string> = {
@@ -39,6 +40,7 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
   session: initialSession,
   onFinish,
   onCancel,
+  onViewProgress,
 }) => {
   const [session, setSession] = useState<WorkoutSession>(initialSession);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(initialSession.durationSeconds || 0);
@@ -56,23 +58,37 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
 
   // Previous performance map: exerciseId -> { weightKg, reps, rpe }
   const [performanceMap, setPerformanceMap] = useState<Record<string, { weightKg: number; reps: number; rpe?: number }>>({});
+  // Existing PR map: exerciseId -> estimatedOneRepMax
+  const [existingPrsMap, setExistingPrsMap] = useState<Record<string, number>>({});
 
   // Rest Timer Hook with Web Audio API chime
   const {
     secondsRemaining,
     progressFraction,
     isActive: isTimerActive,
+    isPaused: isTimerPaused,
     startTimer,
+    pauseTimer,
+    resumeTimer,
     stopTimer,
     addTime,
     subtractTime,
   } = useRestTimer();
 
-  // Load previous performances & available catalog for in-workout swap/add
+  // Load previous performances, PRs & available catalog for in-workout swap/add
   useEffect(() => {
     let mounted = true;
     workoutService.getPreviousPerformanceMap(session.userId).then(map => {
       if (mounted) setPerformanceMap(map);
+    });
+    workoutService.getPersonalRecords(session.userId).then(records => {
+      if (mounted) {
+        const prMap: Record<string, number> = {};
+        records.forEach(r => {
+          prMap[r.exerciseId] = r.estimatedOneRepMax;
+        });
+        setExistingPrsMap(prMap);
+      }
     });
     exerciseService.getExercises().then(list => {
       if (mounted) setAvailableExercises(list);
@@ -258,9 +274,13 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
     setSubmitting(true);
 
     try {
+      const currentSessionWithDuration: WorkoutSession = {
+        ...session,
+        durationSeconds: elapsedSeconds,
+      };
       const idempotencyKey = `idemp-${session.id}-${Date.now()}`;
       const res = await workoutService.finishWorkoutSession(
-        session.id,
+        currentSessionWithDuration,
         idempotencyKey,
         sessionRating,
         sessionNotes
@@ -368,19 +388,27 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <Timer size={16} color="var(--accent-primary)" />
-              <span style={{ fontWeight: 700, fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-heading)' }}>
+              <span style={{ fontWeight: 700, fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)' }}>
                 Rest: {formatTimerClock(secondsRemaining)}
               </span>
             </div>
 
             <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => subtractTime(15)} title="Subtract 15 seconds">
+              <button className="btn btn-secondary btn-sm" onClick={() => subtractTime(15)} title="Subtract 15 seconds" style={{ minHeight: '36px', minWidth: '40px' }}>
                 -15s
               </button>
-              <button className="btn btn-secondary btn-sm" onClick={() => addTime(30)} title="Add 30 seconds">
+              <button className="btn btn-secondary btn-sm" onClick={() => addTime(30)} title="Add 30 seconds" style={{ minHeight: '36px', minWidth: '40px' }}>
                 +30s
               </button>
-              <button className="btn btn-primary btn-sm" onClick={stopTimer}>
+              <button
+                className={`btn ${isTimerPaused ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                onClick={isTimerPaused ? resumeTimer : pauseTimer}
+                style={{ minHeight: '36px', minWidth: '58px' }}
+                title={isTimerPaused ? 'Resume rest timer' : 'Pause rest timer'}
+              >
+                {isTimerPaused ? 'Resume' : 'Pause'}
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={stopTimer} style={{ minHeight: '36px' }}>
                 Skip
               </button>
             </div>
@@ -509,13 +537,13 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
                       alignItems: 'center',
                       padding: 'var(--space-2)',
                       background: set.completed ? 'var(--accent-primary-muted)' : 'var(--bg-input)',
-                      border: `1px solid ${set.completed ? 'rgba(199, 240, 0, 0.3)' : 'var(--border-subtle)'}`,
+                      border: `1px solid ${set.completed ? 'rgba(224, 139, 76, 0.4)' : 'var(--border-subtle)'}`,
                       borderRadius: 'var(--radius-sm)',
                       transition: 'background-color var(--transition-fast)',
                     }}
                   >
                     {/* Set Number */}
-                    <span style={{ fontWeight: 700, textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    <span style={{ fontWeight: 700, textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>
                       {set.setIndex}
                     </span>
 
@@ -524,7 +552,7 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
                       className="select"
                       value={set.setType || 'normal'}
                       onChange={e => updateSetValue(exIndex, setIndex, 'setType', e.target.value as SetType)}
-                      style={{ height: '38px', minHeight: '38px', fontSize: '0.75rem', padding: '0 4px', textAlign: 'center' }}
+                      style={{ height: '38px', minHeight: '38px', fontSize: '0.75rem', padding: '0 4px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}
                     >
                       <option value="normal">Work</option>
                       <option value="warmup">Warm</option>
@@ -541,7 +569,7 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
                         min={0}
                         step={0.5}
                         onChange={e => updateSetValue(exIndex, setIndex, 'weightKg', parseFloat(e.target.value) || 0)}
-                        style={{ textAlign: 'center', height: '38px', minHeight: '38px', padding: 0, fontSize: '0.95rem' }}
+                        style={{ textAlign: 'center', height: '38px', minHeight: '38px', padding: 0, fontSize: '0.95rem', fontFamily: 'var(--font-mono)', fontWeight: 600 }}
                       />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                         <button
@@ -572,7 +600,7 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
                       value={set.reps}
                       min={0}
                       onChange={e => updateSetValue(exIndex, setIndex, 'reps', parseInt(e.target.value) || 0)}
-                      style={{ textAlign: 'center', height: '38px', minHeight: '38px', padding: 0, fontSize: '0.95rem' }}
+                      style={{ textAlign: 'center', height: '38px', minHeight: '38px', padding: 0, fontSize: '0.95rem', fontFamily: 'var(--font-mono)', fontWeight: 600 }}
                     />
 
                     {/* RPE Selector */}
@@ -580,7 +608,7 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
                       className="select"
                       value={set.rpe || 8}
                       onChange={e => updateSetValue(exIndex, setIndex, 'rpe', parseFloat(e.target.value))}
-                      style={{ height: '38px', minHeight: '38px', fontSize: '0.8rem', padding: '0 4px', textAlign: 'center' }}
+                      style={{ height: '38px', minHeight: '38px', fontSize: '0.8rem', padding: '0 4px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}
                       title={RPE_DESCRIPTIONS[set.rpe || 8] || 'RPE'}
                     >
                       <option value={6}>6</option>
@@ -592,13 +620,15 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
                       <option value={10}>10</option>
                     </select>
 
-                    {/* Checkbox */}
+                    {/* Checkbox (Touch Target >= 44px) */}
                     <button
                       type="button"
                       onClick={() => toggleSetCompleted(exIndex, setIndex)}
                       style={{
-                        height: '38px',
-                        width: '38px',
+                        height: '44px',
+                        width: '44px',
+                        minHeight: '44px',
+                        minWidth: '44px',
                         borderRadius: 'var(--radius-sm)',
                         border: 'none',
                         backgroundColor: set.completed ? 'var(--accent-primary)' : 'var(--bg-surface-elevated)',
@@ -612,7 +642,7 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
                       }}
                       aria-label="Mark set completed"
                     >
-                      <Check size={18} strokeWidth={set.completed ? 3 : 2} />
+                      <Check size={20} strokeWidth={set.completed ? 3 : 2} />
                     </button>
                   </div>
                 ))}
@@ -728,7 +758,9 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
       {/* WORKOUT SUMMARY MODAL */}
       {showSummaryModal && (
         <WorkoutSummaryModal
-          session={session}
+          session={{ ...session, durationSeconds: elapsedSeconds }}
+          existingPrsMap={existingPrsMap}
+          onViewProgress={onViewProgress}
           onClose={() => {
             setShowSummaryModal(false);
             onFinish(session);

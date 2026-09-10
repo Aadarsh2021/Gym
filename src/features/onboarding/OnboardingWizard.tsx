@@ -104,7 +104,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
   return (
     <div className="container-narrow animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)' }}>
-      <div className="card card-glass" style={{ padding: 'var(--space-8)' }}>
+      <div className="card" style={{ padding: 'var(--space-8)', borderColor: 'var(--border-medium)', background: 'var(--bg-surface)' }}>
         {/* Progress Dots */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-6)' }}>
           {[1, 2, 3, 4].map(num => (
@@ -112,7 +112,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               key={num}
               style={{
                 width: '32px',
-                height: '6px',
+                height: '5px',
                 borderRadius: 'var(--radius-full)',
                 backgroundColor: num <= step ? 'var(--accent-primary)' : 'var(--border-medium)',
                 transition: 'all var(--transition-normal)',
@@ -124,10 +124,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {error && (
           <div style={{
             padding: 'var(--space-3)',
-            backgroundColor: 'rgba(255, 77, 77, 0.1)',
-            border: '1px solid rgba(255, 77, 77, 0.3)',
+            backgroundColor: 'rgba(193, 89, 79, 0.15)',
+            border: '1px solid var(--color-error)',
             borderRadius: 'var(--radius-md)',
-            color: 'var(--accent-fire)',
+            color: 'var(--color-error)',
             fontSize: '0.875rem',
             marginBottom: 'var(--space-4)',
           }}>
@@ -139,7 +139,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {step === 1 && (
           <div>
             <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-              <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(212, 255, 0, 0.1)', borderRadius: '50%', marginBottom: 'var(--space-2)', color: 'var(--accent-primary)' }}>
+              <div style={{ display: 'inline-flex', padding: '12px', background: 'var(--accent-primary-muted)', borderRadius: '50%', marginBottom: 'var(--space-2)', color: 'var(--accent-primary)' }}>
                 <Target size={28} />
               </div>
               <h2>Your Biometrics</h2>
@@ -199,11 +199,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {step === 2 && (
           <div>
             <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-              <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(0, 240, 255, 0.1)', borderRadius: '50%', marginBottom: 'var(--space-2)', color: 'var(--accent-secondary)' }}>
+              <div style={{ display: 'inline-flex', padding: '12px', background: 'var(--accent-primary-muted)', borderRadius: '50%', marginBottom: 'var(--space-2)', color: 'var(--accent-primary)' }}>
                 <Award size={28} />
               </div>
               <h2>What is your primary goal?</h2>
-              <p>We personalize your workout intensity and nutritional balance to match.</p>
+              <p style={{ color: 'var(--text-secondary)' }}>We personalize your workout intensity and nutritional balance to match.</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
@@ -216,11 +216,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <div
                   key={opt.id}
                   onClick={() => setGoal(opt.id as FitnessGoal)}
-                  className={`card card-interactive ${goal === opt.id ? 'card-glow' : ''}`}
+                  className="card card-interactive"
                   style={{
                     padding: 'var(--space-4)',
                     cursor: 'pointer',
                     borderColor: goal === opt.id ? 'var(--accent-primary)' : 'var(--border-subtle)',
+                    background: goal === opt.id ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -230,7 +231,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     <h4 style={{ color: goal === opt.id ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
                       {opt.title}
                     </h4>
-                    <small>{opt.desc}</small>
+                    <small style={{ color: 'var(--text-secondary)' }}>{opt.desc}</small>
                   </div>
                   {goal === opt.id && <Check size={20} color="var(--accent-primary)" />}
                 </div>
@@ -256,40 +257,42 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {step === 3 && (
           <div>
             <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-              <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(212, 255, 0, 0.1)', borderRadius: '50%', marginBottom: 'var(--space-2)', color: 'var(--accent-primary)' }}>
+              <div style={{ display: 'inline-flex', padding: '12px', background: 'var(--accent-primary-muted)', borderRadius: '50%', marginBottom: 'var(--space-2)', color: 'var(--accent-primary)' }}>
                 <Dumbbell size={28} />
               </div>
               <h2>Training Setup & Gear</h2>
-              <p>We ensure you are never assigned an exercise you cannot physically perform.</p>
+              <p style={{ color: 'var(--text-secondary)' }}>We ensure you are never assigned an exercise you cannot physically perform.</p>
             </div>
 
+            {/* Weekly Schedule Days */}
             <div className="input-group" style={{ marginBottom: 'var(--space-6)' }}>
-              <label className="label">Workout Days Per Week ({daysPerWeek} days)</label>
-              <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
-                {[2, 3, 4, 5, 6].map(d => (
+              <label className="label">Weekly Training Availability</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-2)' }}>
+                {[3, 4, 5, 6].map(days => (
                   <button
-                    key={d}
+                    key={days}
                     type="button"
-                    className={`btn ${daysPerWeek === d ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ flex: 1, minHeight: '42px', padding: 0 }}
-                    onClick={() => setDaysPerWeek(d)}
+                    className={`btn ${daysPerWeek === days ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setDaysPerWeek(days)}
+                    style={{ padding: 'var(--space-3) 0', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}
                   >
-                    {d}
+                    {days} Days
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="input-group" style={{ marginBottom: 'var(--space-4)' }}>
-              <label className="label">Workout Duration ({duration} mins)</label>
-              <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+            {/* Target Session Duration */}
+            <div className="input-group" style={{ marginBottom: 'var(--space-6)' }}>
+              <label className="label">Target Session Duration ({duration} mins)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-2)' }}>
                 {[30, 45, 60, 90].map(dur => (
                   <button
                     key={dur}
                     type="button"
                     className={`btn ${duration === dur ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ flex: 1, minHeight: '38px', padding: 0 }}
                     onClick={() => setDuration(dur)}
+                    style={{ padding: 'var(--space-3) 0', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}
                   >
                     {dur}m
                   </button>
@@ -297,9 +300,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               </div>
             </div>
 
+            {/* Equipment Multi-select */}
             <div className="input-group">
-              <label className="label">Available Equipment (Select all available)</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)' }}>
+              <label className="label">Available Equipment (Select all that apply)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 'var(--space-2)' }}>
                 {['Barbell', 'Dumbbells', 'Cable', 'Bodyweight', 'Machines'].map(eq => {
                   const selected = equipment.includes(eq);
                   return (
@@ -310,7 +314,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         padding: 'var(--space-3) var(--space-4)',
                         borderRadius: 'var(--radius-md)',
                         border: `1px solid ${selected ? 'var(--accent-primary)' : 'var(--border-medium)'}`,
-                        backgroundColor: selected ? 'rgba(212, 255, 0, 0.08)' : 'var(--bg-input)',
+                        backgroundColor: selected ? 'var(--accent-primary-muted)' : 'var(--bg-input)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -331,11 +335,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {step === 4 && (
           <div>
             <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-              <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '50%', marginBottom: 'var(--space-2)', color: 'var(--accent-success)' }}>
+              <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(127, 166, 107, 0.15)', borderRadius: '50%', marginBottom: 'var(--space-2)', color: 'var(--color-success)' }}>
                 <Utensils size={28} />
               </div>
               <h2>Dietary Foundation</h2>
-              <p>Tailored specifically for high-protein Indian dietary choices.</p>
+              <p style={{ color: 'var(--text-secondary)' }}>Tailored specifically for high-protein Indian dietary choices.</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
@@ -348,11 +352,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <div
                   key={diet.id}
                   onClick={() => setDietaryPreference(diet.id as DietaryPreference)}
-                  className={`card card-interactive ${dietaryPreference === diet.id ? 'card-glow' : ''}`}
+                  className="card card-interactive"
                   style={{
                     padding: 'var(--space-4)',
                     cursor: 'pointer',
                     borderColor: dietaryPreference === diet.id ? 'var(--accent-primary)' : 'var(--border-subtle)',
+                    background: dietaryPreference === diet.id ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -362,7 +367,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     <h4 style={{ color: dietaryPreference === diet.id ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
                       {diet.title}
                     </h4>
-                    <small>{diet.desc}</small>
+                    <small style={{ color: 'var(--text-secondary)' }}>{diet.desc}</small>
                   </div>
                   {dietaryPreference === diet.id && <Check size={20} color="var(--accent-primary)" />}
                 </div>

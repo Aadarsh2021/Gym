@@ -61,15 +61,15 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
     <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
-        <span className="badge badge-fire" style={{ marginBottom: 'var(--space-1)' }}>Consistency Ledger</span>
+        <span className="badge badge-gold" style={{ marginBottom: 'var(--space-2)' }}>Consistency Ledger</span>
         <h1>Streaks & Rewards</h1>
-        <p>Your consistency is rewarded authoritatively. Complete scheduled workouts to protect your streak.</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Your consistency is recorded authoritatively. Complete scheduled workouts to protect your streak.</p>
       </div>
 
       {message && (
         <div style={{
-          padding: 'var(--space-3)',
-          background: 'rgba(212, 255, 0, 0.1)',
+          padding: 'var(--space-3) var(--space-4)',
+          background: 'var(--accent-primary-muted)',
           border: '1px solid var(--accent-primary)',
           borderRadius: 'var(--radius-md)',
           color: 'var(--accent-primary)',
@@ -82,28 +82,28 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
       {/* Top Banner Cards */}
       <div className="grid grid-cols-2" style={{ gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
         {/* Active Streak Hero Tile */}
-        <div className="card card-elevated" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-          <div style={{ padding: '16px', background: 'rgba(255, 77, 77, 0.15)', borderRadius: 'var(--radius-xl)', color: 'var(--accent-fire)' }}>
-            <Flame size={40} fill="var(--accent-fire)" />
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', borderColor: 'var(--border-medium)' }}>
+          <div style={{ padding: '16px', background: 'var(--accent-gold-muted)', borderRadius: 'var(--radius-lg)', color: 'var(--accent-gold)' }}>
+            <Flame size={36} fill="var(--accent-gold)" />
           </div>
           <div>
-            <small style={{ textTransform: 'uppercase' }}>Current Active Streak</small>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-heading)', color: 'var(--accent-fire)' }}>
-              {streak.currentStreak} <span style={{ fontSize: '1.2rem', color: 'var(--text-primary)' }}>Days</span>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Current Active Streak</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)', lineHeight: 1.1 }}>
+              {streak.currentStreak} <span style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Days</span>
             </div>
             <small style={{ color: 'var(--text-muted)' }}>Longest Streak: {streak.longestStreak} days</small>
           </div>
         </div>
 
         {/* Coin Balance */}
-        <div className="card" style={{ borderColor: 'rgba(255, 184, 0, 0.3)', display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-          <div style={{ padding: '16px', background: 'rgba(255, 184, 0, 0.15)', borderRadius: 'var(--radius-xl)', color: 'var(--accent-amber)' }}>
-            <Coins size={40} />
+        <div className="card" style={{ borderColor: 'var(--border-medium)', display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+          <div style={{ padding: '16px', background: 'var(--accent-gold-muted)', borderRadius: 'var(--radius-lg)', color: 'var(--accent-gold)' }}>
+            <Coins size={36} />
           </div>
           <div>
-            <small style={{ textTransform: 'uppercase' }}>Authoritative Coin Balance</small>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-heading)', color: 'var(--accent-amber)' }}>
-              {coins} <span style={{ fontSize: '1.2rem', color: 'var(--text-primary)' }}>Coins</span>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Coin Balance</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)', lineHeight: 1.1 }}>
+              {coins} <span style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Coins</span>
             </div>
             <small style={{ color: 'var(--text-muted)' }}>Earned through workouts & milestones</small>
           </div>
@@ -111,14 +111,14 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
       </div>
 
       {/* Streak Protection & Revives */}
-      <div className="card" style={{ marginBottom: 'var(--space-8)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+      <div className="card" style={{ marginBottom: 'var(--space-8)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)', borderColor: 'var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <div style={{ padding: '12px', background: 'rgba(0, 240, 255, 0.15)', borderRadius: 'var(--radius-lg)', color: 'var(--accent-secondary)' }}>
-            <Shield size={26} />
+          <div style={{ padding: '12px', background: 'var(--accent-primary-muted)', borderRadius: 'var(--radius-md)', color: 'var(--accent-primary)' }}>
+            <Shield size={24} />
           </div>
           <div>
-            <h3>Free Streak Revives</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            <h3 style={{ fontSize: '1.05rem', marginBottom: '2px' }}>Free Streak Revives</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
               Get 3 free revives every calendar month if you accidentally missed a workout day.
             </p>
           </div>
@@ -129,7 +129,7 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
           onClick={handleUseRevive}
           disabled={reviving}
         >
-          {reviving ? <span className="spinner" /> : <><RotateCcw size={16} /> Restore Streak</>}
+          {reviving ? <span className="spinner" /> : <><RotateCcw size={15} /> Restore Streak</>}
         </button>
       </div>
 
@@ -140,27 +140,28 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
           {milestones.map(m => (
             <div
               key={m.days}
-              className={`card ${m.unlocked ? 'card-glow' : ''}`}
+              className="card"
               style={{
                 opacity: m.unlocked ? 1 : 0.6,
-                borderColor: m.unlocked ? 'var(--accent-primary)' : 'var(--border-subtle)',
+                borderColor: m.unlocked ? 'var(--accent-gold)' : 'var(--border-subtle)',
+                background: m.unlocked ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-                <Award size={20} color={m.unlocked ? 'var(--accent-primary)' : 'var(--text-muted)'} />
-                <span className={`badge ${m.unlocked ? 'badge-lime' : ''}`}>
+                <Award size={20} color={m.unlocked ? 'var(--accent-gold)' : 'var(--text-muted)'} />
+                <span className={`badge ${m.unlocked ? 'badge-gold' : ''}`}>
                   {m.unlocked ? 'Unlocked' : `${m.days} Days`}
                 </span>
               </div>
-              <h4>{m.label}</h4>
-              <small style={{ color: 'var(--accent-amber)', fontWeight: 600 }}>+{m.coins} Fitness Coins</small>
+              <h4 style={{ fontSize: '1rem', marginBottom: '4px' }}>{m.label}</h4>
+              <small style={{ color: 'var(--accent-gold)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>+{m.coins} Fitness Coins</small>
             </div>
           ))}
         </div>
       </div>
 
       {/* Append-Only Coin Ledger */}
-      <div className="card">
+      <div className="card" style={{ borderColor: 'var(--border-subtle)' }}>
         <h3 style={{ marginBottom: 'var(--space-4)' }}>Coin Ledger (Audit Trail)</h3>
         {transactions.length === 0 ? (
           <p style={{ color: 'var(--text-muted)' }}>No coin transactions recorded yet.</p>
@@ -174,20 +175,20 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: 'var(--space-3)',
-                  background: 'var(--bg-input)',
+                  background: 'var(--bg-primary)',
                   borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--border-subtle)',
                 }}
               >
                 <div>
-                  <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>
+                  <span style={{ fontWeight: 600, textTransform: 'capitalize', fontSize: '0.9rem' }}>
                     {t.source.replace('_', ' ')}
                   </span>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {formatDate(t.createdAt)} {t.referenceId ? `• Ref: ${t.referenceId}` : ''}
+                    {formatDate(t.createdAt)} {t.referenceId ? `| Ref: ${t.referenceId}` : ''}
                   </div>
                 </div>
-                <div style={{ fontWeight: 700, color: 'var(--accent-amber)', fontSize: '1.1rem' }}>
+                <div style={{ fontWeight: 700, color: 'var(--accent-gold)', fontSize: '1.05rem', fontFamily: 'var(--font-mono)' }}>
                   +{t.amount}
                 </div>
               </div>

@@ -1,4 +1,6 @@
 import React from 'react';
+import { BrandLogo } from '@/components/common/BrandLogo';
+import { BRAND_CONFIG } from '@/config/branding';
 
 interface FooterProps {
   onOpenPublicTool?: (tool: string) => void;
@@ -16,9 +18,11 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPublicTool }) => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-6)' }}>
           {/* Brand Info */}
           <div>
-            <h4 style={{ color: 'var(--accent-primary)', marginBottom: 'var(--space-2)' }}>FITNESS.AI</h4>
+            <div style={{ marginBottom: 'var(--space-2)' }}>
+              <BrandLogo size="sm" />
+            </div>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-              Consumer-first personal fitness system. Algorithmic workout generation, Indian-tailored nutrition plans, authoritative PR tracking, and Guru Ji AI assistance.
+              {BRAND_CONFIG.tagline}. Intelligent training splits, Indian-tailored nutrition planning, authoritative PR tracking, and Guru Ji guidance.
             </p>
           </div>
 

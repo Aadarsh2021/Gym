@@ -64,12 +64,12 @@ export const WorkoutGeneratorModal: React.FC<WorkoutGeneratorModalProps> = ({
       <div className="modal-content animate-fade-in" onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <div style={{ padding: '8px', background: 'rgba(212, 255, 0, 0.15)', borderRadius: 'var(--radius-md)', color: 'var(--accent-primary)' }}>
+            <div style={{ padding: '8px', background: 'var(--accent-primary-muted)', borderRadius: 'var(--radius-md)', color: 'var(--accent-primary)' }}>
               <Sparkles size={20} />
             </div>
             <div>
-              <h3>Algorithmic Plan Generator</h3>
-              <small>Builds structured, science-backed workout splits</small>
+              <h3>Build Your Training Plan</h3>
+              <small style={{ color: 'var(--text-secondary)' }}>Builds structured, science-backed workout splits</small>
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -130,7 +130,7 @@ export const WorkoutGeneratorModal: React.FC<WorkoutGeneratorModalProps> = ({
                     padding: 'var(--space-2) var(--space-3)',
                     borderRadius: 'var(--radius-md)',
                     border: `1px solid ${selected ? 'var(--accent-primary)' : 'var(--border-medium)'}`,
-                    backgroundColor: selected ? 'rgba(212, 255, 0, 0.08)' : 'var(--bg-input)',
+                    backgroundColor: selected ? 'var(--accent-primary-muted)' : 'var(--bg-input)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',

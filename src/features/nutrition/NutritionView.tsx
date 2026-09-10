@@ -24,45 +24,51 @@ export const NutritionView: React.FC<NutritionViewProps> = ({ nutritionProfile }
     <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
-          <span className="badge badge-cyan">Indian Nutrition System</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+          <span className="badge badge-accent">Indian Nutrition System</span>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>ICMR-NIN Reference</span>
         </div>
         <h1>Personalized Nutrition & Protein Analyzer</h1>
-        <p>Deterministic macronutrient targets and reference nutritional analysis for Indian foods.</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Deterministic macronutrient targets and reference nutritional analysis for Indian foods.</p>
       </div>
 
       {/* Target Macros Cards */}
-      <div className="card card-elevated" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-8)' }}>
-        <div className="card">
-          <small>Target Calories</small>
-          <h2>{nutritionProfile ? nutritionProfile.targetCalories : 2200} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>kcal</span></h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Daily Energy Requirement</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-8)' }}>
+        <div className="card" style={{ borderColor: 'var(--border-subtle)' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 'var(--space-2)' }}>Target Calories</div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', lineHeight: 1.1 }}>
+            {nutritionProfile ? nutritionProfile.targetCalories : 2200} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>kcal</span>
+          </div>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 'var(--space-2)', display: 'block' }}>Daily Energy Requirement</span>
         </div>
 
-        <div className="card" style={{ borderColor: 'rgba(0, 240, 255, 0.3)' }}>
-          <small style={{ color: 'var(--accent-secondary)' }}>Target Protein</small>
-          <h2 style={{ color: 'var(--accent-secondary)' }}>
-            {nutritionProfile ? nutritionProfile.targetProteinG : 140} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>g</span>
-          </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hypertrophy / Recovery</span>
+        <div className="card" style={{ borderColor: 'var(--border-medium)', background: 'var(--bg-surface-elevated)' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 'var(--space-2)' }}>Target Protein</div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)', lineHeight: 1.1 }}>
+            {nutritionProfile ? nutritionProfile.targetProteinG : 140} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>g</span>
+          </div>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 'var(--space-2)', display: 'block' }}>Hypertrophy / Recovery</span>
         </div>
 
-        <div className="card">
-          <small>Carbohydrates</small>
-          <h2>{nutritionProfile ? nutritionProfile.targetCarbsG : 240} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>g</span></h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Clean Energy Stores</span>
+        <div className="card" style={{ borderColor: 'var(--border-subtle)' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 'var(--space-2)' }}>Carbohydrates</div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', lineHeight: 1.1 }}>
+            {nutritionProfile ? nutritionProfile.targetCarbsG : 240} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>g</span>
+          </div>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 'var(--space-2)', display: 'block' }}>Clean Energy Stores</span>
         </div>
 
-        <div className="card">
-          <small>Healthy Fats</small>
-          <h2>{nutritionProfile ? nutritionProfile.targetFatG : 60} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>g</span></h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hormonal Balance (25%)</span>
+        <div className="card" style={{ borderColor: 'var(--border-subtle)' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 'var(--space-2)' }}>Healthy Fats</div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', lineHeight: 1.1 }}>
+            {nutritionProfile ? nutritionProfile.targetFatG : 60} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>g</span>
+          </div>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 'var(--space-2)', display: 'block' }}>Hormonal Balance (25%)</span>
         </div>
       </div>
 
       {/* Sample Personalized Indian Meal Structure */}
-      <div className="card" style={{ marginBottom: 'var(--space-8)' }}>
+      <div className="card" style={{ marginBottom: 'var(--space-8)', borderColor: 'var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
           <Utensils size={20} color="var(--accent-primary)" />
           <h3>Sample Daily High-Protein Meal Plan</h3>
@@ -75,10 +81,10 @@ export const NutritionView: React.FC<NutritionViewProps> = ({ nutritionProfile }
             { meal: 'Evening Snack', foods: '50g Roasted Chana or 1 Scoop Whey + 1 Banana', protein: '~26g' },
             { meal: 'Dinner', foods: '50g Cooked Soya Chunks (or 150g Chicken Breast) + 1 Cup Rice + Curd', protein: '~38g' },
           ].map((item, idx) => (
-            <div key={idx} style={{ padding: 'var(--space-3)', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+            <div key={idx} style={{ padding: 'var(--space-3)', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)' }}>
                 <span style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>{item.meal}</span>
-                <span className="badge badge-lime">{item.protein}</span>
+                <span className="badge badge-accent" style={{ fontFamily: 'var(--font-mono)' }}>{item.protein}</span>
               </div>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{item.foods}</p>
             </div>
@@ -87,11 +93,11 @@ export const NutritionView: React.FC<NutritionViewProps> = ({ nutritionProfile }
       </div>
 
       {/* Indian Food Database / Protein Analyzer */}
-      <div className="card">
+      <div className="card" style={{ borderColor: 'var(--border-subtle)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
           <div>
             <h3>Indian Food Database & Protein Analyzer</h3>
-            <p style={{ fontSize: '0.875rem' }}>Reference macros per standard serving based on ICMR-NIN Indian Food Composition Tables.</p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Reference macros per standard serving based on ICMR-NIN Indian Food Composition Tables.</p>
           </div>
 
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
@@ -135,31 +141,39 @@ export const NutritionView: React.FC<NutritionViewProps> = ({ nutritionProfile }
               </tr>
             </thead>
             <tbody>
-              {foods.map(f => (
-                <tr key={f.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                  <td style={{ padding: 'var(--space-3)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {f.name}
-                  </td>
-                  <td style={{ padding: 'var(--space-3)', color: 'var(--text-secondary)' }}>
-                    {f.servingSize} {f.servingUnit}
-                  </td>
-                  <td style={{ padding: 'var(--space-3)', fontWeight: 700, color: 'var(--accent-secondary)' }}>
-                    {f.proteinG}g
-                  </td>
-                  <td style={{ padding: 'var(--space-3)', fontWeight: 600 }}>
-                    {f.calories} kcal
-                  </td>
-                  <td style={{ padding: 'var(--space-3)', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    {f.carbsG}g / {f.fatG}g
-                  </td>
-                  <td style={{ padding: 'var(--space-3)', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <ShieldCheck size={14} color="var(--accent-success)" />
-                      {f.sourceReference || f.source}
-                    </div>
+              {foods.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: 'var(--space-8)', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    No food items found matching "{search}". Try searching for Paneer, Eggs, Dal, or Soya.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                foods.map(f => (
+                  <tr key={f.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: 'var(--space-3)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {f.name}
+                    </td>
+                    <td style={{ padding: 'var(--space-3)', color: 'var(--text-secondary)' }}>
+                      {f.servingSize} {f.servingUnit}
+                    </td>
+                    <td style={{ padding: 'var(--space-3)', fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
+                      {f.proteinG}g
+                    </td>
+                    <td style={{ padding: 'var(--space-3)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+                      {f.calories} kcal
+                    </td>
+                    <td style={{ padding: 'var(--space-3)', color: 'var(--text-muted)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}>
+                      {f.carbsG}g / {f.fatG}g
+                    </td>
+                    <td style={{ padding: 'var(--space-3)', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <ShieldCheck size={14} color="var(--color-success)" />
+                        {f.sourceReference || f.source}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -167,12 +181,12 @@ export const NutritionView: React.FC<NutritionViewProps> = ({ nutritionProfile }
         {/* Nutritional Disclaimer */}
         <div style={{
           marginTop: 'var(--space-6)',
-          padding: 'var(--space-3)',
-          background: 'rgba(255, 184, 0, 0.08)',
-          border: '1px solid rgba(255, 184, 0, 0.25)',
+          padding: 'var(--space-3) var(--space-4)',
+          background: 'var(--accent-gold-muted)',
+          border: '1px solid var(--accent-gold)',
           borderRadius: 'var(--radius-md)',
           fontSize: '0.8rem',
-          color: 'var(--accent-amber)',
+          color: 'var(--accent-gold)',
           display: 'flex',
           gap: 'var(--space-2)',
           alignItems: 'center',

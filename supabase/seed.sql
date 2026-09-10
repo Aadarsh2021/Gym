@@ -33,8 +33,8 @@ VALUES
 -- Arms
 ('Barbell Bicep Curl', 'Biceps', ARRAY['Forearms'], 'Barbell', 'beginner', 'Arm Flexion', ARRAY['Keep elbows pinned at ribcage', 'Curl bar up towards shoulders', 'Lower with 3-second eccentric'], TRUE),
 ('Hammer Curl', 'Biceps', ARRAY['Brachialis', 'Forearms'], 'Dumbbells', 'beginner', 'Neutral Grip Flexion', ARRAY['Hold dumbbells with palms facing each other', 'Curl upward without swinging', 'Slowly descend'], TRUE),
-('Tricep Cable Pushdown', 'Triceps', ARRAY[], 'Cable', 'beginner', 'Arm Extension', ARRAY['Keep upper arms fixed at sides', 'Extend elbows to push bar/rope straight down', 'Lock out and pause'], TRUE),
-('Overhead Dumbbell Tricep Extension', 'Triceps', ARRAY[], 'Dumbbells', 'beginner', 'Overhead Extension', ARRAY['Hold dumbbell overhead with both hands', 'Lower behind neck by flexing elbows', 'Press back to full extension'], TRUE),
+('Tricep Cable Pushdown', 'Triceps', ARRAY[]::TEXT[], 'Cable', 'beginner', 'Arm Extension', ARRAY['Keep upper arms fixed at sides', 'Extend elbows to push bar/rope straight down', 'Lock out and pause'], TRUE),
+('Overhead Dumbbell Tricep Extension', 'Triceps', ARRAY[]::TEXT[], 'Dumbbells', 'beginner', 'Overhead Extension', ARRAY['Hold dumbbell overhead with both hands', 'Lower behind neck by flexing elbows', 'Press back to full extension'], TRUE),
 
 -- Core
 ('Plank', 'Core', ARRAY['Shoulders', 'Glutes'], 'Bodyweight', 'beginner', 'Anti-Extension', ARRAY['Support on forearms and toes', 'Keep body in straight line from head to heels', 'Brace core tightly'], TRUE),

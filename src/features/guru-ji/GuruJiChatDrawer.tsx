@@ -100,12 +100,12 @@ export const GuruJiChatDrawer: React.FC<GuruJiChatDrawerProps> = ({
           alignItems: 'center',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <div style={{ padding: '8px', background: 'rgba(0, 240, 255, 0.15)', borderRadius: 'var(--radius-md)', color: 'var(--accent-secondary)' }}>
+            <div style={{ padding: '8px', background: 'var(--accent-primary-muted)', borderRadius: 'var(--radius-md)', color: 'var(--accent-primary)' }}>
               <Sparkles size={20} />
             </div>
             <div>
               <h3 style={{ fontSize: '1.1rem' }}>Guru Ji — AI Fitness Coach</h3>
-              <small style={{ color: 'var(--accent-secondary)' }}>Context-Aware Assistant</small>
+              <small style={{ color: 'var(--text-secondary)' }}>Context-Aware Assistant</small>
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -126,8 +126,8 @@ export const GuruJiChatDrawer: React.FC<GuruJiChatDrawerProps> = ({
               }}
             >
               {msg.role === 'assistant' && (
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 240, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Bot size={18} color="var(--accent-secondary)" />
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-primary-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Bot size={18} color="var(--accent-primary)" />
                 </div>
               )}
 

@@ -42,6 +42,7 @@ export function useRestTimer() {
   const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
   const [totalDuration, setTotalDuration] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
   const intervalRef = useRef<any>(null);
 
   const startTimer = useCallback((durationSeconds: number) => {
@@ -49,13 +50,26 @@ export function useRestTimer() {
     setTotalDuration(durationSeconds);
     setSecondsRemaining(durationSeconds);
     setIsActive(true);
+    setIsPaused(false);
   }, []);
+
+  const pauseTimer = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setIsPaused(true);
+  }, []);
+
+  const resumeTimer = useCallback(() => {
+    if (isActive && secondsRemaining > 0) {
+      setIsPaused(false);
+    }
+  }, [isActive, secondsRemaining]);
 
   const stopTimer = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setSecondsRemaining(0);
     setTotalDuration(0);
     setIsActive(false);
+    setIsPaused(false);
   }, []);
 
   const addTime = useCallback((extraSeconds = 30) => {
@@ -68,12 +82,13 @@ export function useRestTimer() {
   }, []);
 
   useEffect(() => {
-    if (isActive && secondsRemaining > 0) {
+    if (isActive && !isPaused && secondsRemaining > 0) {
       intervalRef.current = setInterval(() => {
         setSecondsRemaining(prev => {
           if (prev <= 1) {
             clearInterval(intervalRef.current);
             setIsActive(false);
+            setIsPaused(false);
 
             // 1. Play native Web Audio chime
             playRestTimerChime();
@@ -96,7 +111,7 @@ export function useRestTimer() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isActive, secondsRemaining]);
+  }, [isActive, isPaused, secondsRemaining]);
 
   const progressFraction = totalDuration > 0 ? (totalDuration - secondsRemaining) / totalDuration : 0;
 
@@ -105,7 +120,10 @@ export function useRestTimer() {
     totalDuration,
     progressFraction,
     isActive,
+    isPaused,
     startTimer,
+    pauseTimer,
+    resumeTimer,
     stopTimer,
     addTime,
     subtractTime,

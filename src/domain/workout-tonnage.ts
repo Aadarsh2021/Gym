@@ -6,6 +6,7 @@ export interface WorkoutPerformanceSummary {
   totalCompletedSets: number;
   totalReps: number;
   newPersonalRecords: Array<{
+    exerciseId: string;
     exerciseName: string;
     weightKg: number;
     reps: number;
@@ -50,6 +51,7 @@ export function calculateWorkoutSummary(
     const priorPr = existingPrsMap[exercise.exerciseId] || 0;
     if (bestEstimated1RMInSession > priorPr && bestSet) {
       newPrs.push({
+        exerciseId: exercise.exerciseId,
         exerciseName: exercise.exerciseName,
         weightKg: bestSet.weightKg,
         reps: bestSet.reps,

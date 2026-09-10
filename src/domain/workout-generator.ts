@@ -92,6 +92,7 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
       dayNumber: 1,
       name: 'Push (Chest, Shoulders & Triceps)',
       targetMuscleGroups: ['Chest', 'Shoulders', 'Triceps'],
+      scheduledDaysOfWeek: [1, 4], // Mon, Thu
       exercises: [
         createDayExercise(chestEx, 1, 4, 8, 10, 120, true),
         createDayExercise(shoulderEx, 2, 3, 10, 12, 90, true),
@@ -110,6 +111,7 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
       dayNumber: 2,
       name: 'Pull (Back, Biceps & Rear Delts)',
       targetMuscleGroups: ['Back', 'Biceps'],
+      scheduledDaysOfWeek: [2, 5], // Tue, Fri
       exercises: [
         createDayExercise(backEx, 1, 4, 8, 10, 120, true),
         createDayExercise(bicepEx, 2, 3, 10, 12, 60, false),
@@ -127,6 +129,7 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
       dayNumber: 3,
       name: 'Legs & Core (Quads, Hamstrings & Abs)',
       targetMuscleGroups: ['Legs', 'Core'],
+      scheduledDaysOfWeek: [3, 6], // Wed, Sat
       exercises: [
         createDayExercise(legEx, 1, 4, 8, 12, 120, true),
         createDayExercise(coreEx, 2, 3, 15, 20, 60, false),
@@ -144,6 +147,7 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
       dayNumber: 1,
       name: 'Upper Body Power',
       targetMuscleGroups: ['Chest', 'Back', 'Shoulders'],
+      scheduledDaysOfWeek: [1, 4], // Mon, Thu
       exercises: [
         createDayExercise(chestEx, 1, 4, 8, 10, 120, true),
         createDayExercise(backEx, 2, 4, 8, 10, 120, true),
@@ -161,6 +165,7 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
       dayNumber: 2,
       name: 'Lower Body & Core',
       targetMuscleGroups: ['Legs', 'Core'],
+      scheduledDaysOfWeek: [2, 5], // Tue, Fri
       exercises: [
         createDayExercise(legEx, 1, 4, 8, 12, 120, true),
         createDayExercise(coreEx, 2, 3, 12, 15, 60, false),
@@ -179,6 +184,7 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
       dayNumber: 1,
       name: 'Full Body Foundational',
       targetMuscleGroups: ['Chest', 'Back', 'Legs', 'Core'],
+      scheduledDaysOfWeek: [1, 3, 5], // Mon, Wed, Fri
       exercises: [
         createDayExercise(legEx, 1, 3, 8, 10, 120, true),
         createDayExercise(chestEx, 2, 3, 8, 10, 90, true),

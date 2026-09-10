@@ -3,10 +3,11 @@ import { Search, Dumbbell, ArrowRightLeft, BookOpen, Plus, X } from 'lucide-reac
 import { Exercise } from '@/types/workout.types';
 import { filterExerciseCatalog } from '@/domain/exercise-search';
 import { findExerciseAlternatives } from '@/domain/exercise-alternatives';
+import { FALLBACK_EXERCISES } from '@/services/exercise.service';
 import { ExerciseDetailModal } from './ExerciseDetailModal';
 
 interface ExerciseLibraryViewProps {
-  exercises: Exercise[];
+  exercises?: Exercise[];
   onSelectExerciseForWorkout?: (exercise: Exercise) => void;
   isSelectionMode?: boolean;
 }
@@ -16,7 +17,7 @@ const EQUIPMENT_LIST = ['All', 'Barbell', 'Dumbbells', 'Cable', 'Bodyweight'];
 const DIFFICULTY_LIST = ['All', 'beginner', 'intermediate', 'advanced'];
 
 export const ExerciseLibraryView: React.FC<ExerciseLibraryViewProps> = ({
-  exercises,
+  exercises = FALLBACK_EXERCISES,
   onSelectExerciseForWorkout,
   isSelectionMode = false,
 }) => {

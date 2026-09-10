@@ -45,6 +45,7 @@ export interface WorkoutPlanDay {
   name: string;
   targetMuscleGroups: string[];
   exercises: WorkoutPlanExercise[];
+  scheduledDaysOfWeek?: number[]; // 0=Sunday, 1=Monday, ..., 6=Saturday
 }
 
 export interface WorkoutPlan {

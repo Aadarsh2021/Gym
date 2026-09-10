@@ -31,9 +31,10 @@ export const nutritionService = {
       if (dietaryType !== 'all') query = query.eq('dietary_type', dietaryType);
 
       const { data, error } = await query;
-      if (error || !data || data.length === 0) {
-        return FALLBACK_FOODS.filter(f => !search || f.name.toLowerCase().includes(search.toLowerCase()));
+      if (error) {
+        return [];
       }
+      if (!data) return [];
 
       return data.map(d => ({
         id: d.id,
@@ -50,7 +51,7 @@ export const nutritionService = {
         isVerified: d.is_verified,
       }));
     } catch {
-      return FALLBACK_FOODS;
+      return [];
     }
   },
 
