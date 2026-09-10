@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Coins, User, LogOut, Dumbbell } from 'lucide-react';
+import { Flame, Coins, User, LogOut, Dumbbell, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 interface HeaderProps {
@@ -7,6 +7,8 @@ interface HeaderProps {
   coinBalance?: number;
   onOpenAuthModal?: () => void;
   onNavigateTab?: (tab: string) => void;
+  activeTab?: string;
+  onOpenGuruJi?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -14,97 +16,148 @@ export const Header: React.FC<HeaderProps> = ({
   coinBalance = 0,
   onOpenAuthModal,
   onNavigateTab,
+  activeTab = 'dashboard',
+  onOpenGuruJi,
 }) => {
   const { session, signOut } = useAuth();
 
+  const navLinks = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'workout', label: 'Workouts' },
+    { id: 'exercises', label: 'Exercise Library' },
+    { id: 'nutrition', label: 'Nutrition' },
+    { id: 'progress', label: 'Progress' },
+  ];
+
   return (
-    <header className="header" style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: 'var(--space-3) var(--space-4)',
-      background: 'var(--bg-glass)',
-      backdropFilter: 'blur(16px)',
-      borderBottom: '1px solid var(--border-subtle)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 90,
-    }}>
-      {/* Brand Logo */}
-      <div
-        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}
-        onClick={() => onNavigateTab?.('dashboard')}
-      >
-        <div style={{
-          width: '36px',
-          height: '36px',
-          borderRadius: 'var(--radius-md)',
-          background: 'var(--accent-primary)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--text-inverse)',
-          boxShadow: 'var(--glow-primary)',
-        }}>
-          <Dumbbell size={20} strokeWidth={2.5} />
+    <header
+      className="header"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 var(--space-4)',
+        height: '60px',
+        background: 'var(--bg-primary)',
+        borderBottom: '1px solid var(--border-subtle)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 110,
+      }}
+    >
+      {/* Brand Logo & Desktop Nav */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-6)' }}>
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}
+          onClick={() => onNavigateTab?.('dashboard')}
+        >
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: 'var(--radius-xs)',
+              background: 'var(--accent-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--accent-primary-text)',
+            }}
+          >
+            <Dumbbell size={18} strokeWidth={2.5} />
+          </div>
+          <div>
+            <span
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontWeight: 800,
+                fontSize: '1.15rem',
+                letterSpacing: '-0.02em',
+                color: 'var(--text-primary)',
+              }}
+            >
+              APEX<span style={{ color: 'var(--accent-primary)' }}>FIT</span>
+            </span>
+          </div>
         </div>
-        <div>
-          <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.03em' }}>
-            FITNESS<span style={{ color: 'var(--accent-primary)' }}>.AI</span>
-          </span>
-        </div>
+
+        {/* Desktop Navigation Links */}
+        <nav
+          style={{
+            display: 'none',
+            gap: 'var(--space-1)',
+            alignItems: 'center',
+          }}
+          className="desktop-nav"
+        >
+          {navLinks.map(link => (
+            <button
+              key={link.id}
+              className={`btn btn-ghost btn-sm ${activeTab === link.id ? 'btn-secondary' : ''}`}
+              style={{
+                color: activeTab === link.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                fontWeight: activeTab === link.id ? 700 : 500,
+              }}
+              onClick={() => onNavigateTab?.(link.id)}
+            >
+              {link.label}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      {/* Metrics & Profile Section */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-        {/* Streak Counter */}
+      {/* Metrics, AI Coach & Profile Section */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+        {/* Guru Ji Coach Trigger */}
+        {onOpenGuruJi && (
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={onOpenGuruJi}
+            title="Guru Ji Fitness Coach"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Sparkles size={14} color="var(--accent-primary)" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Coach</span>
+          </button>
+        )}
+
+        {/* Streak Badge */}
         <div
-          className="badge badge-fire"
-          style={{ cursor: 'pointer', padding: '6px 12px' }}
+          className="badge badge-warning"
+          style={{ cursor: 'pointer', padding: '5px 10px' }}
           onClick={() => onNavigateTab?.('streaks')}
-          title="Current Workout Streak"
+          title="Active Workout Streak"
         >
-          <Flame size={15} fill="var(--accent-fire)" />
-          <span style={{ fontWeight: 800 }}>{currentStreak}</span>
+          <Flame size={14} />
+          <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{currentStreak}</span>
         </div>
 
-        {/* Coins Counter */}
+        {/* Coins Badge */}
         <div
-          className="badge"
-          style={{
-            cursor: 'pointer',
-            padding: '6px 12px',
-            background: 'rgba(255, 184, 0, 0.15)',
-            color: 'var(--accent-amber)',
-            borderColor: 'rgba(255, 184, 0, 0.3)',
-          }}
+          className="badge badge-accent"
+          style={{ cursor: 'pointer', padding: '5px 10px' }}
           onClick={() => onNavigateTab?.('streaks')}
           title="Fitness Coins"
         >
-          <Coins size={15} />
-          <span style={{ fontWeight: 800 }}>{coinBalance}</span>
+          <Coins size={14} />
+          <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{coinBalance}</span>
         </div>
 
-        {/* Auth / Profile State */}
+        {/* Profile / Auth Controls */}
         {session.user ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => onNavigateTab?.('onboarding')}
-              title="Profile & Onboarding"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Profile Settings"
             >
-              <User size={15} />
-              <span style={{ display: 'none', md: 'inline' } as any}>
-                {session.profile?.displayName || 'Profile'}
-              </span>
+              <User size={14} />
             </button>
             <button
-              className="btn btn-secondary btn-sm"
+              className="btn btn-ghost btn-sm"
               onClick={signOut}
               title="Sign Out"
             >
-              <LogOut size={15} />
+              <LogOut size={14} />
             </button>
           </div>
         ) : (

@@ -1,6 +1,9 @@
 export type MuscleGroup = 'Chest' | 'Back' | 'Shoulders' | 'Biceps' | 'Triceps' | 'Legs' | 'Core' | 'Glutes';
 export type EquipmentType = 'Barbell' | 'Dumbbells' | 'Cable' | 'Bodyweight' | 'Machines' | 'Bands';
+export type MovementPattern = 'Horizontal Push' | 'Incline Push' | 'Vertical Push' | 'Horizontal Pull' | 'Vertical Pull' | 'Squat' | 'Hinge' | 'Lunge' | 'Isolation' | 'Arm Flexion' | 'Arm Extension' | 'Anti-Extension' | 'Spine Flexion';
+export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
 export type SessionRating = 'easy' | 'normal' | 'exhausting';
+export type SetType = 'warmup' | 'normal' | 'drop' | 'failure';
 
 export interface Exercise {
   id: string;
@@ -8,9 +11,17 @@ export interface Exercise {
   primaryMuscle: string;
   secondaryMuscles: string[];
   equipmentRequired: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: DifficultyLevel;
   movementPattern: string;
   instructions: string[];
+  cues?: string[];
+  mistakesToAvoid?: string[];
+  alternativeExerciseIds?: string[];
+  targetMusclesDetail?: {
+    primary: string[];
+    secondary: string[];
+  };
+  muscleGraphicKey?: string;
   isSystem: boolean;
 }
 
@@ -49,11 +60,17 @@ export interface WorkoutPlan {
 export interface WorkoutSet {
   id?: string;
   setIndex: number;
+  setType?: SetType;
   weightKg: number;
   reps: number;
   rpe?: number;
   completed: boolean;
   completedAt?: string;
+  previousPerformance?: {
+    weightKg: number;
+    reps: number;
+    rpe?: number;
+  };
 }
 
 export interface WorkoutSessionExercise {
@@ -62,6 +79,10 @@ export interface WorkoutSessionExercise {
   exerciseName: string;
   primaryMuscle: string;
   orderIndex: number;
+  targetRepsMin?: number;
+  targetRepsMax?: number;
+  restSeconds?: number;
+  notes?: string;
   sets: WorkoutSet[];
 }
 

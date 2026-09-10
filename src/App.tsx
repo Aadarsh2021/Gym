@@ -13,6 +13,7 @@ import { GuruJiChatDrawer } from '@/features/guru-ji/GuruJiChatDrawer';
 import { OnboardingWizard } from '@/features/onboarding/OnboardingWizard';
 import { AuthModal } from '@/features/auth/AuthModal';
 import { PublicCalculatorsModal } from '@/features/seo-pages/PublicCalculatorsModal';
+import { ExerciseLibraryView } from '@/features/exercise-library/ExerciseLibraryView';
 
 import { workoutService } from '@/services/workout.service';
 import { streakService } from '@/services/streak.service';
@@ -145,8 +146,10 @@ function MainApp() {
       <Header
         currentStreak={streak.currentStreak}
         coinBalance={coinBalance}
+        activeTab={activeTab}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onNavigateTab={tab => setActiveTab(tab)}
+        onOpenGuruJi={() => setIsGuruJiOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -243,6 +246,8 @@ function MainApp() {
               </div>
             )}
           </div>
+        ) : activeTab === 'exercises' ? (
+          <ExerciseLibraryView exercises={exercises} />
         ) : activeTab === 'nutrition' ? (
           <NutritionView nutritionProfile={nutritionProfile} />
         ) : activeTab === 'progress' ? (

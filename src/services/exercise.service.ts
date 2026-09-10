@@ -1,93 +1,100 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Exercise } from '@/types/workout.types';
 import { logger } from '@/lib/logger';
+import { CURATED_EXERCISE_CATALOG } from './exercise-catalog.data';
+import { filterExerciseCatalog, ExerciseFilterCriteria } from '@/domain/exercise-search';
+import { findExerciseAlternatives } from '@/domain/exercise-alternatives';
 
-// Default static catalog for offline/preview mode matching seed.sql
-export const FALLBACK_EXERCISES: Exercise[] = [
-  { id: 'ex-1', name: 'Barbell Bench Press', primaryMuscle: 'Chest', secondaryMuscles: ['Triceps', 'Front Delts'], equipmentRequired: 'Barbell', difficulty: 'intermediate', movementPattern: 'Horizontal Push', instructions: ['Lie flat on bench', 'Lower bar to mid chest with elbows at 45 deg', 'Press up firmly'], isSystem: true },
-  { id: 'ex-2', name: 'Incline Dumbbell Press', primaryMuscle: 'Chest', secondaryMuscles: ['Front Delts', 'Triceps'], equipmentRequired: 'Dumbbells', difficulty: 'intermediate', movementPattern: 'Incline Push', instructions: ['Bench at 30 degrees', 'Lower dumbbells to upper chest', 'Press upward'], isSystem: true },
-  { id: 'ex-3', name: 'Push-Up', primaryMuscle: 'Chest', secondaryMuscles: ['Triceps', 'Core'], equipmentRequired: 'Bodyweight', difficulty: 'beginner', movementPattern: 'Horizontal Push', instructions: ['Plank position', 'Lower chest to floor', 'Press up'], isSystem: true },
-  { id: 'ex-4', name: 'Conventional Deadlift', primaryMuscle: 'Back', secondaryMuscles: ['Hamstrings', 'Glutes', 'Traps'], equipmentRequired: 'Barbell', difficulty: 'advanced', movementPattern: 'Hinge', instructions: ['Stand midfoot under bar', 'Hinge hips to grip bar', 'Lock lats and drive hips up'], isSystem: true },
-  { id: 'ex-5', name: 'Barbell Bent-Over Row', primaryMuscle: 'Back', secondaryMuscles: ['Biceps'], equipmentRequired: 'Barbell', difficulty: 'intermediate', movementPattern: 'Horizontal Pull', instructions: ['Hinge torso to 45 deg', 'Pull bar to sternum', 'Control lower'], isSystem: true },
-  { id: 'ex-6', name: 'Lat Pulldown', primaryMuscle: 'Back', secondaryMuscles: ['Biceps'], equipmentRequired: 'Cable', difficulty: 'beginner', movementPattern: 'Vertical Pull', instructions: ['Wide grip', 'Pull smoothly to upper chest', 'Slowly extend'], isSystem: true },
-  { id: 'ex-7', name: 'Barbell Back Squat', primaryMuscle: 'Legs', secondaryMuscles: ['Glutes', 'Core'], equipmentRequired: 'Barbell', difficulty: 'intermediate', movementPattern: 'Squat', instructions: ['Bar on upper traps', 'Squat until thighs parallel to ground', 'Drive through midfoot'], isSystem: true },
-  { id: 'ex-8', name: 'Goblet Squat', primaryMuscle: 'Legs', secondaryMuscles: ['Quads', 'Core'], equipmentRequired: 'Dumbbells', difficulty: 'beginner', movementPattern: 'Squat', instructions: ['Hold dumbbell at chest', 'Squat deep', 'Drive upward'], isSystem: true },
-  { id: 'ex-9', name: 'Overhead Barbell Press', primaryMuscle: 'Shoulders', secondaryMuscles: ['Triceps'], equipmentRequired: 'Barbell', difficulty: 'intermediate', movementPattern: 'Vertical Push', instructions: ['Press bar directly overhead', 'Lockout at top'], isSystem: true },
-  { id: 'ex-10', name: 'Dumbbell Lateral Raise', primaryMuscle: 'Shoulders', secondaryMuscles: ['Traps'], equipmentRequired: 'Dumbbells', difficulty: 'beginner', movementPattern: 'Isolation', instructions: ['Raise arms out to sides to shoulder height', 'Lower with control'], isSystem: true },
-  { id: 'ex-11', name: 'Barbell Bicep Curl', primaryMuscle: 'Biceps', secondaryMuscles: ['Forearms'], equipmentRequired: 'Barbell', difficulty: 'beginner', movementPattern: 'Flexion', instructions: ['Keep elbows pinned at sides', 'Curl bar up towards chest'], isSystem: true },
-  { id: 'ex-12', name: 'Tricep Cable Pushdown', primaryMuscle: 'Triceps', secondaryMuscles: [], equipmentRequired: 'Cable', difficulty: 'beginner', movementPattern: 'Extension', instructions: ['Push bar down to full lockout', 'Squeeze triceps'], isSystem: true },
-  { id: 'ex-13', name: 'Plank', primaryMuscle: 'Core', secondaryMuscles: ['Shoulders'], equipmentRequired: 'Bodyweight', difficulty: 'beginner', movementPattern: 'Anti-Extension', instructions: ['Forearm support', 'Rigid straight line', 'Brace core'], isSystem: true },
-];
+export const FALLBACK_EXERCISES = CURATED_EXERCISE_CATALOG;
+
+/**
+ * Normalizes a raw Supabase exercise database record into a clean domain Exercise entity.
+ * Fills in structured metadata defaults if the database column has not migrated yet.
+ */
+function mapDatabaseToDomainExercise(dbRecord: any): Exercise {
+  // Check if curated catalog has additional coaching cues for this exercise name
+  const curatedMatch = CURATED_EXERCISE_CATALOG.find(
+    c => c.name.toLowerCase() === dbRecord.name?.toLowerCase()
+  );
+
+  return {
+    id: dbRecord.id,
+    name: dbRecord.name,
+    primaryMuscle: dbRecord.primary_muscle,
+    secondaryMuscles: dbRecord.secondary_muscles || [],
+    equipmentRequired: dbRecord.equipment_required,
+    difficulty: dbRecord.difficulty,
+    movementPattern: dbRecord.movement_pattern,
+    instructions: dbRecord.instructions || [],
+    cues: curatedMatch?.cues || [
+      'Maintain controlled tempo throughout the movement.',
+      'Breathe out during exertion, breathe in during eccentric lowering.',
+    ],
+    mistakesToAvoid: curatedMatch?.mistakesToAvoid || [
+      'Using excessive body momentum to heave the load.',
+    ],
+    alternativeExerciseIds: curatedMatch?.alternativeExerciseIds || [],
+    targetMusclesDetail: curatedMatch?.targetMusclesDetail || {
+      primary: [dbRecord.primary_muscle],
+      secondary: dbRecord.secondary_muscles || [],
+    },
+    muscleGraphicKey: curatedMatch?.muscleGraphicKey,
+    isSystem: dbRecord.is_system,
+  };
+}
 
 export const exerciseService = {
-  async getExercises(filters?: {
-    muscle?: string;
-    equipment?: string;
-    difficulty?: string;
-    search?: string;
-  }): Promise<Exercise[]> {
+  /**
+   * Fetch exercises from Supabase with client-side or database-side filtering.
+   * Falls back gracefully to curated local catalog when offline or in preview.
+   */
+  async getExercises(criteria?: ExerciseFilterCriteria): Promise<Exercise[]> {
     if (!isSupabaseConfigured) {
-      return this.filterExercises(FALLBACK_EXERCISES, filters);
+      return filterExerciseCatalog(CURATED_EXERCISE_CATALOG, criteria);
     }
 
     try {
       let query = supabase.from('exercises').select('*').eq('is_system', true);
 
-      if (filters?.muscle && filters.muscle !== 'All') {
-        query = query.eq('primary_muscle', filters.muscle);
+      if (criteria?.muscle && criteria.muscle.toLowerCase() !== 'all') {
+        query = query.eq('primary_muscle', criteria.muscle);
       }
-      if (filters?.equipment && filters.equipment !== 'All') {
-        query = query.eq('equipment_required', filters.equipment);
+      if (criteria?.equipment && criteria.equipment.toLowerCase() !== 'all') {
+        query = query.eq('equipment_required', criteria.equipment);
       }
-      if (filters?.difficulty && filters.difficulty !== 'All') {
-        query = query.eq('difficulty', filters.difficulty);
+      if (criteria?.difficulty && criteria.difficulty.toLowerCase() !== 'all') {
+        query = query.eq('difficulty', criteria.difficulty);
       }
-      if (filters?.search) {
-        query = query.ilike('name', `%${filters.search}%`);
+      if (criteria?.search) {
+        query = query.ilike('name', `%${criteria.search.trim()}%`);
       }
 
       const { data, error } = await query;
       if (error || !data || data.length === 0) {
-        return this.filterExercises(FALLBACK_EXERCISES, filters);
+        return filterExerciseCatalog(CURATED_EXERCISE_CATALOG, criteria);
       }
 
-      return data.map(d => ({
-        id: d.id,
-        name: d.name,
-        primaryMuscle: d.primary_muscle,
-        secondaryMuscles: d.secondary_muscles || [],
-        equipmentRequired: d.equipment_required,
-        difficulty: d.difficulty,
-        movementPattern: d.movement_pattern,
-        instructions: d.instructions || [],
-        isSystem: d.is_system,
-      }));
+      const domainExercises = data.map(mapDatabaseToDomainExercise);
+      return filterExerciseCatalog(domainExercises, criteria);
     } catch (err) {
-      logger.error('Error fetching exercises', { err });
-      return this.filterExercises(FALLBACK_EXERCISES, filters);
+      logger.error('Error fetching exercises from repository', { err });
+      return filterExerciseCatalog(CURATED_EXERCISE_CATALOG, criteria);
     }
   },
 
-  filterExercises(exercises: Exercise[], filters?: {
-    muscle?: string;
-    equipment?: string;
-    difficulty?: string;
-    search?: string;
-  }): Exercise[] {
-    return exercises.filter(ex => {
-      if (filters?.muscle && filters.muscle !== 'All' && ex.primaryMuscle.toLowerCase() !== filters.muscle.toLowerCase()) {
-        return false;
-      }
-      if (filters?.equipment && filters.equipment !== 'All' && ex.equipmentRequired.toLowerCase() !== filters.equipment.toLowerCase()) {
-        return false;
-      }
-      if (filters?.difficulty && filters.difficulty !== 'All' && ex.difficulty.toLowerCase() !== filters.difficulty.toLowerCase()) {
-        return false;
-      }
-      if (filters?.search && !ex.name.toLowerCase().includes(filters.search.toLowerCase())) {
-        return false;
-      }
-      return true;
-    });
+  /**
+   * Get an exercise by ID.
+   */
+  async getExerciseById(id: string): Promise<Exercise | null> {
+    const all = await this.getExercises();
+    return all.find(e => e.id === id) || null;
+  },
+
+  /**
+   * Get exercise alternatives using the deterministic alternatives engine.
+   */
+  async getAlternativesForExercise(target: Exercise, limit = 4): Promise<Exercise[]> {
+    const all = await this.getExercises();
+    return findExerciseAlternatives(target, all, limit);
   },
 };

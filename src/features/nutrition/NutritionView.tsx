@@ -33,8 +33,8 @@ export const NutritionView: React.FC<NutritionViewProps> = ({ nutritionProfile }
       </div>
 
       {/* Target Macros Cards */}
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-8)' }}>
-        <div className="card card-glow">
+      <div className="card card-elevated" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-8)' }}>
+        <div className="card">
           <small>Target Calories</small>
           <h2>{nutritionProfile ? nutritionProfile.targetCalories : 2200} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>kcal</span></h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Daily Energy Requirement</span>

@@ -1,33 +1,42 @@
+/* Typography Hierarchy - Athletic & Editorial */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading);
   color: var(--text-primary);
-  letter-spacing: -0.02em;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
   margin: 0;
+  letter-spacing: -0.015em;
 }
 
 h1 {
-  font-size: clamp(2rem, 5vw, 3rem);
-  font-weight: 800;
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 h2 {
-  font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+  font-family: var(--font-heading);
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 600;
 }
 
 h3 {
-  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-family: var(--font-body);
+  font-size: 1.15rem;
+  font-weight: 600;
 }
 
 h4 {
-  font-size: 1.15rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 p {
-  margin: 0 0 var(--space-4) 0;
-  line-height: 1.6;
+  margin: 0 0 var(--space-3) 0;
+  line-height: 1.55;
   color: var(--text-secondary);
+  font-size: 0.95rem;
 }
 
 p:last-child {
@@ -35,28 +44,44 @@ p:last-child {
 }
 
 small {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
-.text-gradient {
-  background: linear-gradient(135deg, #F8FAFC 0%, var(--accent-primary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.text-cyan {
-  color: var(--accent-secondary);
-}
-
-.text-lime {
-  color: var(--accent-primary);
-}
-
-.text-fire {
-  color: var(--accent-fire);
+/* Numerical performance metrics */
+.metric-number {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Functional subtle text utilities */
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-accent {
+  color: var(--accent-primary);
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.text-warning {
+  color: var(--color-warning);
+}
+
+.text-error {
+  color: var(--color-error);
 }

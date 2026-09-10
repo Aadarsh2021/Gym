@@ -81,8 +81,8 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
 
       {/* Top Banner Cards */}
       <div className="grid grid-cols-2" style={{ gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
-        {/* Streak Counter */}
-        <div className="card card-glow" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+        {/* Active Streak Hero Tile */}
+        <div className="card card-elevated" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           <div style={{ padding: '16px', background: 'rgba(255, 77, 77, 0.15)', borderRadius: 'var(--radius-xl)', color: 'var(--accent-fire)' }}>
             <Flame size={40} fill="var(--accent-fire)" />
           </div>
