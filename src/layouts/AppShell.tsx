@@ -176,11 +176,11 @@ export const AppShell: React.FC = () => {
             <span className="badge" style={{ fontSize: '0.65rem' }}>AI</span>
           </div>
           <button
-            className="btn btn-secondary btn-sm btn-block"
+            className="btn btn-ai btn-sm btn-block"
             onClick={() => setIsGuruJiOpen(true)}
-            style={{ fontSize: '0.78rem', height: '30px' }}
+            style={{ fontSize: '0.78rem', height: '32px' }}
           >
-            <Sparkles size={12} color="var(--accent-primary)" />
+            <Sparkles size={13} />
             <span>Chat with Guru Ji</span>
           </button>
         </div>
@@ -330,10 +330,16 @@ export const AppShell: React.FC = () => {
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => setIsGuruJiOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                borderColor: 'rgba(139, 92, 246, 0.35)',
+                background: 'rgba(28, 22, 50, 0.6)',
+              }}
             >
-              <Sparkles size={14} color="var(--accent-primary)" />
-              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Guru Ji Coach</span>
+              <Sparkles size={14} color="#A78BFA" />
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#E2E8F0' }}>Guru Ji Coach</span>
             </button>
 
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>

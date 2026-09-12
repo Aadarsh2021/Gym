@@ -1,4 +1,7 @@
-/* Functional, Subtle Transitions Only */
+/* ==========================================================================
+   Modern 3D & Micro-Animation Library (2026)
+   ========================================================================== */
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -10,7 +13,7 @@
 
 @keyframes slideUp {
   from {
-    transform: translateY(8px);
+    transform: translateY(12px);
     opacity: 0;
   }
   to {
@@ -19,10 +22,113 @@
   }
 }
 
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  70% {
+    transform: scale(1.02) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Breathing Neon Glow Pulse */
+@keyframes pulseGlowEmerald {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(0, 242, 157, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(0, 242, 157, 0.55);
+  }
+}
+
+@keyframes pulseGlowPurple {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(139, 92, 246, 0.55);
+  }
+}
+
+@keyframes pulseGlowGold {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(255, 184, 0, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 184, 0, 0.55);
+  }
+}
+
+/* 3D Floating Levitation */
+@keyframes float3d {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(0.5deg);
+  }
+}
+
+/* Specular Shimmer Sweep */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Live Status Dot Ring Ping */
+@keyframes pingDot {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 242, 157, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(0, 242, 157, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 242, 157, 0);
+  }
+}
+
+/* Utility Animation Classes */
 .animate-fade-in {
-  animation: fadeIn 0.15s ease-out forwards;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.18s ease-out forwards;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+.animate-pop-in {
+  animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-float {
+  animation: float3d 4s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+.animate-ping-emerald {
+  animation: pingDot 2s infinite;
+}
+

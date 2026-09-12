@@ -42,11 +42,12 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             width: glyphDimensions,
             height: glyphDimensions,
             borderRadius: 'var(--radius-sm)',
-            background: 'var(--accent-primary)',
+            background: 'linear-gradient(135deg, var(--accent-primary) 0%, #00B377 100%)',
+            boxShadow: '0 0 16px rgba(0, 242, 157, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#14120F',
+            color: '#05140E',
             flexShrink: 0,
           }}
           aria-hidden="true"
@@ -56,11 +57,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       )}
       <span
         style={{
-          fontFamily: 'var(--font-display)',
+          fontFamily: 'var(--font-display, var(--font-heading))',
           fontSize,
           fontWeight: 800,
-          letterSpacing: '-0.02em',
-          color: 'var(--text-primary)',
+          letterSpacing: '-0.03em',
+          background: 'linear-gradient(135deg, #FFFFFF 60%, #94A3B8 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
           lineHeight: 1,
         }}
       >

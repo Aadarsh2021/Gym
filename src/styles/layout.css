@@ -6,6 +6,11 @@ html, body {
   margin: 0;
   padding: 0;
   background-color: var(--bg-primary);
+  background-image:
+    radial-gradient(circle at 12% 15%, rgba(0, 242, 157, 0.06) 0%, transparent 45%),
+    radial-gradient(circle at 88% 25%, rgba(139, 92, 246, 0.07) 0%, transparent 45%),
+    radial-gradient(circle at 50% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
+  background-attachment: fixed;
   color: var(--text-primary);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -98,7 +103,7 @@ html, body {
   display: flex;
   min-height: 100vh;
   width: 100%;
-  background-color: var(--bg-primary);
+  background-color: transparent;
 }
 
 .app-sidebar {
@@ -118,7 +123,9 @@ html, body {
   position: sticky;
   top: 0;
   z-index: 110;
-  background: var(--bg-primary);
+  background: rgba(8, 9, 14, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
   height: 60px;
   align-items: center;
@@ -139,12 +146,14 @@ html, body {
   .app-sidebar {
     display: flex;
     flex-direction: column;
-    width: 270px;
-    min-width: 270px;
+    width: 275px;
+    min-width: 275px;
     height: 100vh;
     position: sticky;
     top: 0;
-    background: var(--bg-secondary);
+    background: rgba(10, 13, 22, 0.88);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     border-right: 1px solid var(--border-subtle);
     padding: var(--space-4);
     box-sizing: border-box;
@@ -181,7 +190,9 @@ html, body {
     justify-content: space-between;
     height: 56px;
     padding: 0 var(--space-6);
-    background: var(--bg-primary);
+    background: rgba(8, 9, 14, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border-subtle);
     position: sticky;
     top: 0;
@@ -230,22 +241,26 @@ html, body {
 }
 
 .sidebar-user-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(145deg, rgba(22, 29, 50, 0.72) 0%, rgba(13, 17, 30, 0.78) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   padding: var(--space-3);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   text-decoration: none;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-user-card:hover {
-  border-color: var(--border-medium);
-  background: var(--bg-surface-elevated);
-  transform: translateY(-1px);
+  border-color: rgba(0, 242, 157, 0.35);
+  background: linear-gradient(145deg, rgba(28, 38, 66, 0.85) 0%, rgba(16, 22, 40, 0.9) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.7), 0 0 18px rgba(0, 242, 157, 0.12);
 }
 
 .sidebar-user-top {
@@ -258,14 +273,15 @@ html, body {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-gold) 100%);
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #00B377 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-inverse);
+  color: var(--accent-primary-text);
   font-weight: 800;
   font-size: 1.15rem;
-  border: 2px solid var(--border-medium);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 16px rgba(0, 242, 157, 0.3);
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -309,7 +325,7 @@ html, body {
 .sidebar-nav-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   flex: 1;
 }
 
@@ -334,29 +350,39 @@ html, body {
   font-weight: 600;
   transition: all var(--transition-fast);
   border-left: 3px solid transparent;
+  position: relative;
 }
 
 .sidebar-link:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+  transform: translateX(2px);
 }
 
 .sidebar-link.active {
-  background: var(--accent-primary-muted);
+  background: linear-gradient(90deg, rgba(0, 242, 157, 0.16) 0%, rgba(0, 242, 157, 0.03) 100%);
   color: var(--accent-primary);
   border-left-color: var(--accent-primary);
   font-weight: 700;
+  box-shadow: inset 0 0 16px rgba(0, 242, 157, 0.06);
 }
 
 .sidebar-coach-banner {
-  background: linear-gradient(145deg, var(--bg-surface) 0%, var(--bg-primary) 100%);
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(145deg, rgba(25, 23, 48, 0.8) 0%, rgba(14, 15, 30, 0.9) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.28);
   border-radius: var(--radius-md);
   padding: var(--space-3);
   margin-top: auto;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.sidebar-coach-banner:hover {
+  transform: translateY(-2px);
+  border-color: rgba(139, 92, 246, 0.5);
 }
 
 .sidebar-coach-banner::before {
@@ -366,7 +392,7 @@ html, body {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--accent-primary), var(--accent-gold));
+  background: linear-gradient(90deg, #8B5CF6, #00F29D);
 }
 
 .sidebar-bottom {
@@ -377,26 +403,42 @@ html, body {
   justify-content: space-between;
 }
 
-/* Dashboard Welcome Banner */
+/* ==========================================================================
+   Dashboard Welcome Banner & Glance Strip (3D Glass)
+   ========================================================================== */
+
 .dashboard-welcome-banner {
-  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-surface) 100%);
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(135deg, rgba(22, 29, 52, 0.82) 0%, rgba(13, 17, 32, 0.88) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-6);
   margin-bottom: var(--space-6);
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 18px 45px -10px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.dashboard-welcome-banner::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(0, 242, 157, 0.18) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .dashboard-welcome-banner::after {
   content: '';
   position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 160px;
-  height: 160px;
-  background: radial-gradient(circle, var(--accent-primary-muted) 0%, transparent 70%);
+  bottom: -40px;
+  left: 30%;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.14) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -419,19 +461,22 @@ html, body {
   }
 }
 
-/* Bottom Nav Bar (Mobile Ergonomics) */
+/* Bottom Nav Bar (Mobile Ergonomics - Glass Dock) */
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   height: var(--bottom-nav-height);
-  background-color: var(--bg-surface-elevated);
-  border-top: 1px solid var(--border-subtle);
+  background: rgba(10, 14, 25, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-medium);
   display: flex;
   align-items: center;
   justify-content: space-around;
   z-index: 100;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .bottom-nav .nav-tab {
@@ -441,15 +486,18 @@ html, body {
   justify-content: center;
   gap: 3px;
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
   padding: var(--space-1) var(--space-2);
   min-width: 52px;
   text-decoration: none;
+  transition: all var(--transition-fast);
 }
 
 .bottom-nav .nav-tab.active {
   color: var(--accent-primary);
+  transform: translateY(-2px);
+  text-shadow: 0 0 12px rgba(0, 242, 157, 0.5);
 }
 
 @media (max-width: 380px) {
