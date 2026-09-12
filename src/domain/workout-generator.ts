@@ -26,7 +26,7 @@ export interface GeneratedPlan {
  * Non-medical disclaimer regarding conservative movement modifications.
  */
 export const LIMITATIONS_DISCLAIMER =
-  'APEXFIT movement recommendations are general biomechanical exercise modifications based on joint stress distribution, NOT medical diagnosis, treatment, or rehabilitation. If experiencing pain, consult a physician or licensed physiotherapist.';
+  'FitSphere movement recommendations are general biomechanical exercise modifications based on joint stress distribution, NOT medical diagnosis, treatment, or rehabilitation. If experiencing pain, consult a physician or licensed physiotherapist.';
 
 /**
  * Conservative movement preference suggestions.

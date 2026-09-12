@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 type Theme = "dark" | "light";
 
@@ -10,14 +10,24 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const STORAGE_KEY = "apexfit_theme";
+const STORAGE_KEY = "fitness_app_theme";
+const LEGACY_STORAGE_KEY = "apexfit_theme";
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    // 1. Try saved preference
+    // 1. Try new key first
     const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
     if (saved === "light" || saved === "dark") return saved;
-    // 2. System preference fallback
+
+    // 2. Migrate from legacy key (APEXFIT → FitSphere) — preserves user's dark/light preference
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY) as Theme | null;
+    if (legacy === "light" || legacy === "dark") {
+      localStorage.setItem(STORAGE_KEY, legacy);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      return legacy;
+    }
+
+    // 3. System preference fallback
     if (window.matchMedia("(prefers-color-scheme: light)").matches) return "light";
     return "dark";
   });

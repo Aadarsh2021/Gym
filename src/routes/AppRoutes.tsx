@@ -34,6 +34,7 @@ import { ActiveWorkoutRouteView } from '@/features/workout-tracker/ActiveWorkout
 import { NutritionRouteView } from '@/features/nutrition/NutritionRouteView';
 import { ProgressView } from '@/features/progress/ProgressView';
 import { ProfileView } from '@/features/profile/ProfileView';
+import { StreaksRouteView } from '@/features/streaks/StreaksRouteView';
 
 // Route Guard
 import { ProtectedRoute } from './ProtectedRoute';
@@ -130,6 +131,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="exercises" element={<ExerciseLibraryView />} />
         <Route path="nutrition" element={<NutritionRouteView />} />
         <Route path="progress" element={<ProgressView />} />
+        <Route path="streaks" element={<StreaksRouteView />} />
         <Route path="profile" element={<ProfileView />} />
       </Route>
 

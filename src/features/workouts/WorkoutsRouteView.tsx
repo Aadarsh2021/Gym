@@ -11,6 +11,9 @@ export const WorkoutsRouteView: React.FC = () => {
       onStartWorkoutWithDay={(day: WorkoutPlanDay) => {
         navigate(`/app/workouts/active?dayId=${day.id}`);
       }}
+      onStartQuickWorkoutWithDay={(day: WorkoutPlanDay) => {
+        navigate(`/app/workouts/active?dayId=${day.id}&mode=quick`);
+      }}
     />
   );
 };

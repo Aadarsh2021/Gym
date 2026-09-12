@@ -77,6 +77,9 @@ export const profileService = {
         equipment: data.equipment || [],
         dietaryPreference: data.dietary_preference,
         limitations: data.limitations || [],
+        gymLatitude: data.gym_latitude ? Number(data.gym_latitude) : null,
+        gymLongitude: data.gym_longitude ? Number(data.gym_longitude) : null,
+        gymRadiusMeters: data.gym_radius_meters ? Number(data.gym_radius_meters) : 200,
       };
     } catch (err) {
       logger.error('Error fetching fitness profile', { err });
@@ -121,6 +124,9 @@ export const profileService = {
           equipment: profile.equipment,
           dietary_preference: profile.dietaryPreference,
           limitations: profile.limitations,
+          gym_latitude: profile.gymLatitude ?? null,
+          gym_longitude: profile.gymLongitude ?? null,
+          gym_radius_meters: profile.gymRadiusMeters ?? 200,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
@@ -128,11 +134,49 @@ export const profileService = {
         logger.error('Error upserting fitness profile', { error });
         return { success: false, error: error.message };
       }
+
       return { success: true };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save fitness profile';
       logger.error('Exception in saveFitnessProfile', { err });
       return { success: false, error: message };
+    }
+  },
+
+  async saveGymLocation(
+    userId: string,
+    latitude: number | null,
+    longitude: number | null,
+    radiusMeters: number = 200
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured) {
+      const stored = localStorage.getItem(`fitness_profile_${userId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        localStorage.setItem(
+          `fitness_profile_${userId}`,
+          JSON.stringify({ ...parsed, gymLatitude: latitude, gymLongitude: longitude, gymRadiusMeters: radiusMeters })
+        );
+      }
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('fitness_profiles')
+        .update({
+          gym_latitude: latitude,
+          gym_longitude: longitude,
+          gym_radius_meters: radiusMeters,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update gym location';
+      return { success: false, error: msg };
     }
   },
 

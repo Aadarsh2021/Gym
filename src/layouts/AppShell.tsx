@@ -77,20 +77,27 @@ export const AppShell: React.FC = () => {
     session.profile?.displayName ||
     session.user?.email?.split('@')[0] ||
     'Athlete';
-  const userEmail = session.user?.email || 'athlete@apexfit.local';
+  const userEmail = session.user?.email || 'athlete@fitness.local';
   const avatarUrl = session.profile?.avatarUrl;
   const initial = (displayName.charAt(0) || 'A').toUpperCase();
 
+  // Mobile bottom nav: Home, Workouts, Nutrition, Streaks, Progress
+  // (Exercises accessible from Workouts hub and desktop sidebar)
   const primaryNavItems = [
+    { to: '/app', label: 'Home', icon: Home, end: true },
+    { to: '/app/workouts', label: 'Workouts', icon: Dumbbell, end: false },
+    { to: '/app/nutrition', label: 'Nutrition', icon: Utensils, end: false },
+    { to: '/app/streaks', label: 'Streaks', icon: Flame, end: false },
+    { to: '/app/progress', label: 'Progress', icon: TrendingUp, end: false },
+  ];
+
+  const sidebarNavItems = [
     { to: '/app', label: 'Home', icon: Home, end: true },
     { to: '/app/workouts', label: 'Workouts', icon: Dumbbell, end: false },
     { to: '/app/exercises', label: 'Exercises', icon: BookOpen, end: false },
     { to: '/app/nutrition', label: 'Nutrition', icon: Utensils, end: false },
     { to: '/app/progress', label: 'Progress', icon: TrendingUp, end: false },
-  ];
-
-  const sidebarNavItems = [
-    ...primaryNavItems,
+    { to: '/app/streaks', label: 'Streaks & Rewards', icon: Flame, end: false },
     { to: '/app/profile', label: 'Profile & Settings', icon: Settings, end: false },
   ];
 

@@ -150,10 +150,12 @@ export const PricingView: React.FC = () => {
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                 {[
                   'Exercise & Equipment Alternatives (Biomechanically matched)',
+                  'Budget-Based Meal Planning (INR cost analysis & grocery optimization)',
                   'Multi-Attribute Meal Generator (Slot, macro, & serving calibrated)',
                   'Daily Nutrient Target vs Consumed Comparison (Live telemetry)',
                   'Mixed Meal Analysis & Custom Recipe Calculations',
                   'Meal Replacement Alternatives (Flexible substitution)',
+                  '7-Day Rotating Meal Schedule',
                   'High-Resolution Strength & Volume Progress Curves',
                 ].map((item, i) => (
                   <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
@@ -190,7 +192,7 @@ export const PricingView: React.FC = () => {
         </div>
         <h4 style={{ margin: '0 0 var(--space-2)', fontSize: '1.1rem' }}>Planned for Phase 2 (V2)</h4>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>
-          The following capabilities are reserved for Phase 2 and are not active in Phase 1: <strong>7-Day Meal Planning</strong> (multi-day rotating dietary schedules) and <strong>Guru Ji Real-Time AI Coaching</strong>. All Phase 1 training, nutrition, exercise substitution, and tracking features are fully accessible without subscription paywalls today.
+          The following capability is reserved for Phase 2 and is not active in Phase 1: <strong>Guru Ji Real-Time AI Coaching</strong> — personalized AI-driven training and nutrition guidance. All Phase 1 training, nutrition, exercise substitution, and tracking features (including 7-day meal scheduling) are fully accessible without subscription paywalls today.
         </p>
       </div>
     </div>

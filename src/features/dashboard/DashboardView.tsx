@@ -9,35 +9,50 @@ import {
   CheckCircle2,
   Moon,
   ArrowRight,
+  Activity,
+  Trophy,
+  Sparkles,
+  MapPin,
+  AlertTriangle,
+  Loader2,
+  X,
 } from 'lucide-react';
 import { WorkoutPlan, WorkoutSession, WorkoutPlanDay } from '@/types/workout.types';
 import { UserStreak } from '@/types/streak.types';
 import { NutritionProfile, DailyMacroTotals } from '@/types/nutrition.types';
+import { FitnessProfile } from '@/types/user.types';
 import { AuthSession } from '@/services/auth.service';
 import { getTodaysScheduledWorkout } from '@/domain/scheduled-workout';
 import { streakService } from '@/services/streak.service';
+import { calculateWorkoutSummary } from '@/domain/workout-tonnage';
+import { isToday, getTodayIST } from '@/utils/date';
+import { isWithinGymRadius } from '@/utils/geo';
 import { PRODUCT_NAME } from '@/config/branding';
 
 interface DashboardViewProps {
   activePlan: WorkoutPlan | null;
   streak: UserStreak;
   nutritionProfile: NutritionProfile | null;
+  fitnessProfile?: FitnessProfile | null;
   dailyTotals?: DailyMacroTotals;
   recentSessions?: WorkoutSession[];
   coins?: number;
   session?: AuthSession;
-  onStartWorkout: (day?: WorkoutPlanDay) => void;
+  onStartWorkout: (day?: WorkoutPlanDay, gymVerified?: boolean) => void;
+  onStartQuickWorkout?: (day?: WorkoutPlanDay, gymVerified?: boolean) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   activePlan,
   streak,
   nutritionProfile,
+  fitnessProfile,
   dailyTotals,
   recentSessions = [],
   coins = 0,
   session,
   onStartWorkout,
+  onStartQuickWorkout,
 }) => {
   // Pure deterministic scheduler calculation
   const scheduleResult = useMemo(() => {
@@ -51,11 +66,83 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const scheduledDay = scheduleResult.scheduledDay;
   const [restDayLogged, setRestDayLogged] = useState(false);
 
+  // Gym Geofencing Check State
+  const [gymModalOpen, setGymModalOpen] = useState(false);
+  const [gymCheckStatus, setGymCheckStatus] = useState<'checking' | 'verified' | 'outside' | 'error'>('checking');
+  const [gymDistanceMeters, setGymDistanceMeters] = useState<number | null>(null);
+  const [pendingWorkoutDay, setPendingWorkoutDay] = useState<WorkoutPlanDay | undefined>(undefined);
+  const [pendingWorkoutMode, setPendingWorkoutMode] = useState<'standard' | 'quick'>('standard');
+
+  const performGymVerification = (day?: WorkoutPlanDay, mode: 'standard' | 'quick' = 'standard') => {
+    setPendingWorkoutDay(day);
+    setPendingWorkoutMode(mode);
+    setGymModalOpen(true);
+    setGymCheckStatus('checking');
+    setGymDistanceMeters(null);
+
+    if (!navigator.geolocation) {
+      setGymCheckStatus('error');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude, longitude } = pos.coords;
+        const res = isWithinGymRadius(
+          latitude,
+          longitude,
+          fitnessProfile!.gymLatitude!,
+          fitnessProfile!.gymLongitude!,
+          fitnessProfile!.gymRadiusMeters || 200
+        );
+        setGymDistanceMeters(res.distanceMeters);
+        setGymCheckStatus(res.isNearby ? 'verified' : 'outside');
+      },
+      () => {
+        setGymCheckStatus('error');
+      },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
+    );
+  };
+
+  const handleStartWorkoutWithCheck = (day?: WorkoutPlanDay, mode: 'standard' | 'quick' = 'standard') => {
+    if (fitnessProfile?.gymLatitude && fitnessProfile?.gymLongitude) {
+      performGymVerification(day, mode);
+    } else {
+      if (mode === 'quick' && onStartQuickWorkout) {
+        onStartQuickWorkout(day, false);
+      } else {
+        onStartWorkout(day, false);
+      }
+    }
+  };
+
+  const handleConfirmStart = () => {
+    setGymModalOpen(false);
+    const isVerified = gymCheckStatus === 'verified';
+    if (pendingWorkoutMode === 'quick' && onStartQuickWorkout) {
+      onStartQuickWorkout(pendingWorkoutDay, isVerified);
+    } else {
+      onStartWorkout(pendingWorkoutDay, isVerified);
+    }
+  };
+
   const handleMarkRestDay = async () => {
     if (!session?.user?.id) return;
     await streakService.logRestDay(session.user.id);
     setRestDayLogged(true);
   };
+
+  // Today's Fitness Summary Aggregation (IST Date Matching)
+  const todaySession = useMemo(() => {
+    return recentSessions.find(s => isToday(s.startedAt) && s.status === 'completed');
+  }, [recentSessions]);
+
+  const workoutSummary = useMemo(() => {
+    return todaySession ? calculateWorkoutSummary(todaySession) : null;
+  }, [todaySession]);
+
+  const hasActivityToday = Boolean(todaySession || (dailyTotals && dailyTotals.entriesCount > 0));
 
   // User details & Greeting
   const displayName =
@@ -155,7 +242,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="card card-interactive"
           onClick={() => {
             if (scheduledDay && scheduleResult.status === 'scheduled') {
-              onStartWorkout(scheduledDay);
+              handleStartWorkoutWithCheck(scheduledDay, 'standard');
             }
           }}
           style={{
@@ -236,7 +323,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Card 3: Consistency Streak */}
         <Link
-          to="/app/progress"
+          to="/app/streaks"
           className="card card-interactive"
           style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}
         >
@@ -414,10 +501,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                       <button
                         className="btn btn-primary btn-sm"
-                        onClick={() => onStartWorkout(scheduleResult.missedPreviousWorkout!)}
+                        onClick={() => handleStartWorkoutWithCheck(scheduleResult.missedPreviousWorkout!, 'standard')}
                       >
                         Make Up Session
                       </button>
+                      {onStartQuickWorkout && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleStartWorkoutWithCheck(scheduleResult.missedPreviousWorkout!, 'quick')}
+                          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <Zap size={14} color="#eab308" /> Quick (15m)
+                        </button>
+                      )}
                       <button
                         className="btn btn-secondary btn-sm"
                         onClick={handleMarkRestDay}
@@ -475,9 +571,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Action Button */}
           {scheduleResult.status === 'scheduled' && scheduledDay && (
-            <button className="btn btn-primary btn-block btn-lg" onClick={() => onStartWorkout(scheduledDay)}>
-              <Play size={20} fill="var(--accent-primary-text)" /> Start Today's Workout
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+              <button className="btn btn-primary btn-block btn-lg" onClick={() => handleStartWorkoutWithCheck(scheduledDay, 'standard')}>
+                <Play size={20} fill="var(--accent-primary-text)" /> Start Today's Workout
+              </button>
+              {onStartQuickWorkout && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-block"
+                  onClick={() => handleStartWorkoutWithCheck(scheduledDay, 'quick')}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.9rem' }}
+                >
+                  <Zap size={16} color="#eab308" /> Short on Time? 15-Min Quick Workout
+                </button>
+              )}
+            </div>
           )}
 
           {scheduleResult.status === 'completed_today' && (
@@ -579,6 +687,370 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </Link>
       </div>
+
+      {/* TODAY'S PERFORMANCE RECAP / DAILY FITNESS SUMMARY */}
+      <div style={{ marginTop: 'var(--space-8)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <Activity size={22} color="var(--accent-primary)" />
+            <h2 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700 }}>Today's Fitness Summary</h2>
+          </div>
+          <span className="badge badge-accent" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
+            TODAY'S RECAP
+          </span>
+        </div>
+
+        {!hasActivityToday ? (
+          <div className="card" style={{ padding: 'var(--space-6)', textAlign: 'center', background: 'var(--bg-surface)', borderColor: 'var(--border-subtle)' }}>
+            <Sparkles size={28} color="var(--accent-primary)" style={{ margin: '0 auto var(--space-2)' }} />
+            <h4 style={{ margin: '0 0 var(--space-1)', fontSize: '1.05rem' }}>No Activity Recorded Today Yet</h4>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: 0, maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto' }}>
+              Complete today's scheduled training session or log your meals in the nutrition diary to generate your daily performance recap.
+            </p>
+          </div>
+        ) : (
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 'var(--space-4)' }}>
+            {/* 1. Workout Recap */}
+            <div className="card" style={{ padding: 'var(--space-5)', background: 'var(--bg-surface)', borderColor: 'var(--border-subtle)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                    Training Session
+                  </span>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    {todaySession?.gymVerified && (
+                      <span className="badge" style={{ fontSize: '0.68rem', background: 'rgba(127, 166, 107, 0.15)', color: 'var(--color-success)', border: '1px solid rgba(127, 166, 107, 0.3)' }}>
+                        ✓ Gym Verified
+                      </span>
+                    )}
+                    {todaySession ? (
+                      <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Completed</span>
+                    ) : (
+                      <span className="badge" style={{ fontSize: '0.7rem' }}>Pending</span>
+                    )}
+                  </div>
+                </div>
+
+                {todaySession ? (
+                  <>
+                    <h4 style={{ margin: '0 0 var(--space-2)', fontSize: '1.1rem', color: 'var(--text-primary)' }}>
+                      {todaySession.name}
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+                      <div style={{ padding: 'var(--space-2)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                        <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Duration</small>
+                        <strong style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)' }}>
+                          {Math.round(todaySession.durationSeconds / 60)}m
+                        </strong>
+                      </div>
+                      <div style={{ padding: 'var(--space-2)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                        <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Sets Done</small>
+                        <strong style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)' }}>
+                          {workoutSummary?.totalCompletedSets || 0}
+                        </strong>
+                      </div>
+                      <div style={{ padding: 'var(--space-2)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                        <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', display: 'block' }}>Volume</small>
+                        <strong style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)' }}>
+                          {workoutSummary?.totalVolumeKg || 0} kg
+                        </strong>
+                      </div>
+                    </div>
+
+                    {/* Exertion Feedback Rating */}
+                    {todaySession.sessionRating && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: 'var(--space-2)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-secondary)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        <span>Workout Feedback:</span>
+                        <strong style={{ textTransform: 'capitalize', color: todaySession.sessionRating === 'exhausting' ? 'var(--color-warning)' : todaySession.sessionRating === 'easy' ? 'var(--color-success)' : 'var(--accent-primary)' }}>
+                          {todaySession.sessionRating === 'easy' ? 'Easy (Recovery)' : todaySession.sessionRating === 'normal' ? 'Normal (Target RPE)' : 'Exhausting (Max Effort)'}
+                        </strong>
+                      </div>
+                    )}
+
+                    {workoutSummary && workoutSummary.newPersonalRecords.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(234, 179, 8, 0.12)', borderRadius: 'var(--radius-sm)', color: '#eab308', fontSize: '0.8rem', fontWeight: 600 }}>
+                        <Trophy size={14} /> {workoutSummary.newPersonalRecords.length} New Personal Record{workoutSummary.newPersonalRecords.length > 1 ? 's' : ''}!
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: 'var(--space-2) 0 var(--space-4)' }}>
+                    No training session logged today yet. Launch your workout to build consistency.
+                  </p>
+                )}
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
+                <Link to="/app/workouts" style={{ textDecoration: 'none', color: 'var(--accent-primary)', fontSize: '0.84rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>{todaySession ? 'View Full Session Logs' : 'Open Workout Hub'}</span>
+                  <ChevronRight size={16} />
+                </Link>
+              </div>
+            </div>
+
+            {/* 2. Nutrition Intake Recap */}
+            <div className="card" style={{ padding: 'var(--space-5)', background: 'var(--bg-surface)', borderColor: 'var(--border-subtle)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                    Nutrition & Macros
+                  </span>
+                  <span className="badge badge-accent" style={{ fontSize: '0.7rem' }}>
+                    {dailyTotals?.entriesCount || 0} Items Logged
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                  {/* Calorie Bar */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '4px' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Energy</span>
+                      <span style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+                        {dailyTotals?.totalCalories || 0} / {nutritionProfile?.targetCalories || 2200} kcal
+                      </span>
+                    </div>
+                    <div style={{ height: '7px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${Math.min(100, Math.round(((dailyTotals?.totalCalories || 0) / (nutritionProfile?.targetCalories || 2200)) * 100))}%`,
+                          background: 'var(--accent-primary)',
+                          borderRadius: 'var(--radius-full)',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Protein Bar */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '4px' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Protein Target</span>
+                      <span style={{ fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--color-success)' }}>
+                        {dailyTotals?.totalProteinG || 0}g / {nutritionProfile?.targetProteinG || 140}g
+                      </span>
+                    </div>
+                    <div style={{ height: '7px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${Math.min(100, Math.round(((dailyTotals?.totalProteinG || 0) / (nutritionProfile?.targetProteinG || 140)) * 100))}%`,
+                          background: 'var(--color-success)',
+                          borderRadius: 'var(--radius-full)',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mini Macro Breakdown: Carbs, Fat, Fiber */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-2)', marginTop: '2px' }}>
+                    <div style={{ padding: '6px 8px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                      <small style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block' }}>Carbs</small>
+                      <strong style={{ fontSize: '0.84rem', fontFamily: 'var(--font-mono)' }}>{dailyTotals?.totalCarbsG ?? 0}g</strong>
+                    </div>
+                    <div style={{ padding: '6px 8px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                      <small style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block' }}>Fat</small>
+                      <strong style={{ fontSize: '0.84rem', fontFamily: 'var(--font-mono)' }}>{dailyTotals?.totalFatG ?? 0}g</strong>
+                    </div>
+                    <div style={{ padding: '6px 8px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                      <small style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block' }}>Fibre</small>
+                      <strong style={{ fontSize: '0.84rem', fontFamily: 'var(--font-mono)' }}>{dailyTotals?.totalFiberG ?? 0}g</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
+                <Link to="/app/nutrition" style={{ textDecoration: 'none', color: 'var(--accent-primary)', fontSize: '0.84rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Open Food Diary</span>
+                  <ChevronRight size={16} />
+                </Link>
+              </div>
+            </div>
+
+            {/* 3. Consistency & Streak Recap */}
+            <div className="card" style={{ padding: 'var(--space-5)', background: 'var(--bg-surface)', borderColor: 'var(--border-subtle)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                    Consistency & Rewards
+                  </span>
+                  <span className="badge badge-accent" style={{ fontSize: '0.7rem' }}>
+                    {coins} Coins
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                  <div style={{ padding: '12px', background: 'var(--accent-primary-muted)', borderRadius: 'var(--radius-md)', color: 'var(--accent-primary)' }}>
+                    <Flame size={28} fill="var(--accent-primary)" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                      {streak.currentStreak} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Day Streak</span>
+                    </div>
+                    <small style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                      Longest: {streak.longestStreak} consecutive days
+                    </small>
+                  </div>
+                </div>
+
+                <div style={{ padding: 'var(--space-3)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}>
+                    {todaySession || streak.lastActivityDate === getTodayIST() ? (
+                      <>
+                        <CheckCircle2 size={16} color="var(--color-success)" />
+                        <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>Streak preserved for today!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={16} color="#eab308" />
+                        <span style={{ color: 'var(--text-secondary)' }}>Log session today to maintain streak</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
+                <Link to="/app/streaks" style={{ textDecoration: 'none', color: 'var(--accent-primary)', fontSize: '0.84rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>View Rewards & Coin Ledger</span>
+                  <ChevronRight size={16} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Gym Location Verification Soft Check Modal */}
+      {gymModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: 'var(--space-4)',
+          }}
+        >
+          <div
+            className="card card-elevated animate-fade-in"
+            style={{
+              maxWidth: '440px',
+              width: '100%',
+              padding: 'var(--space-6)',
+              position: 'relative',
+              boxShadow: 'var(--shadow-xl)',
+              border: '1px solid var(--border-medium)',
+              background: 'var(--bg-card)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <MapPin size={20} color="var(--accent-primary)" />
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Gym Check-In</h3>
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setGymModalOpen(false)}
+                style={{ padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 'var(--space-6)', textAlign: 'center', padding: 'var(--space-4) 0' }}>
+              {gymCheckStatus === 'checking' && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  <Loader2 size={36} className="animate-spin" color="var(--accent-primary)" />
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                    Verifying proximity to your registered gym...
+                  </p>
+                </div>
+              )}
+
+              {gymCheckStatus === 'verified' && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--color-success-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CheckCircle2 size={32} color="var(--color-success)" />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 var(--space-1)', color: 'var(--color-success)', fontWeight: 700 }}>
+                      Facility Check-In Verified!
+                    </h4>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                      {gymDistanceMeters != null
+                        ? `You are checked in (${gymDistanceMeters}m from pinned coordinates).`
+                        : 'You are within your facility radius.'}{' '}
+                      Ready for high-intensity training!
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {gymCheckStatus === 'outside' && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(234, 179, 8, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <AlertTriangle size={30} color="#eab308" />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 var(--space-1)', color: 'var(--text-primary)', fontWeight: 700 }}>
+                      Away from Registered Gym
+                    </h4>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                      You appear to be {gymDistanceMeters}m away from your gym (target radius: {fitnessProfile?.gymRadiusMeters || 200}m). Training away or at home today?
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {gymCheckStatus === 'error' && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <MapPin size={28} color="var(--text-muted)" />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 var(--space-1)', color: 'var(--text-primary)', fontWeight: 700 }}>
+                      GPS Unavailable
+                    </h4>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                      Could not get current GPS location. You can proceed directly with your workout.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              {(gymCheckStatus === 'outside' || gymCheckStatus === 'error') && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ flex: 1 }}
+                  onClick={() => performGymVerification(pendingWorkoutDay, pendingWorkoutMode)}
+                >
+                  Retry GPS
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ flex: 2 }}
+                onClick={handleConfirmStart}
+              >
+                {gymCheckStatus === 'verified' ? 'Start Session Now' : 'Proceed to Workout'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -12,18 +12,21 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
   const [streak, setStreak] = useState<UserStreak>({ currentStreak: 0, longestStreak: 0, lastActivityDate: null });
   const [coins, setCoins] = useState<number>(0);
   const [transactions, setTransactions] = useState<FitnessCoinTransaction[]>([]);
+  const [revivesRemaining, setRevivesRemaining] = useState<number>(3);
   const [reviving, setReviving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const loadData = async () => {
-    const [s, c, t] = await Promise.all([
+    const [s, c, t, rStatus] = await Promise.all([
       streakService.getStreak(userId),
       streakService.getCoinBalance(userId),
       streakService.getCoinHistory(userId),
+      streakService.getMonthlyRevivesStatus(userId),
     ]);
     setStreak(s);
     setCoins(c);
     setTransactions(t);
+    setRevivesRemaining(rStatus.remaining);
   };
 
   useEffect(() => {
@@ -35,11 +38,14 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
     setMessage(null);
     try {
       const key = `revive-${Date.now()}`;
-      const res = await streakService.useRevive(key);
+      const res = await streakService.useRevive(key, userId);
       if (res.success) {
-        setMessage('Streak successfully restored!');
+        setMessage(`Streak successfully restored! ${res.revivesRemaining ?? Math.max(0, revivesRemaining - 1)} revives remaining this month.`);
         await loadData();
       } else {
+        if (res.isQuotaExceeded) {
+          setRevivesRemaining(0);
+        }
         setMessage(res.error || 'Failed to use revive.');
       }
     } catch {
@@ -117,20 +123,41 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
             <Shield size={24} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.05rem', marginBottom: '2px' }}>Free Streak Revives</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+              <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Free Streak Revives</h3>
+              <span className={`badge ${revivesRemaining > 0 ? 'badge-accent' : ''}`} style={{ fontSize: '0.72rem' }}>
+                {revivesRemaining} of 3 Available This Month
+              </span>
+            </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-              Get 3 free revives every calendar month if you accidentally missed a workout day.
+              {revivesRemaining > 0
+                ? 'Get 3 free revives every calendar month (IST) if you accidentally missed a workout day.'
+                : 'Monthly free revives exhausted (0/3). Additional streak revives are available as a paid add-on.'}
             </p>
           </div>
         </div>
 
-        <button
-          className="btn btn-secondary"
-          onClick={handleUseRevive}
-          disabled={reviving}
-        >
-          {reviving ? <span className="spinner" /> : <><RotateCcw size={15} /> Restore Streak</>}
-        </button>
+        {revivesRemaining > 0 ? (
+          <button
+            className="btn btn-secondary"
+            onClick={handleUseRevive}
+            disabled={reviving}
+          >
+            {reviving ? <span className="spinner" /> : <><RotateCcw size={15} /> Restore Streak ({revivesRemaining} Free Left)</>}
+          </button>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <span className="badge badge-warning" style={{ fontSize: '0.72rem' }}>Add-On Required</span>
+            <button
+              className="btn btn-secondary"
+              disabled
+              title="You have used all 3 free monthly revives. Paid add-on pack required."
+              style={{ opacity: 0.6, cursor: 'not-allowed' }}
+            >
+              Paid Add-On (Coming Soon)
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Milestones */}

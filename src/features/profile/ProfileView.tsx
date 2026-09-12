@@ -12,6 +12,8 @@ import {
   Bell,
   Clock,
   Info,
+  MapPin,
+  Navigation,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { profileService } from '@/services/profile.service';
@@ -35,7 +37,7 @@ export const ProfileView: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Form state
+  // Form fields
   const [weightKg, setWeightKg] = useState<number>(70);
   const [heightCm, setHeightCm] = useState<number>(175);
   const [age, setAge] = useState<number>(25);
@@ -45,6 +47,14 @@ export const ProfileView: React.FC = () => {
   const [daysPerWeek, setDaysPerWeek] = useState<number>(4);
   const [equipment, setEquipment] = useState<string[]>(['Barbell', 'Dumbbells', 'Bodyweight']);
   const [limitations, setLimitations] = useState<string[]>(['None']);
+
+  // Gym Location Verification State
+  const [gymLatitude, setGymLatitude] = useState<number | null>(null);
+  const [gymLongitude, setGymLongitude] = useState<number | null>(null);
+  const [gymRadiusMeters, setGymRadiusMeters] = useState<number>(200);
+  const [capturingLocation, setCapturingLocation] = useState<boolean>(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationSuccess, setLocationSuccess] = useState<string | null>(null);
 
   // Workout Alarm & Reminder state
   const [reminderId, setReminderId] = useState<string | undefined>(undefined);
@@ -78,6 +88,9 @@ export const ProfileView: React.FC = () => {
           if (profile.limitations && profile.limitations.length > 0) {
             setLimitations(profile.limitations);
           }
+          if (profile.gymLatitude) setGymLatitude(profile.gymLatitude);
+          if (profile.gymLongitude) setGymLongitude(profile.gymLongitude);
+          if (profile.gymRadiusMeters) setGymRadiusMeters(profile.gymRadiusMeters);
         }
 
         if (isMounted && reminderPref) {
@@ -98,6 +111,37 @@ export const ProfileView: React.FC = () => {
       isMounted = false;
     };
   }, [userId]);
+
+  const handleCaptureCurrentLocation = () => {
+    setLocationError(null);
+    setLocationSuccess(null);
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      return;
+    }
+    setCapturingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        const lat = Number(position.coords.latitude.toFixed(6));
+        const lng = Number(position.coords.longitude.toFixed(6));
+        setGymLatitude(lat);
+        setGymLongitude(lng);
+        setCapturingLocation(false);
+        setLocationSuccess(`Gym coordinates pinned: ${lat}, ${lng}. Click Save Profile Changes below to persist.`);
+      },
+      err => {
+        setCapturingLocation(false);
+        setLocationError(`Location request failed: ${err.message}. Please allow location access in your browser.`);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  const handleClearGymLocation = () => {
+    setGymLatitude(null);
+    setGymLongitude(null);
+    setLocationSuccess('Gym location cleared. Click Save Profile Changes to persist.');
+  };
 
   const toggleLimitation = (item: string) => {
     if (item === 'None') {
@@ -191,6 +235,9 @@ export const ProfileView: React.FC = () => {
         equipment,
         dietaryPreference: 'vegetarian',
         limitations,
+        gymLatitude,
+        gymLongitude,
+        gymRadiusMeters,
       });
 
       // 2. Synchronize calculated nutrition profile
@@ -771,6 +818,90 @@ export const ProfileView: React.FC = () => {
               <strong style={{ color: 'var(--text-primary)' }}>Session Notification Notice: </strong>
               Workout reminders trigger reliably while your application or browser tab is active. Operating system background push across sleeping devices requires native OS push infrastructure. Your workout tracking, PR records, and streak scores never depend on reminders.
             </span>
+          </div>
+        </div>
+
+        {/* Gym Facility Location Verification Card */}
+        <div className="card" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-5)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <MapPin size={20} color="var(--accent-primary)" />
+              <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Gym Location Verification</h3>
+            </div>
+            <span
+              className={`badge ${gymLatitude && gymLongitude ? 'badge-success' : ''}`}
+              style={{ fontSize: '0.72rem' }}
+            >
+              {gymLatitude && gymLongitude ? 'Location Pinned' : 'Not Configured'}
+            </span>
+          </div>
+
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', lineHeight: 1.5, marginBottom: 'var(--space-4)' }}>
+            Optionally save the GPS coordinates of your gym or home training center. FitSphere uses this for soft proximity check-ins when starting a session.
+          </p>
+
+          {locationSuccess && (
+            <div style={{ padding: 'var(--space-3)', background: 'var(--color-success-muted)', color: 'var(--color-success)', borderRadius: 'var(--radius-sm)', marginBottom: 'var(--space-3)', fontSize: '0.84rem' }}>
+              {locationSuccess}
+            </div>
+          )}
+
+          {locationError && (
+            <div style={{ padding: 'var(--space-3)', background: 'var(--color-error-muted)', color: 'var(--color-error)', borderRadius: 'var(--radius-sm)', marginBottom: 'var(--space-3)', fontSize: '0.84rem' }}>
+              {locationError}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+            <div style={{ padding: 'var(--space-3)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                Saved Coordinates
+              </span>
+              <span style={{ fontWeight: 600, fontSize: '0.9rem', fontFamily: 'var(--font-mono)', color: gymLatitude ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                {gymLatitude && gymLongitude ? `${gymLatitude.toFixed(4)}°N, ${gymLongitude.toFixed(4)}°E` : 'No location saved'}
+              </span>
+            </div>
+
+            <div>
+              <label className="label" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Verification Radius
+              </label>
+              <select
+                className="select select-sm"
+                value={gymRadiusMeters}
+                onChange={e => setGymRadiusMeters(Number(e.target.value))}
+                style={{ width: '100%' }}
+              >
+                <option value={50}>50 meters (Compact Gym)</option>
+                <option value={100}>100 meters (Standard Facility)</option>
+                <option value={200}>200 meters (Fitness Compound - Recommended)</option>
+                <option value={500}>500 meters (Sports Complex / Campus)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleCaptureCurrentLocation}
+              disabled={capturingLocation}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Navigation size={14} />
+              {capturingLocation ? 'Acquiring GPS...' : 'Pin Current GPS Location as Gym'}
+            </button>
+
+            {gymLatitude && gymLongitude && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={handleClearGymLocation}
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Clear Pinned Gym
+              </button>
+            )}
           </div>
         </div>
 

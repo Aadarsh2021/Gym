@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import { clearActiveSessionDraft } from '@/utils/storage';
 import { calculateWorkoutSummary } from '@/domain/workout-tonnage';
 import { getDayScheduledDays } from '@/domain/scheduled-workout';
+import { hasCompletedCoreExercise } from '@/domain/streak-calculator';
 import { ensureUserProfile } from '@/services/profile.service';
 
 export const workoutService = {
@@ -289,6 +290,9 @@ export const workoutService = {
       typeof sessionOrId === 'object' ? sessionOrId : fullSession;
     const rawSessionId = typeof sessionOrId === 'string' ? sessionOrId : sessionOrId.id;
 
+    // Determine whether core/necessary exercise requirement was fulfilled
+    const isCoreCompleted = session ? hasCompletedCoreExercise(session) : true;
+
     // Helper for local storage persistence and mock offline resilience
     const persistLocally = async () => {
       const userId = session?.userId || 'guest-user';
@@ -330,22 +334,27 @@ export const workoutService = {
         }
       }
 
-      // Update streak in localStorage
+      // Update streak in localStorage ONLY if core/necessary exercises were completed
       let currentStreak = 1;
+      let streakCounted = false;
       try {
         const rawStreak = localStorage.getItem(`streak_${userId}`);
         const currentStreakData = rawStreak
           ? JSON.parse(rawStreak)
           : { currentStreak: 3, longestStreak: 7, lastActivityDate: null };
         const todayStr = new Date().toISOString().split('T')[0];
-        if (currentStreakData.lastActivityDate !== todayStr) {
-          currentStreakData.currentStreak += 1;
-          currentStreakData.longestStreak = Math.max(
-            currentStreakData.longestStreak,
-            currentStreakData.currentStreak
-          );
-          currentStreakData.lastActivityDate = todayStr;
-          localStorage.setItem(`streak_${userId}`, JSON.stringify(currentStreakData));
+
+        if (isCoreCompleted) {
+          if (currentStreakData.lastActivityDate !== todayStr) {
+            currentStreakData.currentStreak += 1;
+            currentStreakData.longestStreak = Math.max(
+              currentStreakData.longestStreak,
+              currentStreakData.currentStreak
+            );
+            currentStreakData.lastActivityDate = todayStr;
+            localStorage.setItem(`streak_${userId}`, JSON.stringify(currentStreakData));
+          }
+          streakCounted = true;
         }
         currentStreak = currentStreakData.currentStreak;
       } catch {
@@ -370,6 +379,7 @@ export const workoutService = {
           completedAt: new Date().toISOString(),
           sessionRating: rating,
           notes: notes || session.notes,
+          gymVerified: Boolean(session.gymVerified),
         };
 
         try {
@@ -395,6 +405,9 @@ export const workoutService = {
           status: 'success',
           session_id: rawSessionId,
           streak_count: currentStreak,
+          streak_counted: streakCounted,
+          core_completed: isCoreCompleted,
+          gym_verified: Boolean(session?.gymVerified),
           coins_earned: coinsEarned,
           new_prs: summary.newPersonalRecords,
         },
@@ -432,6 +445,7 @@ export const workoutService = {
           started_at: session.startedAt || new Date().toISOString(),
           duration_seconds: session.durationSeconds || 0,
           idempotency_key: idempotencyKey,
+          gym_verified: Boolean(session.gymVerified),
         });
 
         // Insert session exercises and sets
@@ -468,6 +482,8 @@ export const workoutService = {
         p_idempotency_key: idempotencyKey,
         p_session_rating: rating,
         p_notes: notes,
+        p_is_core_completed: isCoreCompleted,
+        p_gym_verified: Boolean(session?.gymVerified),
       });
 
       if (error) {

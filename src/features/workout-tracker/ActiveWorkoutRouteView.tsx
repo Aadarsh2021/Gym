@@ -6,7 +6,7 @@ import { WorkoutSession, WorkoutPlanDay } from '@/types/workout.types';
 import { loadActiveSessionDraft, clearActiveSessionDraft } from '@/utils/storage';
 import { getTodaysScheduledWorkout } from '@/domain/scheduled-workout';
 import { WorkoutTrackerView } from './WorkoutTrackerView';
-import { Dumbbell } from 'lucide-react';
+import { Dumbbell, Zap } from 'lucide-react';
 
 export const ActiveWorkoutRouteView: React.FC = () => {
   const { session } = useAuth();
@@ -75,12 +75,15 @@ export const ActiveWorkoutRouteView: React.FC = () => {
           targetDay = scheduleResult.scheduledDay || plan.days[0];
         }
 
+        const isGymVerified = searchParams.get('gymVerified') === '1';
+
         const newSession: WorkoutSession = {
           id: `session-${Date.now()}`,
           userId,
           planId: plan.id,
           name: targetDay.name,
           status: 'in_progress',
+          gymVerified: isGymVerified,
           startedAt: new Date().toISOString(),
           durationSeconds: 0,
           exercises: targetDay.exercises.map((wpe, idx) => ({
@@ -91,6 +94,7 @@ export const ActiveWorkoutRouteView: React.FC = () => {
             targetRepsMin: wpe.targetRepsMin,
             targetRepsMax: wpe.targetRepsMax,
             restSeconds: wpe.restSeconds,
+            isCore: wpe.isCore,
             sets: Array.from({ length: wpe.targetSets }, (_, sIdx) => ({
               setIndex: sIdx + 1,
               weightKg: 40,
@@ -162,9 +166,15 @@ export const ActiveWorkoutRouteView: React.FC = () => {
         }}
       >
         <div className="card" style={{ padding: 'var(--space-8)' }}>
-          <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>
-            Workout Countdown
-          </span>
+          {searchParams.get('mode') === 'quick' ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', fontWeight: 600, marginBottom: 'var(--space-2)' }}>
+              <Zap size={14} /> Short on Time Mode (15m - Core Lifts)
+            </div>
+          ) : (
+            <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>
+              Workout Countdown
+            </span>
+          )}
           <h2 style={{ marginBottom: 'var(--space-1)', fontSize: '1.6rem' }}>Get Ready, Athlete!</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)', fontSize: '0.92rem' }}>
             Preparing <strong>{activeSession.name}</strong>. Set your mindset, review your weights, and brace your core.
@@ -202,6 +212,7 @@ export const ActiveWorkoutRouteView: React.FC = () => {
     <div className="animate-fade-in">
       <WorkoutTrackerView
         session={activeSession}
+        isShortOnTime={searchParams.get('mode') === 'quick'}
         onFinish={() => {
           clearActiveSessionDraft();
           navigate('/app');

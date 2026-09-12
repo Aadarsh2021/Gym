@@ -62,3 +62,37 @@ export function calculateUpdatedStreak(
 export function canUseStreakRevive(revivesUsedThisMonth: number): boolean {
   return revivesUsedThisMonth < 3;
 }
+
+export function hasCompletedCoreExercise(
+  sessionOrExercises:
+    | {
+        exercises: Array<{
+          isCore?: boolean;
+          sets: Array<{ completed?: boolean; isCompleted?: boolean }>;
+        }>;
+      }
+    | Array<{
+        isCore?: boolean;
+        sets: Array<{ completed?: boolean; isCompleted?: boolean }>;
+      }>
+): boolean {
+  const exercises = Array.isArray(sessionOrExercises)
+    ? sessionOrExercises
+    : sessionOrExercises?.exercises;
+
+  if (!exercises || exercises.length === 0) return false;
+
+  const isSetDone = (s: { completed?: boolean; isCompleted?: boolean }) =>
+    Boolean(s.completed || s.isCompleted);
+
+  // If no exercise in the session is flagged as core (e.g. legacy/custom freeform),
+  // check if any exercise has a completed set.
+  const hasAnyCoreDefined = exercises.some(ex => ex.isCore);
+  if (!hasAnyCoreDefined) {
+    return exercises.some(ex => ex.sets && ex.sets.some(isSetDone));
+  }
+
+  return exercises.some(
+    ex => ex.isCore && ex.sets && ex.sets.some(isSetDone)
+  );
+}

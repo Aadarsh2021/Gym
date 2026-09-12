@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Dumbbell, Play, Clock, History } from 'lucide-react';
+import { Dumbbell, Play, Clock, History, Zap } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { workoutService } from '@/services/workout.service';
 import { streakService } from '@/services/streak.service';
@@ -11,9 +11,13 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 interface WorkoutsHubViewProps {
   onStartWorkoutWithDay: (day: WorkoutPlanDay) => void;
+  onStartQuickWorkoutWithDay?: (day: WorkoutPlanDay) => void;
 }
 
-export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({ onStartWorkoutWithDay }) => {
+export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({
+  onStartWorkoutWithDay,
+  onStartQuickWorkoutWithDay,
+}) => {
   const { session } = useAuth();
   const userId = session.user?.id || 'guest-user';
 
@@ -113,13 +117,23 @@ export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({ onStartWorkout
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
             <button
               className="btn btn-primary btn-sm"
               onClick={() => onStartWorkoutWithDay(scheduleResult.missedPreviousWorkout!)}
             >
               Make Up Session
             </button>
+            {onStartQuickWorkoutWithDay && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => onStartQuickWorkoutWithDay(scheduleResult.missedPreviousWorkout!)}
+                title="15-minute core movement session"
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Zap size={14} color="#eab308" /> Quick (15m)
+              </button>
+            )}
             <button
               className="btn btn-secondary btn-sm"
               onClick={handleMarkRestDay}
@@ -186,13 +200,25 @@ export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({ onStartWorkout
                     </div>
                   </div>
 
-                  <button
-                    className="btn btn-primary btn-block"
-                    onClick={() => onStartWorkoutWithDay(day)}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                  >
-                    <Play size={16} fill="var(--text-inverse)" /> Start {day.name}
-                  </button>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => onStartWorkoutWithDay(day)}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      <Play size={16} fill="var(--text-inverse)" /> Start {day.name}
+                    </button>
+                    {onStartQuickWorkoutWithDay && (
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => onStartQuickWorkoutWithDay(day)}
+                        title="Short on Time: 15 min core lift routine"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.82rem', padding: 'var(--space-2) var(--space-3)' }}
+                      >
+                        <Zap size={14} color="#eab308" /> 15m
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}

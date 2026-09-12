@@ -3,6 +3,7 @@ export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 export type DietaryPreference = 'vegetarian' | 'vegan' | 'eggetarian' | 'non_vegetarian';
 export type Gender = 'male' | 'female' | 'other';
 export type UnitSystem = 'metric' | 'imperial';
+export type PlanType = 'free' | 'premium';
 
 export interface UserProfile {
   id: string;
@@ -10,6 +11,7 @@ export interface UserProfile {
   unitSystem: UnitSystem;
   timezone: string;
   avatarUrl?: string | null;
+  planType?: PlanType;
 }
 
 export interface FitnessProfile {
@@ -26,4 +28,7 @@ export interface FitnessProfile {
   equipment: string[];
   dietaryPreference: DietaryPreference;
   limitations: string[];
+  gymLatitude?: number | null;
+  gymLongitude?: number | null;
+  gymRadiusMeters?: number | null;
 }

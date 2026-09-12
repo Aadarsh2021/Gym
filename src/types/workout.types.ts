@@ -84,6 +84,7 @@ export interface WorkoutSessionExercise {
   targetRepsMax?: number;
   restSeconds?: number;
   notes?: string;
+  isCore?: boolean;
   sets: WorkoutSet[];
 }
 
@@ -99,6 +100,7 @@ export interface WorkoutSession {
   durationSeconds: number;
   sessionRating?: SessionRating;
   notes?: string;
+  gymVerified?: boolean;
   exercises: WorkoutSessionExercise[];
 }
 

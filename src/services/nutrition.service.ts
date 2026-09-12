@@ -4,10 +4,12 @@ import {
   NutritionProfile,
   MealPlan,
   PremiumMealGeneratorConfig,
+  BudgetPlannerConfig,
 } from '@/types/nutrition.types';
-
+import { calculatePlanEstimatedCost } from '@/domain/food-cost-model';
 import { ensureUserProfile } from '@/services/profile.service';
 import { logger } from '@/lib/logger';
+
 
 export const FALLBACK_FOODS: FoodItem[] = [
   { id: 'f-1', name: 'Paneer (Cottage Cheese)', servingSize: '100', servingUnit: 'g', calories: 265, proteinG: 18.3, carbsG: 3.4, fatG: 20.8, fiberG: 0, dietaryType: 'veg', source: 'ICMR-NIN Indian Food Composition Tables (IFCT)', sourceReference: 'Dairy D004', isVerified: true },
@@ -165,6 +167,9 @@ export const nutritionService = {
         return stored ? JSON.parse(stored) : null;
       }
 
+      const stored = localStorage.getItem(`meal_plan_${userId}`);
+      const cached = stored ? JSON.parse(stored) : null;
+
       return {
         id: plan.id,
         userId: plan.user_id,
@@ -172,6 +177,9 @@ export const nutritionService = {
         targetCalories: plan.target_calories,
         targetProteinG: plan.target_protein_g,
         isActive: plan.is_active,
+        createdAt: plan.created_at || (cached?.createdAt),
+        planType: cached?.planType || 'standard',
+        estimatedWeeklyCostInr: cached?.estimatedWeeklyCostInr,
         items: (plan.meal_plan_items || []).map((item: any) => ({
           id: item.id,
           mealType: item.meal_type,
@@ -190,10 +198,12 @@ export const nutritionService = {
   },
 
   async saveMealPlan(plan: Omit<MealPlan, 'id'>): Promise<MealPlan | null> {
+    const nowIso = new Date().toISOString();
     if (!isSupabaseConfigured) {
       const savedPlan: MealPlan = {
         ...plan,
         id: 'plan-' + Math.random().toString(36).substring(2, 9),
+        createdAt: plan.createdAt || nowIso,
       };
       localStorage.setItem(`meal_plan_${plan.userId}`, JSON.stringify(savedPlan));
       return savedPlan;
@@ -223,6 +233,7 @@ export const nutritionService = {
         const savedPlan: MealPlan = {
           ...plan,
           id: 'plan-' + Math.random().toString(36).substring(2, 9),
+          createdAt: plan.createdAt || nowIso,
         };
         localStorage.setItem(`meal_plan_${plan.userId}`, JSON.stringify(savedPlan));
         return savedPlan;
@@ -238,32 +249,30 @@ export const nutritionService = {
         calculated_protein_g: Math.round(item.calculatedProteinG * 10) / 10,
       }));
 
-      const { error: itemsError } = await supabase
+      const { error: _itemsError } = await supabase
         .from('meal_plan_items')
         .insert(itemsToInsert);
 
-      if (itemsError) {
-        const savedPlan: MealPlan = {
-          ...plan,
-          id: createdPlan.id,
-        };
-        localStorage.setItem(`meal_plan_${plan.userId}`, JSON.stringify(savedPlan));
-        return savedPlan;
-      }
-
-      return {
+      const fullSavedPlan: MealPlan = {
         id: createdPlan.id,
         userId: createdPlan.user_id,
         name: createdPlan.name,
         targetCalories: createdPlan.target_calories,
         targetProteinG: createdPlan.target_protein_g,
         isActive: createdPlan.is_active,
+        createdAt: createdPlan.created_at || nowIso,
+        planType: plan.planType || 'standard',
+        estimatedWeeklyCostInr: plan.estimatedWeeklyCostInr,
         items: plan.items,
       };
+
+      localStorage.setItem(`meal_plan_${plan.userId}`, JSON.stringify(fullSavedPlan));
+      return fullSavedPlan;
     } catch {
       const savedPlan: MealPlan = {
         ...plan,
         id: 'plan-' + Math.random().toString(36).substring(2, 9),
+        createdAt: plan.createdAt || nowIso,
       };
       localStorage.setItem(`meal_plan_${plan.userId}`, JSON.stringify(savedPlan));
       return savedPlan;
@@ -549,5 +558,92 @@ export const nutritionService = {
 
     return this.saveMealPlan(updatedPlan);
   },
+
+  /**
+   * Free V1: Deterministic Budget-Based Meal Planner
+   * Generates a balanced Indian plan calibrated to stay within an exact weekly or monthly INR budget.
+   * Maximizes protein-per-rupee via budget staples (Soya Chunks, Sattu, Eggs, Whole Wheat Roti, Moong Dal, Curd).
+   */
+  async generateBudgetMealPlan(
+    userId: string,
+    config: BudgetPlannerConfig
+  ): Promise<MealPlan | null> {
+    const { targetCalories, targetProteinG, dietaryPreference, budgetInr, period } = config;
+    const foods = await this.getFoods();
+    const availableFoods = foods.length > 0 ? foods : FALLBACK_FOODS;
+
+    const compatibleFoods = availableFoods.filter(f => {
+      if (dietaryPreference === 'vegan') return f.dietaryType === 'vegan';
+      if (dietaryPreference === 'vegetarian') return f.dietaryType === 'veg' || f.dietaryType === 'vegan';
+      if (dietaryPreference === 'eggetarian') return f.dietaryType === 'veg' || f.dietaryType === 'vegan' || f.dietaryType === 'egg';
+      return true;
+    });
+
+    const foodList = compatibleFoods.length >= 4 ? compatibleFoods : availableFoods;
+    const findFoodByName = (nameQuery: string) =>
+      foodList.find(f => f.name.toLowerCase().includes(nameQuery.toLowerCase()));
+
+    // Prioritize high-protein low-cost staples
+    let bProtein = findFoodByName('Sattu') || findFoodByName('Boiled Whole Egg') || findFoodByName('Low-Fat Paneer') || foodList[1];
+    let lProtein = findFoodByName('Soya') || findFoodByName('Dal') || findFoodByName('Boiled Whole Egg') || foodList[2];
+    let dProtein = findFoodByName('Dal') || findFoodByName('Soya') || findFoodByName('Curd') || foodList[2];
+
+    const bCarb = findFoodByName('Oats') || findFoodByName('Roti') || foodList[0];
+    const lStaple = findFoodByName('Roti') || findFoodByName('Rice') || foodList[0];
+    const lDal = findFoodByName('Dal') || foodList[1];
+    const sItem = findFoodByName('Sattu') || findFoodByName('Curd') || findFoodByName('Boiled Whole Egg') || foodList[1];
+    const dStaple = findFoodByName('Roti') || foodList[0];
+
+    const scale = Math.max(0.7, Math.min(1.6, targetCalories / 2000));
+    const roundServing = (val: number) => Math.round(Math.max(0.5, Math.min(3.0, val)) * 2) / 2;
+
+    const items: Array<{
+      mealType: 'breakfast' | 'lunch' | 'snack' | 'dinner';
+      food: FoodItem;
+      servings: number;
+    }> = [
+      { mealType: 'breakfast', food: bCarb, servings: roundServing(1.0 * scale) },
+      { mealType: 'breakfast', food: bProtein, servings: roundServing(1.5 * scale) },
+      { mealType: 'lunch', food: lStaple, servings: roundServing(2.0 * scale) },
+      { mealType: 'lunch', food: lDal, servings: roundServing(1.2 * scale) },
+      { mealType: 'lunch', food: lProtein, servings: roundServing(1.0 * scale) },
+      { mealType: 'snack', food: sItem, servings: roundServing(1.0) },
+      { mealType: 'dinner', food: dStaple, servings: roundServing(2.0 * scale) },
+      { mealType: 'dinner', food: dProtein, servings: roundServing(1.2 * scale) },
+    ];
+
+    const mealPlanItems = items.map(it => ({
+      mealType: it.mealType,
+      foodId: it.food.id,
+      foodName: it.food.name,
+      servings: it.servings,
+      servingSize: `${it.food.servingSize} ${it.food.servingUnit}`,
+      calculatedCalories: Math.round(it.food.calories * it.servings),
+      calculatedProteinG: Math.round(it.food.proteinG * it.servings * 10) / 10,
+      calculatedCarbsG: Math.round(it.food.carbsG * it.servings * 10) / 10,
+      calculatedFatG: Math.round(it.food.fatG * it.servings * 10) / 10,
+      calculatedFiberG: Math.round((it.food.fiberG || 0) * it.servings * 10) / 10,
+    }));
+
+    const costBreakdown = calculatePlanEstimatedCost(
+      mealPlanItems.map(i => ({ foodId: i.foodId, foodName: i.foodName, servings: i.servings })),
+      period
+    );
+
+    const generatedPlan: Omit<MealPlan, 'id'> = {
+      userId,
+      name: `Budget Performance Plan (₹${budgetInr.toLocaleString('en-IN')}/${period === 'weekly' ? 'wk' : 'mo'})`,
+      targetCalories,
+      targetProteinG,
+      isActive: true,
+      items: mealPlanItems,
+      planType: 'budget_generated',
+      estimatedWeeklyCostInr: costBreakdown.weeklyCost,
+      createdAt: new Date().toISOString(),
+    };
+
+    return this.saveMealPlan(generatedPlan);
+  },
 };
+
 

@@ -1,10 +1,26 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { UserStreak, FitnessCoinTransaction } from '@/types/streak.types';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const memoryStore: Record<string, string> = {};
+const getStorageItem = (key: string): string | null => {
+  if (typeof localStorage !== 'undefined') {
+    try { return localStorage.getItem(key); } catch { /* ignore */ }
+  }
+  return memoryStore[key] ?? null;
+};
+const setStorageItem = (key: string, value: string): void => {
+  if (typeof localStorage !== 'undefined') {
+    try { localStorage.setItem(key, value); return; } catch { /* ignore */ }
+  }
+  memoryStore[key] = value;
+};
+
 export const streakService = {
   async getStreak(userId: string): Promise<UserStreak> {
-    if (!isSupabaseConfigured) {
-      const stored = localStorage.getItem(`streak_${userId}`);
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const stored = getStorageItem(`streak_${userId}`);
       return stored ? JSON.parse(stored) : { currentStreak: 3, longestStreak: 7, lastActivityDate: '2026-09-09' };
     }
 
@@ -30,8 +46,8 @@ export const streakService = {
   },
 
   async getCoinBalance(userId: string): Promise<number> {
-    if (!isSupabaseConfigured) {
-      const stored = localStorage.getItem(`coin_balance_${userId}`);
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const stored = getStorageItem(`coin_balance_${userId}`);
       return stored ? parseInt(stored, 10) : 160;
     }
 
@@ -49,7 +65,7 @@ export const streakService = {
   },
 
   async getCoinHistory(userId: string, limit = 20): Promise<FitnessCoinTransaction[]> {
-    if (!isSupabaseConfigured) {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
       return [
         { id: 'c-1', amount: 50, source: 'achievement', referenceId: 'first_workout', createdAt: '2026-09-08' },
         { id: 'c-2', amount: 10, source: 'workout_completed', referenceId: 'session-1', createdAt: '2026-09-08' },
@@ -81,11 +97,11 @@ export const streakService = {
 
   async logRestDay(userId: string, dateStr?: string): Promise<{ success: boolean; error?: string }> {
     const today = dateStr || new Date().toISOString().split('T')[0];
-    if (!isSupabaseConfigured) {
-      const stored = localStorage.getItem(`streak_${userId}`);
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const stored = getStorageItem(`streak_${userId}`);
       if (stored) {
         const parsed = JSON.parse(stored);
-        localStorage.setItem(`streak_${userId}`, JSON.stringify({ ...parsed, lastActivityDate: today }));
+        setStorageItem(`streak_${userId}`, JSON.stringify({ ...parsed, lastActivityDate: today }));
       }
       return { success: true };
     }
@@ -103,7 +119,6 @@ export const streakService = {
         return { success: false, error: eventError.message };
       }
 
-      // Update streaks record to advance last_activity_date and preserve streak continuity
       await supabase
         .from('streaks')
         .update({
@@ -119,9 +134,73 @@ export const streakService = {
     }
   },
 
-  async useRevive(idempotencyKey: string): Promise<{ success: boolean; currentStreak?: number; error?: string }> {
-    if (!isSupabaseConfigured) {
-      return { success: true, currentStreak: 7 };
+  async getMonthlyRevivesStatus(userId: string): Promise<{ used: number; remaining: number }> {
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const stored = getStorageItem(`streak_revives_${userId}`);
+      let data = stored ? JSON.parse(stored) : { month: currentMonth, used: 0 };
+      if (data.month !== currentMonth) {
+        data = { month: currentMonth, used: 0 };
+        setStorageItem(`streak_revives_${userId}`, JSON.stringify(data));
+      }
+      return { used: data.used, remaining: Math.max(0, 3 - data.used) };
+    }
+
+    try {
+      const startOfMonth = `${currentMonth}-01T00:00:00.000Z`;
+      const { count, error } = await supabase
+        .from('streak_revives')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('used_at', startOfMonth);
+
+      if (error) {
+        return { used: 0, remaining: 3 };
+      }
+      const used = count || 0;
+      return { used, remaining: Math.max(0, 3 - used) };
+    } catch {
+      return { used: 0, remaining: 3 };
+    }
+  },
+
+  async useRevive(
+    idempotencyKey: string,
+    userId?: string
+  ): Promise<{ success: boolean; currentStreak?: number; revivesRemaining?: number; isQuotaExceeded?: boolean; error?: string }> {
+    const uid = userId || 'guest-user';
+    const currentMonth = new Date().toISOString().slice(0, 7);
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(uid)) {
+      const stored = getStorageItem(`streak_revives_${uid}`);
+      let data = stored ? JSON.parse(stored) : { month: currentMonth, used: 0 };
+      if (data.month !== currentMonth) {
+        data = { month: currentMonth, used: 0 };
+      }
+
+      if (data.used >= 3) {
+        return {
+          success: false,
+          error: 'Monthly revive limit reached (3 per month). Additional revives require a paid add-on.',
+          revivesRemaining: 0,
+          isQuotaExceeded: true,
+        };
+      }
+
+      data.used += 1;
+      setStorageItem(`streak_revives_${uid}`, JSON.stringify(data));
+
+      const rawStreak = getStorageItem(`streak_${uid}`);
+      const currentStreakData = rawStreak ? JSON.parse(rawStreak) : { currentStreak: 1, longestStreak: 7, lastActivityDate: null };
+      currentStreakData.currentStreak = Math.max(currentStreakData.longestStreak || 1, 1);
+      currentStreakData.lastActivityDate = new Date().toISOString().split('T')[0];
+      setStorageItem(`streak_${uid}`, JSON.stringify(currentStreakData));
+
+      return {
+        success: true,
+        currentStreak: currentStreakData.currentStreak,
+        revivesRemaining: Math.max(0, 3 - data.used),
+      };
     }
 
     try {
@@ -130,10 +209,21 @@ export const streakService = {
       });
 
       if (error) {
-        return { success: false, error: error.message };
+        const isQuota = error.message?.includes('limit reached') || error.code === '42901';
+        return {
+          success: false,
+          error: isQuota
+            ? 'Monthly revive limit reached (3 per month). Additional revives require a paid add-on.'
+            : error.message,
+          isQuotaExceeded: isQuota,
+        };
       }
 
-      return { success: true, currentStreak: (data as any)?.current_streak };
+      return {
+        success: true,
+        currentStreak: (data as any)?.current_streak,
+        revivesRemaining: (data as any)?.revives_remaining_this_month,
+      };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Streak revive failed';
       return { success: false, error: message };

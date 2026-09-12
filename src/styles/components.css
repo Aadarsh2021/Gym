@@ -439,3 +439,106 @@
   }
 }
 
+/* Guided Workout 3-Column Cockpit Layout (2026 Modern Sports-Tech) */
+.guided-workout-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+.guided-desktop-only {
+  display: none;
+}
+
+/* 2-Column Compact Cockpit (1024px - 1279px) */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .guided-workout-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    max-width: 100%;
+    margin: 0 auto;
+    align-items: start;
+    gap: var(--space-4);
+    box-sizing: border-box;
+  }
+
+  .guided-desktop-only {
+    display: block;
+  }
+
+  /* In compact 2-column cockpit, left outline stays in Movements header button */
+  .guided-sidebar-left {
+    display: none !important;
+  }
+
+  .guided-sidebar-right {
+    display: block !important;
+    position: sticky;
+    top: 76px;
+  }
+}
+
+/* 3-Column Athlete Cockpit (1280px+) */
+@media (min-width: 1280px) {
+  .guided-workout-layout {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr) 280px;
+    max-width: 1300px;
+    margin: 0 auto;
+    align-items: start;
+    gap: var(--space-4);
+    box-sizing: border-box;
+  }
+
+  .guided-desktop-only {
+    display: block;
+  }
+
+  .guided-sidebar-left {
+    display: block !important;
+    position: sticky;
+    top: 76px;
+  }
+
+  .guided-sidebar-right {
+    display: block !important;
+    position: sticky;
+    top: 76px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .guided-workout-layout {
+    grid-template-columns: 260px minmax(0, 1fr) 300px;
+    max-width: 1360px;
+    gap: var(--space-5);
+  }
+}
+
+@media (min-width: 1600px) {
+  .guided-workout-layout {
+    grid-template-columns: 280px minmax(0, 1fr) 320px;
+    max-width: 1440px;
+    gap: var(--space-5);
+  }
+}
+
+/* Guided Workout Dominant Steppers Layout */
+.guided-steppers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 480px) {
+  .guided-steppers-grid {
+    gap: var(--space-2);
+  }
+}
+
+
+

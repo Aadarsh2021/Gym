@@ -25,6 +25,7 @@ export const authService = {
             displayName: parsed.displayName || 'Fitness Warrior',
             unitSystem: 'metric',
             timezone: 'Asia/Kolkata',
+            planType: (parsed.planType as 'free' | 'premium') || 'free',
           },
         };
       }
@@ -80,6 +81,7 @@ export const authService = {
               unitSystem: profile.unit_system as 'metric' | 'imperial',
               timezone: profile.timezone,
               avatarUrl: resolvedAvatar,
+              planType: (profile.plan_type as 'free' | 'premium') || 'free',
             }
           : {
               id: session.user.id,
@@ -87,6 +89,7 @@ export const authService = {
               unitSystem: 'metric',
               timezone: 'Asia/Kolkata',
               avatarUrl: resolvedAvatar,
+              planType: 'free',
             },
       };
     } catch (err) {

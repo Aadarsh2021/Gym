@@ -318,7 +318,7 @@ export const reminderService = {
    * Immediate test notification dispatch
    */
   async sendTestNotification(
-    title = 'APEXFIT Workout Alarm Test',
+    title = 'FitSphere Workout Alarm Test',
     message = 'Workout reminder test successful! Reminders will trigger during your active sessions.'
   ): Promise<{ success: boolean; message: string }> {
     const perm = this.getPermissionStatus();

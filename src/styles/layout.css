@@ -36,9 +36,35 @@ html, body {
 
 .container-workout {
   width: 100%;
-  max-width: 880px;
+  max-width: 600px;
   margin: 0 auto;
   padding: 0 var(--space-4);
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .container-workout {
+    max-width: 100%;
+    padding: 0 var(--space-4);
+  }
+}
+
+@media (min-width: 1280px) {
+  .container-workout {
+    max-width: 1320px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .container-workout {
+    max-width: 1380px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .container-workout {
+    max-width: 1460px;
+  }
 }
 
 .container-narrow {
@@ -125,6 +151,7 @@ html, body {
   flex-direction: column;
   min-width: 0;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .mobile-only-header {

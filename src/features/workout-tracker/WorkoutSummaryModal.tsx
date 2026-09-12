@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti';
 import { WorkoutSession } from '@/types/workout.types';
 import { calculateWorkoutSummary } from '@/domain/workout-tonnage';
 import { formatTimerClock } from '@/utils/formatters';
+import { hasCompletedCoreExercise } from '@/domain/streak-calculator';
 
 interface WorkoutSummaryModalProps {
   session: WorkoutSession;
@@ -19,6 +20,7 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
   existingPrsMap = {},
 }) => {
   const summary = calculateWorkoutSummary(session, existingPrsMap);
+  const isCoreDone = hasCompletedCoreExercise(session);
 
   // Event-driven celebratory moment: Electric Blue & Success Green confetti strictly when a new PR is broken
   useEffect(() => {
@@ -61,9 +63,25 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
             <Check size={28} strokeWidth={3} />
           </div>
 
-          <span className="badge badge-success" style={{ marginBottom: 'var(--space-2)' }}>
-            Workout Completed
-          </span>
+          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: 'var(--space-2)' }}>
+            <span className="badge badge-success">
+              Workout Completed
+            </span>
+            {session.gymVerified && (
+              <span className="badge" style={{ background: 'rgba(127, 166, 107, 0.15)', color: 'var(--color-success)', border: '1px solid rgba(127, 166, 107, 0.3)' }}>
+                ✓ Gym Verified
+              </span>
+            )}
+            {isCoreDone ? (
+              <span className="badge badge-accent">
+                🔥 Streak Counted
+              </span>
+            ) : (
+              <span className="badge" style={{ color: '#eab308', background: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                ⚠️ Core Exercise Incomplete (Streak Not Advanced)
+              </span>
+            )}
+          </div>
           <h2 style={{ fontSize: '1.6rem', marginBottom: 'var(--space-1)' }}>{session.name}</h2>
           <small style={{ color: 'var(--text-muted)' }}>
             Logged on {new Date(session.completedAt || Date.now()).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
