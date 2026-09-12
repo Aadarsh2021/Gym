@@ -131,13 +131,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             fontSize: '2.1rem',
             fontWeight: 800,
             margin: '0 0 var(--space-2)',
-            background: 'linear-gradient(135deg, #FFFFFF 50%, #94A3B8 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: 'var(--text-primary)',
             letterSpacing: '-0.03em',
           }}
         >
-          {timeGreeting}, {firstName}! <span style={{ WebkitTextFillColor: 'initial' }}>⚡</span>
+          {timeGreeting}, {firstName}! <span>⚡</span>
         </h1>
         <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.98rem', maxWidth: '720px', lineHeight: 1.6 }}>
           {scheduleResult.status === 'completed_today'
@@ -277,7 +275,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               background: 'var(--color-success-muted)',
               borderRadius: 'var(--radius-sm)',
               color: 'var(--color-success)',
-              boxShadow: '0 0 16px rgba(16, 185, 129, 0.22)',
             }}
           >
             <Utensils size={22} />
@@ -384,7 +381,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <CheckCircle2 size={18} /> Great work! Today's session was successfully logged.
                 </p>
                 {scheduleResult.nextScheduledWorkout && (
-                  <div style={{ padding: 'var(--space-3)', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', fontSize: '0.88rem' }}>
+                  <div style={{ padding: 'var(--space-3)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', fontSize: '0.88rem' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Next scheduled session: </span>
                     <strong style={{ color: 'var(--text-primary)' }}>
                       {scheduleResult.nextScheduledWorkout.day.name} ({scheduleResult.nextScheduledWorkout.dayOfWeekName})
@@ -400,7 +397,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </p>
 
                 {scheduleResult.nextScheduledWorkout && (
-                  <div style={{ padding: 'var(--space-3)', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', marginBottom: 'var(--space-3)', fontSize: '0.88rem' }}>
+                  <div style={{ padding: 'var(--space-3)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', marginBottom: 'var(--space-3)', fontSize: '0.88rem' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Next training day: </span>
                     <strong style={{ color: 'var(--accent-primary)' }}>
                       {scheduleResult.nextScheduledWorkout.day.name} ({scheduleResult.nextScheduledWorkout.dayOfWeekName})
@@ -410,7 +407,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                 {/* Off-schedule recovery / catchup */}
                 {scheduleResult.missedPreviousWorkout && !restDayLogged && (
-                  <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
                     <small style={{ color: 'var(--text-muted)', display: 'block', marginBottom: 'var(--space-2)', lineHeight: 1.4 }}>
                       Missed previous session ({scheduleResult.missedPreviousWorkout.name})? You can make it up today or log it as an active recovery day to keep your streak intact.
                     </small>
@@ -453,7 +450,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           justifyContent: 'space-between',
                           alignItems: 'center',
                           padding: 'var(--space-2) var(--space-3)',
-                          background: 'var(--bg-input)',
+                          background: 'var(--bg-secondary)',
                           border: '1px solid var(--border-subtle)',
                           borderRadius: 'var(--radius-sm)',
                           fontSize: '0.88rem',
@@ -490,18 +487,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           )}
         </div>
 
-        {/* DAILY NUTRITION TARGETS CARD (3D Glass) */}
+        {/* DAILY NUTRITION TARGETS CARD (Modern Graphite Elevated) */}
         <Link
           to="/app/nutrition"
-          className="card card-interactive"
+          className="card card-elevated card-interactive"
           style={{
             textDecoration: 'none',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            background: 'linear-gradient(145deg, rgba(16, 24, 40, 0.85) 0%, rgba(10, 14, 26, 0.92) 100%)',
             borderColor: 'var(--border-medium)',
-            boxShadow: '0 18px 45px -8px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+            boxShadow: 'var(--shadow-md)',
           }}
         >
           <div>
@@ -513,7 +509,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     background: 'var(--accent-primary-muted)',
                     borderRadius: 'var(--radius-sm)',
                     color: 'var(--accent-primary)',
-                    boxShadow: '0 0 16px var(--accent-primary-glow)',
                   }}
                 >
                   <Utensils size={22} />
@@ -531,7 +526,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-2)', margin: 'var(--space-4) 0' }}>
-              <div style={{ padding: 'var(--space-3)', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ padding: 'var(--space-3)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Calories (Consumed / Target)</span>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '2px' }}>
                   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
@@ -545,7 +540,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               </div>
 
-              <div style={{ padding: 'var(--space-3)', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ padding: 'var(--space-3)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Protein (Consumed / Target)</span>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '2px' }}>
                   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>

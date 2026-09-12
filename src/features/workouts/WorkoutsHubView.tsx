@@ -93,8 +93,8 @@ export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({ onStartWorkout
           className="card"
           style={{
             padding: 'var(--space-4)',
-            background: 'linear-gradient(145deg, rgba(28, 22, 58, 0.4) 0%, rgba(16, 21, 36, 0.7) 100%)',
-            borderColor: 'var(--accent-indigo)',
+            background: 'var(--bg-surface)',
+            borderColor: 'var(--border-medium)',
             marginBottom: 'var(--space-6)',
             display: 'flex',
             justifyContent: 'space-between',

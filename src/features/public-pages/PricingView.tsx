@@ -111,8 +111,8 @@ export const PricingView: React.FC = () => {
             flexDirection: 'column',
             justifyContent: 'space-between',
             borderColor: 'var(--accent-primary)',
-            background: 'linear-gradient(145deg, rgba(16, 24, 40, 0.92) 0%, rgba(10, 14, 26, 0.98) 100%)',
-            boxShadow: '0 20px 48px -10px rgba(0, 0, 0, 0.7), 0 0 24px rgba(255, 85, 0, 0.15)',
+            background: 'var(--bg-surface-elevated)',
+            boxShadow: 'var(--shadow-lg)',
             position: 'relative',
           }}
         >

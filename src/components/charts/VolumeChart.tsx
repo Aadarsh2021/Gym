@@ -273,7 +273,7 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ sessions }) => {
                   top: '12px',
                   right: '16px',
                   padding: '8px 12px',
-                  background: 'rgba(10, 14, 26, 0.95)',
+                  background: 'var(--bg-surface-elevated)',
                   border: '1px solid var(--accent-indigo)',
                   borderRadius: 'var(--radius-sm)',
                   boxShadow: 'var(--shadow-md)',

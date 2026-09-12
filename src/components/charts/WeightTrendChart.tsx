@@ -325,7 +325,7 @@ export const WeightTrendChart: React.FC<WeightTrendChartProps> = ({
                   top: '12px',
                   right: '16px',
                   padding: '8px 12px',
-                  background: 'rgba(10, 14, 26, 0.95)',
+                  background: 'var(--bg-surface-elevated)',
                   border: '1px solid var(--border-medium)',
                   borderRadius: 'var(--radius-sm)',
                   boxShadow: 'var(--shadow-md)',
