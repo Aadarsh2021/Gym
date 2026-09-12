@@ -17,7 +17,7 @@ export const PublicAppShell: React.FC = () => {
   ];
 
   return (
-    <div className="app-layout" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="public-layout">
       {/* Public Header */}
       <header
         style={{

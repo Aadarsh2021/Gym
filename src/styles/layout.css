@@ -79,12 +79,25 @@ html, body {
 .gap-6 { gap: var(--space-6); }
 
 /* ==========================================================================
-   Responsive Shell Layout (Desktop Sidebar + Mobile Bottom Nav)
+   Public Layout (Header + Content + Footer)
    ========================================================================== */
 
-.app-layout {
+.public-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--bg-primary);
+}
+
+/* ==========================================================================
+   Authenticated Shell Layout (Desktop Sidebar + Mobile Bottom Nav)
+   ========================================================================== */
+
+.app-shell-layout {
   display: flex;
   min-height: 100vh;
+  width: 100%;
   background-color: var(--bg-primary);
 }
 
@@ -117,26 +130,45 @@ html, body {
   display: none;
 }
 
-/* Sidebar Specific Styles (Desktop) */
+/* Sidebar Specific Styles (Desktop >= 1024px) */
 @media (min-width: 1024px) {
-  .app-layout {
-    flex-direction: row !important;
+  .app-shell-layout {
+    flex-direction: row;
   }
 
   .app-sidebar {
     display: flex;
     flex-direction: column;
-    width: 275px;
-    min-width: 275px;
+    width: 270px;
+    min-width: 270px;
     height: 100vh;
     position: sticky;
     top: 0;
     background: var(--bg-secondary);
     border-right: 1px solid var(--border-subtle);
-    padding: var(--space-5) var(--space-4);
+    padding: var(--space-4);
     box-sizing: border-box;
     z-index: 100;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-subtle) transparent;
+  }
+
+  .app-sidebar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .app-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .app-sidebar::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 4px;
+  }
+
+  .app-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--border-medium);
   }
 
   .mobile-only-header {
@@ -147,7 +179,7 @@ html, body {
     display: flex !important;
     align-items: center;
     justify-content: space-between;
-    height: 64px;
+    height: 56px;
     padding: 0 var(--space-6);
     background: var(--bg-primary);
     border-bottom: 1px solid var(--border-subtle);
@@ -161,22 +193,29 @@ html, body {
   }
 
   .main-content {
-    padding-bottom: var(--space-12) !important;
+    padding-bottom: var(--space-10) !important;
   }
 }
 
 @media (max-width: 1023px) {
-  .app-layout {
+  .app-shell-layout {
     flex-direction: column;
   }
+
   .app-sidebar {
     display: none !important;
   }
+
   .desktop-topbar {
     display: none !important;
   }
+
   .mobile-only-header {
     display: flex !important;
+  }
+
+  .main-content {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--space-8)) !important;
   }
 }
 

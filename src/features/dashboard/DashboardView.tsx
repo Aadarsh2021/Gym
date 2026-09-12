@@ -10,8 +10,6 @@ import {
   CheckCircle2,
   Moon,
   ArrowRight,
-  User,
-  Coins,
 } from 'lucide-react';
 import { WorkoutPlan, WorkoutSession, WorkoutPlanDay } from '@/types/workout.types';
 import { UserStreak } from '@/types/streak.types';
@@ -58,9 +56,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     session?.user?.email?.split('@')[0] ||
     'Athlete';
   const firstName = displayName.split(' ')[0];
-  const userEmail = session?.user?.email || 'athlete@apexfit.local';
-  const avatarUrl = session?.profile?.avatarUrl;
-  const initial = (displayName.charAt(0) || 'A').toUpperCase();
 
   const currentHour = new Date().getHours();
   const timeGreeting =
@@ -106,70 +101,72 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <h1 style={{ fontSize: '1.85rem', margin: '0 0 var(--space-2)' }}>
           {timeGreeting}, {firstName}! ⚡
         </h1>
-        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.95rem', maxWidth: '680px', lineHeight: 1.5 }}>
+        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.95rem', maxWidth: '720px', lineHeight: 1.6 }}>
           {scheduleResult.status === 'completed_today'
-            ? 'Shaabash! Today’s session is logged. Prioritize hydration, post-workout protein, and restorative rest.'
+            ? 'Shaabash! Today’s session is logged. Prioritize hydration, post-workout protein, and restorative sleep.'
             : scheduleResult.status === 'rest_day'
             ? 'Active recovery window today. Your muscles rebuild and grow during rest—stay hydrated and meet your nutrition target.'
             : scheduleResult.status === 'no_plan'
             ? 'Welcome to your athlete command center. Set up your personalized training plan to unlock your scheduled daily routine.'
             : `Today’s objective is ${scheduledDay?.name || 'Workout Session'}. Execute every set with strict form and disciplined intensity.`}
         </p>
+      </div>
 
-        {/* User Identity & Metric Chips */}
+      {/* Athlete Status & Quick Glance Strip (4 Non-Duplicative Metric Cards) */}
+      <div className="athlete-strip-grid">
+        {/* Card 1: Today's Mission Status */}
         <div
+          className="card card-interactive"
+          onClick={() => {
+            if (scheduledDay && scheduleResult.status === 'scheduled') {
+              onStartWorkout(scheduledDay);
+            }
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
-            flexWrap: 'wrap',
             gap: 'var(--space-3)',
-            marginTop: 'var(--space-4)',
-            paddingTop: 'var(--space-3)',
-            borderTop: '1px solid var(--border-subtle)',
+            cursor: scheduledDay && scheduleResult.status === 'scheduled' ? 'pointer' : 'default',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            <User size={14} color="var(--accent-primary)" />
-            <span>{userEmail}</span>
-          </div>
-          <span style={{ color: 'var(--border-medium)' }}>•</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            <Flame size={14} color="var(--accent-gold)" fill="var(--accent-gold)" />
-            <span>
-              Streak: <strong style={{ color: 'var(--accent-gold)' }}>{streak.currentStreak} Days</strong>
-            </span>
-          </div>
-          <span style={{ color: 'var(--border-medium)' }}>•</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            <Coins size={14} color="var(--accent-gold)" />
-            <span>
-              Coins: <strong style={{ color: 'var(--text-primary)' }}>{coins}</strong>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Athlete Status & Quick Glance Strip */}
-      <div className="athlete-strip-grid">
-        {/* Card 1: Athlete Account */}
-        <Link
-          to="/app/profile"
-          className="card card-interactive"
-          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}
-        >
-          <div className="sidebar-avatar" style={{ width: '40px', height: '40px', fontSize: '1rem' }}>
-            {avatarUrl ? <img src={avatarUrl} alt={displayName} /> : <span>{initial}</span>}
+          <div
+            style={{
+              padding: '9px',
+              background:
+                scheduleResult.status === 'completed_today'
+                  ? 'var(--color-success-muted)'
+                  : scheduleResult.status === 'rest_day'
+                  ? 'var(--accent-indigo-muted)'
+                  : 'var(--accent-primary-muted)',
+              borderRadius: 'var(--radius-sm)',
+              color:
+                scheduleResult.status === 'completed_today'
+                  ? 'var(--color-success)'
+                  : scheduleResult.status === 'rest_day'
+                  ? '#8FA8C7'
+                  : 'var(--accent-primary)',
+            }}
+          >
+            {scheduleResult.status === 'completed_today' ? (
+              <CheckCircle2 size={20} />
+            ) : scheduleResult.status === 'rest_day' ? (
+              <Moon size={20} />
+            ) : (
+              <Zap size={20} />
+            )}
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Athlete
+              Today's Status
             </small>
-            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {displayName}
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {scheduledDay ? scheduledDay.name : scheduleResult.status === 'rest_day' ? 'Rest Day' : 'Setup Plan'}
             </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)' }}>Settings →</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)' }}>
+              {scheduleResult.status === 'completed_today' ? 'Done ✓' : scheduleResult.status === 'rest_day' ? 'Recovery' : 'Start →'}
+            </span>
           </div>
-        </Link>
+        </div>
 
         {/* Card 2: Active Plan */}
         <Link
@@ -184,10 +181,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Active Routine
             </small>
-            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {activePlan ? activePlan.name : 'No Active Plan'}
             </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)' }}>View Split →</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)' }}>
+              {activePlan ? `${activePlan.days.length} Days/Wk →` : 'Build Plan →'}
+            </span>
           </div>
         </Link>
 
@@ -204,14 +203,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Consistency
             </small>
-            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
               {streak.currentStreak} Days Streak
             </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Longest: {streak.longestStreak}d</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              {coins > 0 ? `${coins} Coins • ` : ''}Longest: {streak.longestStreak}d →
+            </span>
           </div>
         </Link>
 
-        {/* Card 4: Daily Target */}
+        {/* Card 4: Daily Energy & Nutrition */}
         <Link
           to="/app/nutrition"
           className="card card-interactive"
@@ -224,11 +225,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Daily Energy
             </small>
-            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
               {nutritionProfile ? `${nutritionProfile.targetCalories} kcal` : '2,200 kcal'}
             </div>
             <span style={{ fontSize: '0.75rem', color: 'var(--color-success)' }}>
-              {nutritionProfile ? `${nutritionProfile.targetProteinG}g Protein` : '140g Protein'}
+              {nutritionProfile ? `${nutritionProfile.targetProteinG}g Protein →` : '140g Protein →'}
             </span>
           </div>
         </Link>
@@ -243,7 +244,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <div
-
                   style={{
                     padding: '10px',
                     background:
@@ -435,53 +435,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <ChevronRight size={18} color="var(--accent-secondary)" />
           </div>
         </div>
-      </div>
-
-      {/* QUICK METRICS ROW */}
-      <div className="grid grid-cols-2" style={{ gap: 'var(--space-6)', marginTop: 'var(--space-6)' }}>
-        {/* Streak & Consistency (Molten Gold celebration token) */}
-        <Link
-          to="/app/progress"
-          className="card card-interactive"
-          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-            <div style={{ padding: '12px', background: 'var(--accent-gold-muted)', borderRadius: 'var(--radius-md)', color: 'var(--accent-gold)' }}>
-              <Flame size={26} />
-            </div>
-            <div>
-              <small style={{ color: 'var(--text-muted)' }}>Consistency</small>
-              <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
-                {streak.currentStreak} Days
-              </h2>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Longest: {streak.longestStreak} days</span>
-            </div>
-          </div>
-          <ChevronRight size={18} color="var(--text-muted)" />
-        </Link>
-
-        {/* Nutrition Targets */}
-        <Link
-          to="/app/nutrition"
-          className="card card-interactive"
-          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-            <div style={{ padding: '12px', background: 'var(--color-success-muted)', borderRadius: 'var(--radius-md)', color: 'var(--color-success)' }}>
-              <Utensils size={26} />
-            </div>
-            <div>
-              <small style={{ color: 'var(--text-muted)' }}>Daily Energy Target</small>
-              <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
-                {nutritionProfile ? `${nutritionProfile.targetCalories} kcal` : '2,200 kcal'}
-              </h2>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                Protein: {nutritionProfile ? `${nutritionProfile.targetProteinG}g` : '140g'}
-              </span>
-            </div>
-          </div>
-          <ChevronRight size={18} color="var(--text-muted)" />
-        </Link>
       </div>
     </div>
   );

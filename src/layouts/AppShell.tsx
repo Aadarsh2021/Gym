@@ -84,7 +84,7 @@ export const AppShell: React.FC = () => {
   }).format(new Date());
 
   return (
-    <div className="app-layout">
+    <div className="app-shell-layout">
       {/* ====================================================================
           DESKTOP SIDEBAR (Visible on min-width: 1024px)
           ==================================================================== */}
@@ -151,41 +151,36 @@ export const AppShell: React.FC = () => {
           })}
         </nav>
 
-        {/* Guru Ji Coach Spotlight */}
+        {/* Guru Ji Coach Spotlight (Compact) */}
         <div className="sidebar-coach-banner">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <div
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '6px',
-                background: 'var(--accent-primary-muted)',
-                color: 'var(--accent-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Sparkles size={16} />
-            </div>
-            <div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Guru Ji AI Coach
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '6px',
+                  background: 'var(--accent-primary-muted)',
+                  color: 'var(--accent-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Sparkles size={14} />
               </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                Bilingual Training Advisor
-              </div>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Guru Ji Coach
+              </span>
             </div>
+            <span className="badge" style={{ fontSize: '0.65rem' }}>AI</span>
           </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '4px 0 10px', lineHeight: 1.4 }}>
-            Ask form cues, progressive overload, or Indian meal swaps anytime.
-          </p>
           <button
             className="btn btn-secondary btn-sm btn-block"
             onClick={() => setIsGuruJiOpen(true)}
-            style={{ fontSize: '0.78rem', height: '32px' }}
+            style={{ fontSize: '0.78rem', height: '30px' }}
           >
-            <Sparkles size={13} color="var(--accent-primary)" />
+            <Sparkles size={12} color="var(--accent-primary)" />
             <span>Chat with Guru Ji</span>
           </button>
         </div>
@@ -309,15 +304,25 @@ export const AppShell: React.FC = () => {
           </div>
         </header>
 
-        {/* Desktop Topbar (>= 1024px) */}
+        {/* Desktop Topbar (>= 1024px) - Clean Breadcrumb & Quick Coach */}
         <header className="desktop-topbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-              {todayFormatted}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              Platform
             </span>
-            <span style={{ color: 'var(--border-medium)' }}>•</span>
-            <span style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
-              Athlete Workspace
+            <span style={{ color: 'var(--border-medium)' }}>/</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+              {location.pathname === '/app'
+                ? 'Daily Training Brief'
+                : location.pathname.startsWith('/app/workouts')
+                ? 'Workout Execution & Plans'
+                : location.pathname.startsWith('/app/exercises')
+                ? 'Exercise Library'
+                : location.pathname.startsWith('/app/nutrition')
+                ? 'Nutrition & Targets'
+                : location.pathname.startsWith('/app/progress')
+                ? 'Progress & Analytics'
+                : 'Athlete Profile & Settings'}
             </span>
           </div>
 
@@ -328,42 +333,12 @@ export const AppShell: React.FC = () => {
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <Sparkles size={14} color="var(--accent-primary)" />
-              <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Guru Ji Coach</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Guru Ji Coach</span>
             </button>
 
-            <div
-              className="badge badge-gold"
-              style={{ cursor: 'pointer', padding: '6px 12px', fontFamily: 'var(--font-mono)' }}
-              onClick={() => navigate('/app/progress')}
-              title="Active Workout Streak"
-            >
-              <Flame size={14} fill="var(--accent-gold)" />
-              <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                {streak.currentStreak} Days
-              </span>
-            </div>
-
-            <div
-              className="badge badge-gold"
-              style={{ cursor: 'pointer', padding: '6px 12px', fontFamily: 'var(--font-mono)' }}
-              onClick={() => navigate('/app/progress')}
-              title="Fitness Coins"
-            >
-              <Coins size={14} />
-              <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                {coins} Coins
-              </span>
-            </div>
-
-            <NavLink
-              to="/app/profile"
-              className="btn btn-secondary btn-sm"
-              title="Profile Settings"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
-            >
-              <User size={14} />
-              <span style={{ fontSize: '0.82rem' }}>{displayName}</span>
-            </NavLink>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+              {todayFormatted}
+            </span>
           </div>
         </header>
 
