@@ -51,7 +51,7 @@ export interface MealPlan {
   targetProteinG: number;
   isActive: boolean;
   items: MealPlanItem[];
-  planType?: 'standard' | 'premium_generated' | 'budget_generated';
+  planType?: 'standard' | 'premium_generated' | 'budget_generated' | 'replacement_derived';
   createdAt?: string;
   estimatedWeeklyCostInr?: number;
 }

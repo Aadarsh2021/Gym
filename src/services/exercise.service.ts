@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger';
 import { CURATED_EXERCISE_CATALOG } from './exercise-catalog.data';
 import { filterExerciseCatalog, ExerciseFilterCriteria } from '@/domain/exercise-search';
 import { findExerciseAlternatives } from '@/domain/exercise-alternatives';
+import { entitlementService } from '@/services/entitlement.service';
 
 export const FALLBACK_EXERCISES = CURATED_EXERCISE_CATALOG;
 
@@ -92,8 +93,15 @@ export const exerciseService = {
 
   /**
    * Get exercise alternatives using the deterministic alternatives engine.
+   * Gated by server entitlement when userId is provided or session is active.
    */
-  async getAlternativesForExercise(target: Exercise, limit = 4): Promise<Exercise[]> {
+  async getAlternativesForExercise(target: Exercise, limit = 4, userId?: string): Promise<Exercise[]> {
+    if (userId) {
+      const entitlement = await entitlementService.assertServerEntitlement(userId);
+      if (!entitlement.authorized) {
+        throw new Error('PREMIUM_REQUIRED: Exercise & Equipment Alternatives require an active Premium subscription.');
+      }
+    }
     const all = await this.getExercises();
     return findExerciseAlternatives(target, all, limit);
   },

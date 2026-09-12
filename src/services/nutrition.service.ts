@@ -5,8 +5,11 @@ import {
   MealPlan,
   PremiumMealGeneratorConfig,
   BudgetPlannerConfig,
+  MixedMealItem,
 } from '@/types/nutrition.types';
 import { calculatePlanEstimatedCost } from '@/domain/food-cost-model';
+import { calculateMixedMealTotals } from '@/domain/mixed-meal-analyzer';
+import { entitlementService } from '@/services/entitlement.service';
 import { ensureUserProfile } from '@/services/profile.service';
 import { logger } from '@/lib/logger';
 
@@ -178,7 +181,12 @@ export const nutritionService = {
         targetProteinG: plan.target_protein_g,
         isActive: plan.is_active,
         createdAt: plan.created_at || (cached?.createdAt),
-        planType: cached?.planType || 'standard',
+        planType:
+          plan.plan_kind === 'budget'
+            ? 'budget_generated'
+            : plan.plan_kind === 'replacement_derived'
+            ? 'replacement_derived'
+            : cached?.planType || 'standard',
         estimatedWeeklyCostInr: cached?.estimatedWeeklyCostInr,
         items: (plan.meal_plan_items || []).map((item: any) => ({
           id: item.id,
@@ -210,6 +218,14 @@ export const nutritionService = {
     }
 
     try {
+      // Map planType to machine-readable database plan_kind
+      const planKind: 'standard' | 'budget' | 'replacement_derived' =
+        plan.planType === 'budget_generated'
+          ? 'budget'
+          : plan.planType === 'replacement_derived'
+          ? 'replacement_derived'
+          : 'standard';
+
       // 1. Deactivate old plans for user
       await supabase
         .from('meal_plans')
@@ -225,6 +241,7 @@ export const nutritionService = {
           target_calories: Math.round(plan.targetCalories),
           target_protein_g: Math.round(plan.targetProteinG),
           is_active: true,
+          plan_kind: planKind,
         })
         .select()
         .single();
@@ -247,6 +264,7 @@ export const nutritionService = {
         servings: item.servings,
         calculated_calories: Math.round(item.calculatedCalories),
         calculated_protein_g: Math.round(item.calculatedProteinG * 10) / 10,
+        is_replacement: (item as any).isReplacement || false,
       }));
 
       const { error: _itemsError } = await supabase
@@ -392,6 +410,11 @@ export const nutritionService = {
     userId: string,
     config: PremiumMealGeneratorConfig
   ): Promise<MealPlan | null> {
+    const entitlement = await entitlementService.assertServerEntitlement(userId);
+    if (!entitlement.authorized) {
+      throw new Error('PREMIUM_REQUIRED: Premium meal generator requires an active Premium plan.');
+    }
+
     const { targetCalories, targetProteinG, dietaryPreference, mealSlotCount, focusGoal } = config;
     const foods = await this.getFoods();
     const availableFoods = foods.length > 0 ? foods : FALLBACK_FOODS;
@@ -528,6 +551,32 @@ export const nutritionService = {
       recommendedServings: number;
     }
   ): Promise<MealPlan | null> {
+    const entitlement = await entitlementService.assertServerEntitlement(userId);
+    if (!entitlement.authorized) {
+      throw new Error('PREMIUM_REQUIRED: Meal replacement requires an active Premium plan.');
+    }
+
+    if (isSupabaseConfigured && currentPlan.id && !currentPlan.id.startsWith('plan-')) {
+      const targetItem = currentPlan.items.find(it => it.id === foodToReplaceId || it.foodId === foodToReplaceId);
+      if (targetItem && targetItem.id && !targetItem.id.startsWith('item-')) {
+        try {
+          const { data: rpcItem, error: rpcError } = await supabase.rpc('replace_meal_plan_item', {
+            p_item_id: targetItem.id,
+            p_new_food_id: replacement.food.id,
+            p_servings: replacement.recommendedServings,
+            p_calculated_calories: Math.round(replacement.food.calories * replacement.recommendedServings),
+            p_calculated_protein_g: Math.round(replacement.food.proteinG * replacement.recommendedServings * 10) / 10,
+          });
+
+          if (!rpcError && rpcItem) {
+            return this.getMealPlan(userId);
+          }
+        } catch {
+          // Fall through to plan rebuild
+        }
+      }
+    }
+
     const updatedItems = currentPlan.items.map(it => {
       if (it.foodId === foodToReplaceId || it.id === foodToReplaceId) {
         return {
@@ -541,6 +590,7 @@ export const nutritionService = {
           calculatedCarbsG: Math.round(replacement.food.carbsG * replacement.recommendedServings * 10) / 10,
           calculatedFatG: Math.round(replacement.food.fatG * replacement.recommendedServings * 10) / 10,
           calculatedFiberG: Math.round((replacement.food.fiberG || 0) * replacement.recommendedServings * 10) / 10,
+          isReplacement: true,
         };
       }
       return it;
@@ -553,7 +603,7 @@ export const nutritionService = {
       targetProteinG: currentPlan.targetProteinG,
       isActive: true,
       items: updatedItems,
-      planType: currentPlan.planType,
+      planType: 'replacement_derived',
     };
 
     return this.saveMealPlan(updatedPlan);
@@ -568,6 +618,11 @@ export const nutritionService = {
     userId: string,
     config: BudgetPlannerConfig
   ): Promise<MealPlan | null> {
+    const entitlement = await entitlementService.assertServerEntitlement(userId);
+    if (!entitlement.authorized) {
+      throw new Error('PREMIUM_REQUIRED: Budget-based meal planning requires an active Premium plan.');
+    }
+
     const { targetCalories, targetProteinG, dietaryPreference, budgetInr, period } = config;
     const foods = await this.getFoods();
     const availableFoods = foods.length > 0 ? foods : FALLBACK_FOODS;
@@ -643,6 +698,131 @@ export const nutritionService = {
     };
 
     return this.saveMealPlan(generatedPlan);
+  },
+
+  /**
+   * Premium V1 Authoritative Operation: Daily Nutrient Comparison
+   * Computes compliance percentages and exact delta metrics for energy and macros.
+   * Gated strictly by server entitlement.
+   */
+  async getDailyNutrientComparison(
+    userId: string,
+    consumed: { calories: number; proteinG: number; carbsG: number; fatG: number; fiberG: number },
+    targets: { calories: number; proteinG: number; carbsG: number; fatG: number; fiberG: number }
+  ): Promise<{
+    authorized: boolean;
+    error?: { code: string; message: string };
+    data?: Array<{
+      label: string;
+      consumed: number;
+      target: number;
+      unit: string;
+      percentage: number;
+      delta: number;
+      isOptimal: boolean;
+      status: 'under' | 'optimal' | 'surplus';
+    }>;
+  }> {
+    const entitlement = await entitlementService.assertServerEntitlement(userId);
+    if (!entitlement.authorized) {
+      return {
+        authorized: false,
+        error: { code: 'PREMIUM_REQUIRED', message: 'Daily Nutrient Target Comparison requires an active Premium plan.' },
+      };
+    }
+
+    const rows = [
+      { label: 'Energy (Calories)', consumed: consumed.calories, target: targets.calories, unit: 'kcal' },
+      { label: 'Protein', consumed: consumed.proteinG, target: targets.proteinG, unit: 'g' },
+      { label: 'Carbohydrates', consumed: consumed.carbsG, target: targets.carbsG, unit: 'g' },
+      { label: 'Fat', consumed: consumed.fatG, target: targets.fatG, unit: 'g' },
+      { label: 'Dietary Fibre', consumed: consumed.fiberG, target: targets.fiberG, unit: 'g' },
+    ];
+
+    const data = rows.map(r => {
+      const percentage = Math.round((r.consumed / (r.target || 1)) * 100);
+      const delta = Math.round((r.consumed - r.target) * 10) / 10;
+      const isOptimal = percentage >= 90 && percentage <= 110;
+      const status: 'under' | 'optimal' | 'surplus' = percentage < 90 ? 'under' : percentage > 110 ? 'surplus' : 'optimal';
+      return { ...r, percentage, delta, isOptimal, status };
+    });
+
+    return { authorized: true, data };
+  },
+
+  /**
+   * Premium V1 Authoritative Operation: Mixed Meal Analysis
+   * Decomposes plate ingredients into macro attribution curves.
+   * Gated strictly by server entitlement.
+   */
+  async analyzeMixedMeal(
+    userId: string,
+    items: MixedMealItem[],
+    targets: { calories: number; proteinG: number }
+  ): Promise<{
+    authorized: boolean;
+    error?: { code: string; message: string };
+    data?: ReturnType<typeof calculateMixedMealTotals>;
+  }> {
+    const entitlement = await entitlementService.assertServerEntitlement(userId);
+    if (!entitlement.authorized) {
+      return {
+        authorized: false,
+        error: { code: 'PREMIUM_REQUIRED', message: 'Mixed Meal & Recipe Analyzer requires an active Premium plan.' },
+      };
+    }
+
+    const data = calculateMixedMealTotals(items, targets);
+    return { authorized: true, data };
+  },
+
+  /**
+   * Premium V1 Authoritative Operation: Full Nutrition Analysis
+   * Retrieves comprehensive micronutrient and mineral density profile.
+   * Gated strictly by server entitlement.
+   */
+  async getFullNutritionAnalysis(
+    userId: string,
+    foodId: string
+  ): Promise<{
+    authorized: boolean;
+    error?: { code: string; message: string };
+    data?: {
+      foodId: string;
+      micronutrients: Array<{ name: string; unit: string; value: string; status: string }>;
+      notice: string;
+    };
+  }> {
+    const entitlement = await entitlementService.assertServerEntitlement(userId);
+    if (!entitlement.authorized) {
+      return {
+        authorized: false,
+        error: { code: 'PREMIUM_REQUIRED', message: 'Full Nutrition & Micronutrient Analysis requires an active Premium plan.' },
+      };
+    }
+
+    // Honest scientific reporting based on ICMR-NIN IFCT catalog availability
+    return {
+      authorized: true,
+      data: {
+        foodId,
+        micronutrients: [
+          { name: 'Vitamin A', unit: 'µg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Vitamin B1 (Thiamine)', unit: 'mg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Vitamin B9 (Folate)', unit: 'µg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Vitamin B12', unit: 'µg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Vitamin C', unit: 'mg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Vitamin D', unit: 'µg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Calcium', unit: 'mg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Iron', unit: 'mg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Magnesium', unit: 'mg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Zinc', unit: 'mg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Potassium', unit: 'mg', value: 'Data unavailable', status: 'untested' },
+          { name: 'Leucine', unit: 'g', value: 'Data unavailable', status: 'untested' },
+        ],
+        notice: 'Individual vitamin and amino acid assays are not currently stored for this entry in the local catalog.',
+      },
+    };
   },
 };
 

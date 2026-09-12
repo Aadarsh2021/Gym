@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { WeeklyMealPlan, WeeklyMealPlanDay, WeeklyMealPlanItem } from '@/types/nutrition.types';
 import { generateWeeklyMealPlan } from '@/domain/weekly-meal-planner';
 import { nutritionService } from '@/services/nutrition.service';
+import { entitlementService } from '@/services/entitlement.service';
 import { logger } from '@/lib/logger';
 
 export const weeklyMealPlanService = {
@@ -9,6 +10,11 @@ export const weeklyMealPlanService = {
    * Retrieves the active 7-day weekly meal plan for the given user.
    */
   async getActiveWeeklyMealPlan(userId: string): Promise<WeeklyMealPlan | null> {
+    const entitlement = await entitlementService.assertServerEntitlement(userId);
+    if (!entitlement.authorized) {
+      return null;
+    }
+
     if (!isSupabaseConfigured) {
       const stored = localStorage.getItem(`weekly_meal_plan_${userId}`);
       return stored ? JSON.parse(stored) : null;
@@ -110,6 +116,11 @@ export const weeklyMealPlanService = {
    * Saves a weekly meal plan to Supabase and caches to localStorage.
    */
   async saveWeeklyMealPlan(plan: WeeklyMealPlan): Promise<WeeklyMealPlan> {
+    const entitlement = await entitlementService.assertServerEntitlement(plan.userId);
+    if (!entitlement.authorized) {
+      throw new Error('PREMIUM_REQUIRED: Weekly meal planning requires an active Premium plan.');
+    }
+
     localStorage.setItem(`weekly_meal_plan_${plan.userId}`, JSON.stringify(plan));
 
     if (!isSupabaseConfigured) {

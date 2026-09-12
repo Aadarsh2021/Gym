@@ -259,10 +259,12 @@ export interface Database {
           target_calories: number;
           target_protein_g: number;
           is_active: boolean;
+          plan_kind: 'standard' | 'budget' | 'replacement_derived';
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['meal_plans']['Row'], 'id' | 'created_at'> & {
           id?: string;
+          plan_kind?: 'standard' | 'budget' | 'replacement_derived';
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['meal_plans']['Insert']>;
@@ -276,9 +278,11 @@ export interface Database {
           servings: number;
           calculated_calories: number;
           calculated_protein_g: number;
+          is_replacement: boolean;
         };
         Insert: Omit<Database['public']['Tables']['meal_plan_items']['Row'], 'id'> & {
           id?: string;
+          is_replacement?: boolean;
         };
         Update: Partial<Database['public']['Tables']['meal_plan_items']['Insert']>;
       };
@@ -387,6 +391,7 @@ export interface Database {
           title: string;
           message: string;
           type: 'workout_reminder' | 'milestone' | 'alarm';
+          notification_style: 'basic' | 'gentle' | 'motivational' | 'tough_love';
           scheduled_time: string | null;
           scheduled_days: number[];
           is_read: boolean;
@@ -395,6 +400,7 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['notifications']['Row'], 'id' | 'created_at'> & {
           id?: string;
+          notification_style?: 'basic' | 'gentle' | 'motivational' | 'tough_love';
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['notifications']['Insert']>;
@@ -415,6 +421,16 @@ export interface Database {
           p_idempotency_key: string;
         };
         Returns: Json;
+      };
+      replace_meal_plan_item: {
+        Args: {
+          p_item_id: string;
+          p_new_food_id: string;
+          p_servings: number;
+          p_calculated_calories: number;
+          p_calculated_protein_g: number;
+        };
+        Returns: Database['public']['Tables']['meal_plan_items']['Row'];
       };
     };
   };

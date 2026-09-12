@@ -14,13 +14,17 @@ import {
   Info,
   MapPin,
   Navigation,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useEntitlement } from '@/hooks/useEntitlement';
 import { profileService } from '@/services/profile.service';
 import { nutritionService } from '@/services/nutrition.service';
 import {
   reminderService,
   NotificationPermissionStatus,
+  AlarmMotivationStyle,
+  MOTIVATION_TEMPLATES,
 } from '@/services/reminder.service';
 import { ExperienceLevel, FitnessGoal, Gender } from '@/types/user.types';
 import { calculateBMR, calculateTDEE, calculateCalorieTarget } from '@/domain/calories';
@@ -29,6 +33,7 @@ import { validateBiometrics } from '@/utils/validation';
 
 export const ProfileView: React.FC = () => {
   const { session, signOut } = useAuth();
+  const { isPremium } = useEntitlement();
   const userId = session.user?.id || 'guest-user';
   const navigate = useNavigate();
 
@@ -61,6 +66,7 @@ export const ProfileView: React.FC = () => {
   const [reminderEnabled, setReminderEnabled] = useState<boolean>(false);
   const [reminderTime, setReminderTime] = useState<string>('07:30');
   const [reminderDays, setReminderDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [motivationStyle, setMotivationStyle] = useState<AlarmMotivationStyle>('basic');
   const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus>('default');
   const [testNoticeMsg, setTestNoticeMsg] = useState<{ success: boolean; text: string } | null>(null);
   const [snoozeNoticeMsg, setSnoozeNoticeMsg] = useState<string | null>(null);
@@ -98,6 +104,7 @@ export const ProfileView: React.FC = () => {
           setReminderEnabled(reminderPref.enabled);
           setReminderTime(reminderPref.time);
           setReminderDays(reminderPref.days);
+          setMotivationStyle(reminderPref.motivationStyle || 'basic');
           setPermissionStatus(reminderService.getPermissionStatus());
         }
       } catch {
@@ -259,15 +266,23 @@ export const ProfileView: React.FC = () => {
       });
 
       // 3. Persist workout reminder preferences
-      await reminderService.saveReminderPreference({
+      const styleTemplate = MOTIVATION_TEMPLATES[motivationStyle] || MOTIVATION_TEMPLATES.basic;
+      const reminderRes = await reminderService.saveReminderPreference({
         id: reminderId,
         userId,
         enabled: reminderEnabled,
         time: reminderTime,
         days: reminderDays,
-        title: 'Time for Today’s Workout Session',
-        message: 'Your scheduled training session is waiting. Maintain your streak today!',
+        title: styleTemplate.title,
+        message: styleTemplate.message,
+        motivationStyle,
       });
+
+      if (!reminderRes.success && reminderRes.error) {
+        setErrorMsg(reminderRes.error);
+        setSaving(false);
+        return;
+      }
 
       setSuccessMsg('Profile, nutrition baselines, and workout alarms saved successfully.');
     } catch (err: unknown) {
@@ -673,6 +688,56 @@ export const ProfileView: React.FC = () => {
                   >
                     {label} {active ? '✓' : ''}
                   </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Motivation Style & Tone Customization (Premium V1) */}
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>
+                Motivation Style & Alarm Tone
+              </label>
+              <span className="badge badge-secondary" style={{ fontSize: '0.68rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                {!isPremium && <Lock size={10} />} PREMIUM V1 CUSTOMIZATION
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-2)' }}>
+              {(Object.keys(MOTIVATION_TEMPLATES) as AlarmMotivationStyle[]).map(styleKey => {
+                const item = MOTIVATION_TEMPLATES[styleKey];
+                const isSelected = motivationStyle === styleKey;
+                const isLocked = item.isPremium && !isPremium;
+
+                return (
+                  <div
+                    key={styleKey}
+                    onClick={() => {
+                      if (!isLocked) {
+                        setMotivationStyle(styleKey);
+                      }
+                    }}
+                    style={{
+                      padding: 'var(--space-3)',
+                      borderRadius: 'var(--radius-sm)',
+                      background: isSelected ? 'var(--color-surface-subtle)' : 'var(--bg-surface)',
+                      border: isSelected
+                        ? '1.5px solid var(--accent-primary)'
+                        : '1px solid var(--border-subtle)',
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      opacity: isLocked ? 0.65 : 1,
+                      position: 'relative',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <strong style={{ fontSize: '0.86rem' }}>{item.label}</strong>
+                      {isLocked && <Lock size={12} color="#eab308" />}
+                    </div>
+                    <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.35 }}>
+                      {item.description}
+                    </p>
+                  </div>
                 );
               })}
             </div>

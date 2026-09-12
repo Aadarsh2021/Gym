@@ -1,4 +1,42 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { entitlementService } from '@/services/entitlement.service';
+import { logger } from '@/lib/logger';
+
+export type AlarmMotivationStyle = 'basic' | 'gentle' | 'motivational' | 'tough_love';
+
+export const MOTIVATION_TEMPLATES: Record<
+  AlarmMotivationStyle,
+  { title: string; message: string; label: string; description: string; isPremium: boolean }
+> = {
+  basic: {
+    label: 'Standard Reminder',
+    description: 'Direct session reminder to maintain your training habit.',
+    isPremium: false,
+    title: 'Time for Today’s Workout Session',
+    message: 'Your scheduled training session is waiting. Maintain your streak today!',
+  },
+  gentle: {
+    label: 'Gentle Motivation',
+    description: 'Supportive and encouraging prompt focused on well-being.',
+    isPremium: true,
+    title: 'FitSphere Daily Movement',
+    message: 'Every workout counts. Take a deep breath, step into your space, and enjoy building your strength today.',
+  },
+  motivational: {
+    label: 'Motivational Push',
+    description: 'High-energy athletic drive emphasizing consistency and ambition.',
+    isPremium: true,
+    title: 'FitSphere Championship Mindset',
+    message: 'Consistency separates ambition from accomplishment. Your future PRs are earned right now. Let’s crush this session!',
+  },
+  tough_love: {
+    label: 'Tough-Love Discipline',
+    description: 'Direct, focused discipline protocol. Zero rationalizing delays.',
+    isPremium: true,
+    title: 'FitSphere Discipline Protocol',
+    message: 'No compromises, no rationalizing delays. Put your training gear on and execute your sets. Discipline over excuses.',
+  },
+};
 
 export interface WorkoutReminderPreference {
   id?: string;
@@ -8,6 +46,7 @@ export interface WorkoutReminderPreference {
   days: number[]; // 1 = Monday, 7 = Sunday
   title: string;
   message: string;
+  motivationStyle?: AlarmMotivationStyle;
   snoozedUntil?: string | null;
 }
 
@@ -81,6 +120,18 @@ export const reminderService = {
       // Convert Supabase TIME format (e.g. '07:30:00') to '07:30'
       const timeStr = data.scheduled_time ? data.scheduled_time.substring(0, 5) : '07:30';
 
+      // Machine-readable notification_style from DB, fallback to string-check or default 'basic'
+      let motivationStyle: AlarmMotivationStyle = (data.notification_style as AlarmMotivationStyle) || 'basic';
+      if (!data.notification_style) {
+        if (data.message?.includes('Championship Mindset') || data.message?.includes('separates ambition')) {
+          motivationStyle = 'motivational';
+        } else if (data.message?.includes('Discipline Protocol') || data.message?.includes('No compromises')) {
+          motivationStyle = 'tough_love';
+        } else if (data.message?.includes('Daily Movement') || data.message?.includes('deep breath')) {
+          motivationStyle = 'gentle';
+        }
+      }
+
       return {
         id: data.id,
         userId: data.user_id,
@@ -89,6 +140,7 @@ export const reminderService = {
         days: Array.isArray(data.scheduled_days) ? data.scheduled_days : [1, 2, 3, 4, 5],
         title: data.title || defaultPreference.title,
         message: data.message || defaultPreference.message,
+        motivationStyle,
         snoozedUntil: null,
       };
     } catch {
@@ -108,6 +160,24 @@ export const reminderService = {
       return { success: false, error: 'Invalid reminder time format (must be HH:MM in 24h format)' };
     }
 
+    // Authoritative entitlement check for Premium Motivation Styles
+    if (pref.motivationStyle && pref.motivationStyle !== 'basic') {
+      const entitlement = await entitlementService.assertServerEntitlement(pref.userId);
+      if (!entitlement.authorized) {
+        return {
+          success: false,
+          error: 'PREMIUM_REQUIRED: Motivational and Tough-Love alarms require an active Premium subscription.',
+        };
+      }
+    }
+
+    // Apply template title & message if style specified
+    if (pref.motivationStyle && MOTIVATION_TEMPLATES[pref.motivationStyle]) {
+      const template = MOTIVATION_TEMPLATES[pref.motivationStyle];
+      pref.title = template.title;
+      pref.message = template.message;
+    }
+
     // Save locally for offline / fast access
     localStorage.setItem(`reminder_pref_${pref.userId}`, JSON.stringify(pref));
 
@@ -119,7 +189,7 @@ export const reminderService = {
     try {
       if (pref.id) {
         // Update existing notification row
-        const { error } = await supabase
+        let { error } = await supabase
           .from('notifications')
           .update({
             scheduled_time: `${pref.time}:00`,
@@ -127,21 +197,40 @@ export const reminderService = {
             is_active: pref.enabled,
             title: pref.title,
             message: pref.message,
+            notification_style: pref.motivationStyle || 'basic',
           })
           .eq('id', pref.id)
           .eq('user_id', pref.userId);
 
+        if (error && error.code === 'PGRST204') {
+          // Backward-compatibility: live Supabase migration 20260913000005 not yet applied
+          const fallback = await supabase
+            .from('notifications')
+            .update({
+              scheduled_time: `${pref.time}:00`,
+              scheduled_days: pref.days,
+              is_active: pref.enabled,
+              title: pref.title,
+              message: pref.message,
+            })
+            .eq('id', pref.id)
+            .eq('user_id', pref.userId);
+          error = fallback.error;
+        }
+
         if (error) {
+          logger.warn('Failed to sync updated notification to Supabase, preserving local preference', { error });
           this.rescheduleSameSessionTimer(pref);
           return { success: true, data: pref };
         }
       } else {
         // Insert new notification configuration
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('notifications')
           .insert({
             user_id: pref.userId,
             type: 'workout_reminder',
+            notification_style: pref.motivationStyle || 'basic',
             scheduled_time: `${pref.time}:00`,
             scheduled_days: pref.days,
             is_active: pref.enabled,
@@ -151,19 +240,41 @@ export const reminderService = {
           .select()
           .single();
 
-        if (error || !data) {
+        if (error && error.code === 'PGRST204') {
+          // Backward-compatibility: live Supabase migration 20260913000005 not yet applied
+          const fallback = await supabase
+            .from('notifications')
+            .insert({
+              user_id: pref.userId,
+              type: 'workout_reminder',
+              scheduled_time: `${pref.time}:00`,
+              scheduled_days: pref.days,
+              is_active: pref.enabled,
+              title: pref.title,
+              message: pref.message,
+            })
+            .select()
+            .single();
+          data = fallback.data;
+          error = fallback.error;
+        }
+
+        if (error) {
+          logger.warn('Failed to insert notification into Supabase, preserving local preference', { error });
           this.rescheduleSameSessionTimer(pref);
           return { success: true, data: pref };
         }
 
-        pref.id = data.id;
+        if (data) {
+          pref.id = data.id;
+        }
       }
 
       this.rescheduleSameSessionTimer(pref);
       return { success: true, data: pref };
-    } catch {
+    } catch (err: any) {
       this.rescheduleSameSessionTimer(pref);
-      return { success: true, data: pref };
+      return { success: false, error: err?.message || 'Unexpected exception saving reminder preference' };
     }
   },
 
