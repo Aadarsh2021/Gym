@@ -19,6 +19,7 @@ export const PlanBuilderView: React.FC = () => {
   const [equipment, setEquipment] = useState<string[]>(['Barbell', 'Dumbbells', 'Bodyweight']);
   const [loading, setLoading] = useState(false);
   const [fetchingProfile, setFetchingProfile] = useState(true);
+  const [limitations, setLimitations] = useState<string[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,6 +31,7 @@ export const PlanBuilderView: React.FC = () => {
           if (profile.experienceLevel) setExperienceLevel(profile.experienceLevel);
           if (profile.goal) setGoal(profile.goal);
           if (profile.equipment && profile.equipment.length > 0) setEquipment(profile.equipment);
+          if (profile.limitations && profile.limitations.length > 0) setLimitations(profile.limitations);
         }
       } catch {
         // Fallback to initial defaults
@@ -59,13 +61,14 @@ export const PlanBuilderView: React.FC = () => {
       const exercises = await exerciseService.getExercises().catch(() => FALLBACK_EXERCISES);
       const availableExercises = exercises.length > 0 ? exercises : FALLBACK_EXERCISES;
 
-      // Pure deterministic plan generation
+      // Pure deterministic plan generation with conservative movement preferences
       const generatedPlan = generateWorkoutPlan({
         daysPerWeek,
         experienceLevel,
         equipment,
         goal,
         availableExercises,
+        limitations,
       });
 
       // Save to temporary draft storage across refreshes (Safe across refreshes)
@@ -89,7 +92,7 @@ export const PlanBuilderView: React.FC = () => {
   }
 
   return (
-    <div className="container animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4) var(--space-12)', maxWidth: '680px' }}>
+    <div className="container-narrow animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4) calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-8))' }}>
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
         <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>Structured Training Architecture</span>

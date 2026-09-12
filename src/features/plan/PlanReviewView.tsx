@@ -48,7 +48,7 @@ export const PlanReviewView: React.FC = () => {
         clearDraftPlan();
         navigate('/app', { replace: true });
       } else {
-        setError('Failed to activate plan. Please verify your connection and try again.');
+        setError('Error: Could not save plan. Please retry.');
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error activating plan';
@@ -78,7 +78,7 @@ export const PlanReviewView: React.FC = () => {
   }
 
   return (
-    <div className="container animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4) var(--space-12)', maxWidth: '820px' }}>
+    <div className="container-narrow animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4) calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-8))' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>

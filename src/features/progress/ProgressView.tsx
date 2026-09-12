@@ -1,21 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Share2 } from 'lucide-react';
+import { Trophy, Calendar, Share2, TrendingUp, BarChart3, Scale, Layers } from 'lucide-react';
 import { workoutService } from '@/services/workout.service';
+import { progressService, ProgressEntry } from '@/services/progress.service';
 import { PersonalRecord, WorkoutSession } from '@/types/workout.types';
 import { formatDate, formatDuration } from '@/utils/formatters';
 import { useAuth } from '@/hooks/useAuth';
 import { PRODUCT_NAME } from '@/config/branding';
+import { StrengthProgressChart } from '@/components/charts/StrengthProgressChart';
+import { VolumeChart } from '@/components/charts/VolumeChart';
+import { WeightTrendChart } from '@/components/charts/WeightTrendChart';
 
 interface ProgressViewProps {
   userId?: string;
 }
+
+type ChartTab = 'all' | 'strength' | 'volume' | 'weight';
 
 export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }) => {
   const { session } = useAuth();
   const userId = propUserId || session.user?.id || 'guest-user';
   const [prs, setPrs] = useState<PersonalRecord[]>([]);
   const [history, setHistory] = useState<WorkoutSession[]>([]);
+  const [weightEntries, setWeightEntries] = useState<ProgressEntry[]>([]);
+  const [activeTab, setActiveTab] = useState<ChartTab>('all');
   const [activeSharePR, setActiveSharePR] = useState<PersonalRecord | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const handleOpenPRShare = (pr: PersonalRecord) => {
     setActiveSharePR(pr);
@@ -23,28 +32,115 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
 
   useEffect(() => {
     async function loadData() {
-      const [prData, historyData] = await Promise.all([
-        workoutService.getPersonalRecords(userId),
-        workoutService.getWorkoutHistory(userId),
-      ]);
-      setPrs(prData);
-      setHistory(historyData);
+      try {
+        const [prData, historyData, weightData] = await Promise.all([
+          workoutService.getPersonalRecords(userId),
+          workoutService.getWorkoutHistory(userId),
+          progressService.getProgressEntries(userId),
+        ]);
+        setPrs(prData);
+        setHistory(historyData);
+        setWeightEntries(weightData);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [userId]);
 
+  const handleLogWeight = async (weightKg: number, notes?: string) => {
+    const res = await progressService.logWeight(userId, weightKg, undefined, notes);
+    if (res.success && res.entry) {
+      setWeightEntries(prev => {
+        const updated = [...prev, res.entry!];
+        return updated.sort((a, b) => new Date(a.recordedDate).getTime() - new Date(b.recordedDate).getTime());
+      });
+    }
+  };
+
+  const handleDeleteWeightEntry = async (id: string) => {
+    await progressService.deleteProgressEntry(userId, id);
+    setWeightEntries(prev => prev.filter(e => e.id !== id));
+  };
+
+  if (loading) {
+    return (
+      <div className="container" style={{ padding: 'var(--space-12) var(--space-4)', textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-muted)' }}>Loading training analytics & personal records...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)' }}>
+    <div className="container-app animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4) calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-8))' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
-          <span className="badge badge-gold">Verified PRs</span>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Historical Performance</span>
+          <span className="badge badge-gold">Performance Analytics</span>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Historical Trajectory</span>
         </div>
         <h1>Progress & Personal Records</h1>
         <p style={{ color: 'var(--text-secondary)' }}>
-          Authoritative calculations derived from completed workout sets.
+          Authoritative calculations derived from completed workout sets, cumulative tonnage, and bodyweight logs.
         </p>
+      </div>
+
+      {/* Visual Analytics Segmented Switcher */}
+      <div
+        className="chip-scroll-container"
+        style={{
+          borderBottom: '1px solid var(--border-subtle)',
+          paddingBottom: 'var(--space-3)',
+          marginBottom: 'var(--space-6)',
+        }}
+      >
+        <button
+          className={`btn btn-sm ${activeTab === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveTab('all')}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+        >
+          <Layers size={15} /> All Charts
+        </button>
+        <button
+          className={`btn btn-sm ${activeTab === 'strength' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveTab('strength')}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+        >
+          <TrendingUp size={15} /> Strength Progression
+        </button>
+        <button
+          className={`btn btn-sm ${activeTab === 'volume' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveTab('volume')}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+        >
+          <BarChart3 size={15} /> Training Volume
+        </button>
+        <button
+          className={`btn btn-sm ${activeTab === 'weight' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveTab('weight')}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+        >
+          <Scale size={15} /> Body Weight
+        </button>
+      </div>
+
+      {/* Interactive Charts Section */}
+      <div style={{ marginBottom: 'var(--space-8)' }}>
+        {(activeTab === 'all' || activeTab === 'strength') && (
+          <StrengthProgressChart sessions={history} />
+        )}
+
+        {(activeTab === 'all' || activeTab === 'volume') && (
+          <VolumeChart sessions={history} />
+        )}
+
+        {(activeTab === 'all' || activeTab === 'weight') && (
+          <WeightTrendChart
+            entries={weightEntries}
+            onLogWeight={handleLogWeight}
+            onDeleteEntry={handleDeleteWeightEntry}
+          />
+        )}
       </div>
 
       {/* Personal Records Cards */}
@@ -58,7 +154,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
             <p style={{ color: 'var(--text-muted)' }}>Complete your first workout session to start tracking personal records automatically.</p>
           </div>
         ) : (
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 'var(--space-4)' }}>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 'var(--space-4)' }}>
             {prs.map(pr => (
               <div key={pr.id} className="card card-interactive" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderColor: 'var(--border-subtle)' }}>
                 <div>
@@ -148,33 +244,33 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
               </div>
               <h2 style={{ fontSize: '1.8rem', marginBottom: 'var(--space-2)', fontFamily: 'var(--font-heading)' }}>{activeSharePR.exerciseName}</h2>
               <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)', lineHeight: 1.1 }}>
-                {activeSharePR.weightKg} <span style={{ fontSize: '1.8rem', fontWeight: 600 }}>KG</span>
+                {activeSharePR.weightKg} <span style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-muted)' }}>KG</span>
               </div>
-              <p style={{ marginTop: 'var(--space-3)', fontSize: '1rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                {activeSharePR.reps} Reps | 1RM: {activeSharePR.estimatedOneRepMax} kg
-              </p>
-              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-4)', marginTop: 'var(--space-6)', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                <span style={{ fontWeight: 700, letterSpacing: '0.05em' }}>{PRODUCT_NAME}</span>
-                <span>{formatDate(activeSharePR.achievedAt)}</span>
+              <div style={{ color: 'var(--text-secondary)', marginTop: 'var(--space-2)', fontSize: '1.1rem' }}>
+                {activeSharePR.reps} {activeSharePR.reps === 1 ? 'rep' : 'reps'} @ 1RM {activeSharePR.estimatedOneRepMax} kg
+              </div>
+              <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '0.8rem', letterSpacing: '0.05em' }}>
+                VERIFIED BY {PRODUCT_NAME.toUpperCase()} • {formatDate(activeSharePR.achievedAt)}
               </div>
             </div>
 
-            <button
-              className="btn btn-primary btn-block"
-              onClick={() => {
-                if (navigator.share) {
-                  navigator.share({
-                    title: `New PR on ${activeSharePR.exerciseName}!`,
-                    text: `I just hit a new PR of ${activeSharePR.weightKg} kg for ${activeSharePR.reps} reps on ${PRODUCT_NAME}!`,
-                  }).catch(() => {});
-                } else {
-                  alert('Copied to clipboard: ' + `I just hit a new PR of ${activeSharePR.weightKg} kg on ${PRODUCT_NAME}!`);
-                }
-                setActiveSharePR(null);
-              }}
-            >
-              Share Achievement
-            </button>
+            <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+              <button
+                className="btn btn-primary btn-block"
+                onClick={() => {
+                  navigator.clipboard?.writeText(
+                    `🏆 Hit a new PR on ${PRODUCT_NAME}: ${activeSharePR.exerciseName} - ${activeSharePR.weightKg}kg for ${activeSharePR.reps} reps (1RM: ${activeSharePR.estimatedOneRepMax}kg)!`
+                  );
+                  alert('PR achievement copied to clipboard!');
+                  setActiveSharePR(null);
+                }}
+              >
+                Copy PR Summary
+              </button>
+              <button className="btn btn-secondary" onClick={() => setActiveSharePR(null)}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

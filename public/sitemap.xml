@@ -1,38 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://fitness-ai-app.web.app/</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://gymbuddy-da185.web.app/</loc>
+    <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://fitness-ai-app.web.app/fitness/calorie-calculator</loc>
+    <loc>https://gymbuddy-da185.web.app/how-it-works</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://gymbuddy-da185.web.app/workouts</loc>
     <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://gymbuddy-da185.web.app/exercises</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://gymbuddy-da185.web.app/nutrition</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://gymbuddy-da185.web.app/tools</loc>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://fitness-ai-app.web.app/fitness/protein-calculator</loc>
-    <changefreq>weekly</changefreq>
+    <loc>https://gymbuddy-da185.web.app/tools/calorie-calculator</loc>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://fitness-ai-app.web.app/fitness/bmi-calculator</loc>
-    <changefreq>weekly</changefreq>
+    <loc>https://gymbuddy-da185.web.app/tools/protein-calculator</loc>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://fitness-ai-app.web.app/fitness/1rm-calculator</loc>
+    <loc>https://gymbuddy-da185.web.app/pricing</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://fitness-ai-app.web.app/nutrition/protein-guide</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <loc>https://gymbuddy-da185.web.app/signin</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://fitness-ai-app.web.app/exercises</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <loc>https://gymbuddy-da185.web.app/signup</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
 </urlset>

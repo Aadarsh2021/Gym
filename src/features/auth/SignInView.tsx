@@ -145,7 +145,12 @@ export const SignInView: React.FC = () => {
           </div>
 
           <div className="input-group">
-            <label className="label">Password</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-1)' }}>
+              <label className="label" style={{ marginBottom: 0 }}>Password</label>
+              <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 500 }}>
+                Forgot password?
+              </Link>
+            </div>
             <div style={{ position: 'relative' }}>
               <input
                 type="password"

@@ -1,120 +1,177 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { profileService } from '@/services/profile.service';
-import { useAuth } from '@/hooks/useAuth';
 import { Dumbbell, AlertCircle } from 'lucide-react';
 import { PRODUCT_NAME } from '@/config/branding';
 
+/**
+ * AuthCallbackView
+ *
+ * Landing page for the Supabase OAuth redirect.
+ * Supabase's detectSessionInUrl:true (configured in supabase.ts) automatically
+ * exchanges the #access_token hash for a session. This component waits for that
+ * exchange to complete via onAuthStateChange (SIGNED_IN / INITIAL_SESSION events),
+ * then checks the user's onboarding status and routes accordingly.
+ *
+ * Routing logic:
+ *   fitness_profiles row with goal set → /app (existing user)
+ *   no row or no goal                  → /onboarding (new user)
+ */
 export const AuthCallbackView: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState('Verifying Google authentication...');
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { refreshSession } = useAuth();
+
+  // Prevent double-navigation if both the subscription and the fallback poll fire
+  const handledRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    let isMounted = true;
-    let handled = false;
+    isMountedRef.current = true;
 
-    // 1. Inspect URL parameters for OAuth errors (both hash and search params)
+    // ── 1. Check for OAuth error parameters in the callback URL ──────────────
     const searchParams = new URLSearchParams(location.search);
-    const hashParams = new URLSearchParams(location.hash.startsWith('#') ? location.hash.substring(1) : location.hash);
+    const hashParams = new URLSearchParams(
+      location.hash.startsWith('#') ? location.hash.substring(1) : ''
+    );
 
-    const oauthError = searchParams.get('error') || hashParams.get('error');
-    const oauthErrorDescription = searchParams.get('error_description') || hashParams.get('error_description') || '';
+    const oauthError =
+      searchParams.get('error') || hashParams.get('error');
+    const oauthErrorDescription =
+      searchParams.get('error_description') ||
+      hashParams.get('error_description') ||
+      '';
 
     if (oauthError) {
-      handled = true;
-      let friendlyMessage = 'Google sign-in failed. Please try again.';
-      if (
+      const isCancelled =
         oauthError === 'access_denied' ||
         oauthErrorDescription.toLowerCase().includes('denied') ||
-        oauthErrorDescription.toLowerCase().includes('cancel')
-      ) {
-        friendlyMessage = 'Google sign-in was cancelled.';
-      }
+        oauthErrorDescription.toLowerCase().includes('cancel');
+
+      const friendlyMessage = isCancelled
+        ? 'Google sign-in was cancelled.'
+        : 'Google sign-in failed. Please try again.';
+
       setError(friendlyMessage);
-      setTimeout(() => {
-        if (isMounted) {
-          navigate(`/signin?error=${encodeURIComponent(friendlyMessage)}`, { replace: true });
+      const timer = setTimeout(() => {
+        if (isMountedRef.current) {
+          navigate(`/signin?error=${encodeURIComponent(friendlyMessage)}`, {
+            replace: true,
+          });
         }
-      }, 1500);
-      return;
+      }, 1800);
+      return () => {
+        isMountedRef.current = false;
+        clearTimeout(timer);
+      };
     }
 
+    // ── 2. Mock mode (no Supabase configured) ────────────────────────────────
     if (!isSupabaseConfigured) {
-      handled = true;
       navigate('/app', { replace: true });
-      return;
+      return () => {
+        isMountedRef.current = false;
+      };
     }
 
-    // 2. Process Session and Route to Onboarding vs App
+    // ── 3. Core: wait for Supabase to complete the token exchange ────────────
+    //
+    // Supabase sets detectSessionInUrl:true, which parses the #access_token
+    // fragment from the callback URL and exchanges it for a session. This
+    // happens asynchronously after the page loads.
+    //
+    // The SIGNED_IN / INITIAL_SESSION event from onAuthStateChange fires
+    // *after* the exchange completes — this is the correct hook point.
+    //
+    // We also do a single delayed getSession() poll (150ms) as a fallback for
+    // cases where the exchange finishes before we set up the subscription.
+
     const processSession = async (userId: string) => {
-      if (handled) return;
-      handled = true;
+      if (handledRef.current) return;
+      handledRef.current = true;
 
       try {
-        if (isMounted) setStatusMessage('Preparing your athlete profile...');
-        await refreshSession();
+        if (isMountedRef.current) {
+          setStatusMessage('Preparing your athlete profile...');
+        }
 
-        // Check if user has already completed onboarding
+        // Determine onboarding destination based on fitness_profiles
         const fitnessProfile = await profileService.getFitnessProfile(userId);
 
-        if (!isMounted) return;
+        if (!isMountedRef.current) return;
 
         if (!fitnessProfile || !fitnessProfile.goal) {
-          // New Google athlete -> Start onboarding
+          // New Google user — begin onboarding funnel
           navigate('/onboarding', { replace: true });
         } else {
-          // Existing athlete -> Enter app dashboard directly
+          // Returning user with completed profile — go directly to app
           navigate('/app', { replace: true });
         }
       } catch {
-        if (isMounted) {
-          // Fallback safely to onboarding if profile check throws
+        // Profile lookup failed — default to onboarding (safe fallback)
+        if (isMountedRef.current && !handledRef.current) {
+          handledRef.current = true;
           navigate('/onboarding', { replace: true });
         }
       }
     };
 
-    // 3. Check for existing or immediate session
-    supabase.auth.getSession().then(({ data, error: sessionErr }) => {
-      if (sessionErr) {
-        if (isMounted) {
-          setError('Google authentication failed. Please try again.');
-          setTimeout(() => navigate('/signin?error=auth_failed', { replace: true }), 1500);
+    // Subscribe to auth state changes — fires after token exchange completes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (
+        session?.user &&
+        (event === 'SIGNED_IN' ||
+          event === 'INITIAL_SESSION' ||
+          event === 'TOKEN_REFRESHED')
+      ) {
+        processSession(session.user.id);
+      }
+    });
+
+    // Fallback poll: in case the exchange completed before the subscription
+    // was registered (e.g. fast network or cached session)
+    const pollTimer = setTimeout(async () => {
+      if (handledRef.current || !isMountedRef.current) return;
+      try {
+        const { data, error: sessionErr } = await supabase.auth.getSession();
+        if (sessionErr) {
+          if (isMountedRef.current && !handledRef.current) {
+            handledRef.current = true;
+            setError('Google authentication failed. Please try again.');
+          }
+          return;
         }
-        return;
+        if (data?.session?.user) {
+          processSession(data.session.user.id);
+        }
+      } catch {
+        // Ignore — timeout below will catch persistent failures
       }
+    }, 150);
 
-      if (data?.session?.user) {
-        processSession(data.session.user.id);
-      }
-    });
-
-    // 4. Subscribe to auth state change (handles asynchronous PKCE / hash token exchange)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED')) {
-        await processSession(session.user.id);
-      }
-    });
-
-    // 5. Fallback Timeout
+    // Timeout: if nothing resolves within 10 seconds, show an error
     const timeoutTimer = setTimeout(() => {
-      if (!handled && isMounted) {
-        setError('Authentication timed out. Please try signing in again.');
-        setTimeout(() => navigate('/signin?error=timeout', { replace: true }), 2000);
+      if (!handledRef.current && isMountedRef.current) {
+        handledRef.current = true;
+        setError(
+          'Authentication timed out. Please check your connection and try again.'
+        );
       }
-    }, 6000);
+    }, 10000);
 
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
       subscription.unsubscribe();
+      clearTimeout(pollTimer);
       clearTimeout(timeoutTimer);
     };
-  }, [location, navigate, refreshSession]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Intentionally empty deps — this runs once on mount for the callback URL.
 
   return (
     <div
@@ -152,26 +209,38 @@ export const AuthCallbackView: React.FC = () => {
           <Dumbbell size={28} strokeWidth={2.5} />
         </div>
 
-        <h2 style={{ fontSize: '1.4rem', marginBottom: 'var(--space-2)' }}>{PRODUCT_NAME}</h2>
+        <h2 style={{ fontSize: '1.4rem', marginBottom: 'var(--space-2)' }}>
+          {PRODUCT_NAME}
+        </h2>
 
         {error ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 'var(--space-2)',
-              padding: 'var(--space-3)',
-              background: 'rgba(255, 77, 77, 0.15)',
-              border: '1px solid var(--accent-fire)',
-              borderRadius: 'var(--radius-sm)',
-              color: 'var(--accent-fire)',
-              fontSize: '0.9rem',
-              marginTop: 'var(--space-3)',
-            }}
-          >
-            <AlertCircle size={18} />
-            <span>{error}</span>
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-3)',
+                background: 'rgba(255, 77, 77, 0.15)',
+                border: '1px solid var(--accent-fire)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--accent-fire)',
+                fontSize: '0.9rem',
+                marginTop: 'var(--space-3)',
+                marginBottom: 'var(--space-4)',
+              }}
+            >
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+            <Link
+              to="/signin"
+              className="btn btn-secondary btn-sm"
+              style={{ textDecoration: 'none' }}
+            >
+              Return to Sign In
+            </Link>
           </div>
         ) : (
           <div>
@@ -186,7 +255,9 @@ export const AuthCallbackView: React.FC = () => {
                 margin: 'var(--space-5) auto',
               }}
             />
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{statusMessage}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              {statusMessage}
+            </p>
           </div>
         )}
       </div>

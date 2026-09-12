@@ -26,7 +26,8 @@ describe('Exercise Alternatives Domain Engine', () => {
 
     expect(alts.length).toBeGreaterThan(0);
     expect(alts.some(a => a.id === squat.id)).toBe(false);
-    expect(alts.some(a => a.name.includes('Squat') || a.name.includes('Deadlift'))).toBe(true);
+    expect(alts.every(a => a.name.includes('Squat') || a.movementPattern.includes('Squat') || a.movementPattern.includes('Lunge'))).toBe(true);
+    expect(alts.some(a => a.name.includes('Deadlift'))).toBe(false);
   });
 
   it('falls back to same muscle group if exact name is not in direct map', () => {
@@ -45,5 +46,15 @@ describe('Exercise Alternatives Domain Engine', () => {
     const alts = findExerciseAlternatives(customExercise, CURATED_EXERCISE_CATALOG, 3);
     expect(alts.length).toBeGreaterThan(0);
     expect(alts.every(a => a.primaryMuscle === 'Chest')).toBe(true);
+  });
+
+  it('strictly substitutes deadlift with biomechanical hinge movements, never horizontal rows', () => {
+    const deadlift = CURATED_EXERCISE_CATALOG.find(e => e.name === 'Conventional Deadlift');
+    if (deadlift) {
+      const alts = findExerciseAlternatives(deadlift, CURATED_EXERCISE_CATALOG, 4);
+      expect(alts.length).toBeGreaterThan(0);
+      expect(alts.some(a => a.name.toLowerCase().includes('row'))).toBe(false);
+      expect(alts.every(a => a.movementPattern === 'Hip Hinge' || a.name.includes('Deadlift'))).toBe(true);
+    }
   });
 });

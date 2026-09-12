@@ -5,6 +5,7 @@ import { filterExerciseCatalog } from '@/domain/exercise-search';
 import { findExerciseAlternatives } from '@/domain/exercise-alternatives';
 import { FALLBACK_EXERCISES } from '@/services/exercise.service';
 import { ExerciseDetailModal } from './ExerciseDetailModal';
+import { SEOHead } from '@/components/common/SEOHead';
 
 interface ExerciseLibraryViewProps {
   exercises?: Exercise[];
@@ -53,7 +54,12 @@ export const ExerciseLibraryView: React.FC<ExerciseLibraryViewProps> = ({
   const hasActiveFilters = searchQuery !== '' || selectedMuscle !== 'All' || selectedEquipment !== 'All' || selectedDifficulty !== 'All';
 
   return (
-    <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4) calc(var(--bottom-nav-height) + var(--space-8))' }}>
+    <div className="container-app animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4) calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-8))' }}>
+      <SEOHead
+        title="Exercise Movement Library & Biomechanical Form Cues"
+        description="Explore verified biomechanical movement cues, setup instructions, common mistakes, and exercise alternatives."
+        canonicalPath="/exercises"
+      />
       {/* Editorial Header */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
@@ -107,7 +113,7 @@ export const ExerciseLibraryView: React.FC<ExerciseLibraryViewProps> = ({
         {/* Filter Chips Bar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {/* Muscle Group Chips */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', overflowX: 'auto', paddingBottom: '4px' }}>
+          <div className="chip-scroll-container">
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: '54px' }}>
               Muscle
             </span>
@@ -186,7 +192,7 @@ export const ExerciseLibraryView: React.FC<ExerciseLibraryViewProps> = ({
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-4)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: 'var(--space-4)' }}>
           {filteredExercises.map(exercise => (
             <div
               key={exercise.id}

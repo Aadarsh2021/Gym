@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Coins, User, LogOut, Sparkles } from 'lucide-react';
+import { Flame, Coins, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
@@ -9,7 +9,6 @@ interface HeaderProps {
   onOpenAuthModal?: () => void;
   onNavigateTab?: (tab: string) => void;
   activeTab?: string;
-  onOpenGuruJi?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,7 +17,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuthModal,
   onNavigateTab,
   activeTab = 'dashboard',
-  onOpenGuruJi,
 }) => {
   const { session, signOut } = useAuth();
 
@@ -80,21 +78,8 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
       </div>
 
-      {/* Metrics, AI Coach & Profile Section */}
+      {/* Metrics & Profile Section */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-        {/* Guru Ji Coach Trigger */}
-        {onOpenGuruJi && (
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={onOpenGuruJi}
-            title="Guru Ji Fitness Coach"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Sparkles size={14} color="var(--accent-primary)" />
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Coach</span>
-          </button>
-        )}
-
         {/* Streak Badge */}
         <div
           className="badge badge-warning"

@@ -1,10 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Clock, Zap, Target } from 'lucide-react';
+import { SEOHead } from '@/components/common/SEOHead';
 
 export const PublicWorkoutsView: React.FC = () => {
   return (
     <div className="container animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4) var(--space-12)' }}>
+      <SEOHead
+        title="Structured Workout Splits & Training Architecture"
+        description="Explore science-backed splits: Full Body 3-Day, Upper/Lower 4-Day, and Push/Pull/Legs 5-Day hypertrophy routines."
+        canonicalPath="/workouts"
+      />
       {/* Header */}
       <div style={{ maxWidth: '720px', margin: '0 auto var(--space-10)', textAlign: 'center' }}>
         <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>Training Splits</span>

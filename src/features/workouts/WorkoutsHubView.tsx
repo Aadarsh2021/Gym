@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Dumbbell, Play, Clock, History } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { workoutService } from '@/services/workout.service';
+import { streakService } from '@/services/streak.service';
 import { WorkoutPlan, WorkoutPlanDay, WorkoutSession } from '@/types/workout.types';
-import { getDayScheduledDays } from '@/domain/scheduled-workout';
+import { getDayScheduledDays, getTodaysScheduledWorkout } from '@/domain/scheduled-workout';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -19,6 +20,21 @@ export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({ onStartWorkout
   const [activePlan, setActivePlan] = useState<WorkoutPlan | null>(null);
   const [history, setHistory] = useState<WorkoutSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restDayLogged, setRestDayLogged] = useState(false);
+
+  const scheduleResult = useMemo(() => {
+    if (!activePlan) return null;
+    return getTodaysScheduledWorkout({
+      activePlan,
+      currentDate: new Date(),
+      completedSessions: history,
+    });
+  }, [activePlan, history]);
+
+  const handleMarkRestDay = async () => {
+    await streakService.logRestDay(userId);
+    setRestDayLogged(true);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -53,7 +69,7 @@ export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({ onStartWorkout
   }
 
   return (
-    <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4) var(--space-12)' }}>
+    <div className="container-app animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4) calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-8))' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
@@ -71,6 +87,55 @@ export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({ onStartWorkout
         </div>
       </div>
 
+      {/* Missed Session Recovery Notification */}
+      {scheduleResult?.missedPreviousWorkout && !restDayLogged && (
+        <div
+          className="card"
+          style={{
+            padding: 'var(--space-4)',
+            background: 'linear-gradient(145deg, rgba(28, 22, 58, 0.4) 0%, rgba(16, 21, 36, 0.7) 100%)',
+            borderColor: 'var(--accent-indigo)',
+            marginBottom: 'var(--space-6)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>Missed Session</span>
+              <strong style={{ color: 'var(--text-primary)' }}>{scheduleResult.missedPreviousWorkout.name}</strong>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
+              You can make up this session today, or log an active recovery day to keep your streak intact.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => onStartWorkoutWithDay(scheduleResult.missedPreviousWorkout!)}
+            >
+              Make Up Session
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={handleMarkRestDay}
+            >
+              Mark as Rest Day
+            </button>
+          </div>
+        </div>
+      )}
+
+      {restDayLogged && (
+        <div style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-3)', background: 'var(--color-success-muted)', borderRadius: 'var(--radius-sm)', color: 'var(--color-success)', fontSize: '0.85rem' }}>
+          ✓ Rest day logged. Your training consistency streak is preserved!
+        </div>
+      )}
+
       {/* Active Plan Content */}
       {activePlan && activePlan.days && activePlan.days.length > 0 ? (
         <div style={{ marginBottom: 'var(--space-10)' }}>
@@ -84,7 +149,7 @@ export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({ onStartWorkout
             </p>
           </div>
 
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)' }}>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 'var(--space-6)' }}>
             {activePlan.days.map((day, idx) => {
               const scheduledDOWs = getDayScheduledDays(day, activePlan.days.length, idx);
               const dowNames = scheduledDOWs.map(d => DAY_NAMES[d]).join(', ');

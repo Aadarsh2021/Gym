@@ -1,75 +1,75 @@
 :root {
   /* -------------------------------------------------------------------------
-     Ultra-Modern Sports-Tech & 3D Glass Design System (2026)
-     Deep Obsidian Canvas, Electric Emerald, Cyber Violet, Sunburst Amber
+     FORGED IRON & EMBER DESIGN SYSTEM (2026 MODERN GRAPHITE EDITION)
+     Neutral Graphite & Obsidian Surfaces, Restrained Ember Accents, Gold Honors, Indigo Data
      ------------------------------------------------------------------------- */
 
-  /* Canvas & Backgrounds - Rich Deep Obsidian, not muddy brown */
-  --bg-primary: #08090E;
-  --bg-secondary: #0D101A;
-  --bg-surface: rgba(16, 21, 36, 0.72);
-  --bg-surface-elevated: rgba(23, 30, 50, 0.88);
-  --bg-surface-glass: rgba(18, 24, 42, 0.55);
-  --bg-input: rgba(11, 15, 26, 0.85);
-  --bg-hover: rgba(30, 40, 68, 0.7);
+  /* Canvas & Backgrounds - Neutral Graphite & Obsidian */
+  --bg-primary: #0F1012;
+  --bg-secondary: #141619;
+  --bg-surface: #181A1D;
+  --bg-surface-elevated: #1E2125;
+  --bg-surface-glass: rgba(24, 26, 29, 0.85);
+  --bg-input: #121417;
+  --bg-hover: #22252A;
 
-  /* Modern Glass & Specular Borders */
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-medium: rgba(255, 255, 255, 0.14);
-  --border-strong: rgba(255, 255, 255, 0.24);
-  --border-focus: #00F29D;
-  --glass-specular: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  /* Borders - Precision Graphite Dividers */
+  --border-subtle: #25282D;
+  --border-medium: #30343A;
+  --border-strong: #424750;
+  --border-focus: #E58A4F;
+  --glass-specular: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
 
-  /* Brand Primary - Electric Emerald (High Energy, Vitality & Modern Tech) */
-  --accent-primary: #00F29D;
-  --accent-primary-hover: #19F5A6;
-  --accent-primary-active: #00D88C;
-  --accent-primary-muted: rgba(0, 242, 157, 0.12);
-  --accent-primary-glow: rgba(0, 242, 157, 0.28);
-  --accent-primary-text: #05140E;
+  /* Brand Primary - Restrained Ember / Copper (#E58A4F) */
+  --accent-primary: #E58A4F;
+  --accent-primary-hover: #F09B61;
+  --accent-primary-active: #CC7738;
+  --accent-primary-muted: rgba(229, 138, 79, 0.12);
+  --accent-primary-glow: rgba(229, 138, 79, 0.20);
+  --accent-primary-text: #0F1012;
 
-  /* Accent Secondary - Cyber Violet / Royal Indigo (Guru Ji AI Coach & Intelligence) */
-  --accent-purple: #8B5CF6;
-  --accent-purple-hover: #A78BFA;
-  --accent-purple-muted: rgba(139, 92, 246, 0.14);
-  --accent-purple-glow: rgba(139, 92, 246, 0.32);
-  --accent-indigo: #6366F1;
-  --accent-indigo-muted: rgba(99, 102, 241, 0.14);
+  /* Accent Secondary / Analytics - Indigo (#3B4B6B) for analytics/data only */
+  --accent-indigo: #3B4B6B;
+  --accent-indigo-muted: rgba(59, 75, 107, 0.15);
+  --accent-indigo-border: rgba(59, 75, 107, 0.30);
+  --accent-secondary: #3B4B6B;
+  --accent-purple: #3B4B6B;
+  --accent-purple-hover: #4E628A;
+  --accent-purple-muted: rgba(59, 75, 107, 0.15);
+  --accent-purple-glow: rgba(59, 75, 107, 0.22);
 
-  /* Accent Tertiary - Molten Sunburst Amber (Streaks, Fire, PR Triumphs) */
-  --accent-amber: #FF9900;
-  --accent-gold: #FFB800;
-  --accent-gold-hover: #FFC72C;
-  --accent-gold-muted: rgba(255, 184, 0, 0.14);
-  --accent-gold-glow: rgba(255, 184, 0, 0.3);
-  --accent-fire: #FF5A36;
+  /* Celebration / Reward - Gold (#D4A857) - Special honors only */
+  --accent-amber: #D4A857;
+  --accent-gold: #D4A857;
+  --accent-gold-hover: #E2BA6E;
+  --accent-gold-muted: rgba(212, 168, 87, 0.12);
+  --accent-gold-glow: rgba(212, 168, 87, 0.20);
+  --accent-fire: #E58A4F;
 
-  /* Accent Quaternary - Electric Cyan (Recovery, Hydration, Aerobics) */
-  --accent-cyan: #06B6D4;
-  --accent-cyan-muted: rgba(6, 182, 212, 0.14);
-  --accent-cyan-glow: rgba(6, 182, 212, 0.3);
+  /* Accent Quaternary / Neutral Accent */
+  --accent-cyan: #6B8CAE;
+  --accent-cyan-muted: rgba(107, 140, 174, 0.12);
+  --accent-cyan-glow: rgba(107, 140, 174, 0.20);
 
-  /* Typography - Clean Crisp Off-Whites & Cool Slates (No muddy khaki) */
-  --text-primary: #FFFFFF;
-  --text-secondary: #94A3B8;
-  --text-tertiary: #64748B;
-  --text-muted: #64748B;
-  --text-inverse: #08090E;
+  /* Typography - Crisp Neutral Modern Slate */
+  --text-primary: #F2F3F5;
+  --text-secondary: #A9ADB5;
+  --text-tertiary: #777B84;
+  --text-muted: #686C75;
+  --text-inverse: #0F1012;
 
   /* Semantic */
-  --color-success: #10B981;
-  --color-success-muted: rgba(16, 185, 129, 0.14);
-  --color-warning: #F59E0B;
-  --color-warning-muted: rgba(245, 158, 11, 0.14);
-  --color-error: #EF4444;
-  --color-error-muted: rgba(239, 68, 68, 0.14);
-  --color-info: #38BDF8;
-  --color-info-muted: rgba(56, 189, 248, 0.14);
+  --color-success: #7FA66B;
+  --color-success-muted: rgba(127, 166, 107, 0.12);
+  --color-warning: #D4A857;
+  --color-warning-muted: rgba(212, 168, 87, 0.12);
+  --color-error: #C1594F;
+  --color-error-muted: rgba(193, 89, 79, 0.12);
+  --color-info: #6B8CAE;
+  --color-info-muted: rgba(107, 140, 174, 0.12);
 
-  /* Semantic aliases */
-  --accent-secondary: #8B5CF6;
-  --accent-tertiary: #94A3B8;
-  --accent-success: #10B981;
+  --accent-tertiary: #A9ADB5;
+  --accent-success: #7FA66B;
 
   /* Typography */
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -88,7 +88,7 @@
   --space-12: 3rem;   /* 48px */
   --space-16: 4rem;   /* 64px */
 
-  /* Border Radii (Modern smooth curvatures) */
+  /* Border Radii */
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -96,21 +96,265 @@
   --radius-xl: 22px;
   --radius-full: 9999px;
 
-  /* 3D Depth & Glowing Shadows */
-  --shadow-sm: 0 2px 4px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 20px -4px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 16px 36px -8px rgba(0, 0, 0, 0.65);
-  --shadow-3d: 0 14px 34px -6px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
-  --shadow-glow-emerald: 0 0 24px rgba(0, 242, 157, 0.3);
-  --shadow-glow-purple: 0 0 24px rgba(139, 92, 246, 0.32);
-  --shadow-glow-gold: 0 0 24px rgba(255, 184, 0, 0.3);
+  /* Shadows - Crisp Depth */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 14px -2px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
+  --shadow-3d: 0 8px 24px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  --shadow-glow-copper: 0 0 16px rgba(229, 138, 79, 0.18);
+  --shadow-glow-emerald: 0 0 16px rgba(127, 166, 107, 0.18);
+  --shadow-glow-purple: 0 0 16px rgba(59, 75, 107, 0.18);
+  --shadow-glow-gold: 0 0 16px rgba(212, 168, 87, 0.18);
 
   /* Transitions */
   --transition-fast: 120ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-normal: 220ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-spring: 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Touch Targets (Mobile Ergonomics >= 44px) */
+  /* Touch Targets & Safe Areas (Mobile Ergonomics >= 44px, preferred 48px) */
   --min-touch-size: 44px;
+  --touch-target-lg: 48px;
   --bottom-nav-height: 64px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* ==========================================================================
+   LIGHT MODE THEME — Applied via html[data-theme="light"]
+   Clean, airy sports-tech aesthetic — warm whites, rich slate typography
+   ========================================================================== */
+
+html[data-theme="light"] {
+  /* Canvas & Backgrounds — Crisp Neutral White & Gray */
+  --bg-primary: #F8F9FA;
+  --bg-secondary: #F0F2F5;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-surface-glass: rgba(255, 255, 255, 0.90);
+  --bg-input: #FFFFFF;
+  --bg-hover: #E9ECEF;
+
+  /* Borders — Neutral slate dividers */
+  --border-subtle: #E2E4E8;
+  --border-medium: #D1D5DB;
+  --border-strong: #9CA3AF;
+  --border-focus: #E58A4F;
+  --glass-specular: inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+
+  /* Brand Primary — Restrained Ember */
+  --accent-primary: #C86A28;
+  --accent-primary-hover: #E58A4F;
+  --accent-primary-active: #B25A1E;
+  --accent-primary-muted: rgba(200, 106, 40, 0.10);
+  --accent-primary-glow: rgba(200, 106, 40, 0.15);
+  --accent-primary-text: #FFFFFF;
+
+  /* Accent Gold / Celebration */
+  --accent-gold: #B48228;
+  --accent-gold-hover: #966B1E;
+  --accent-gold-muted: rgba(180, 130, 40, 0.10);
+  --accent-gold-glow: rgba(180, 130, 40, 0.15);
+
+  /* Accent Indigo — Analytics/Data only */
+  --accent-indigo: #3B4B6B;
+  --accent-indigo-muted: rgba(59, 75, 107, 0.10);
+
+  /* Typography */
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-tertiary: #6B7280;
+  --text-muted: #9CA3AF;
+  --text-inverse: #FFFFFF;
+
+  /* Semantic colors */
+  --color-success: #5C8049;
+  --color-success-muted: rgba(92, 128, 73, 0.10);
+  --color-warning: #B48228;
+  --color-warning-muted: rgba(180, 130, 40, 0.10);
+  --color-error: #B84A40;
+  --color-error-muted: rgba(184, 74, 64, 0.10);
+  --color-info: #5A7B9B;
+  --color-info-muted: rgba(90, 123, 155, 0.10);
+
+  /* Aliases */
+  --accent-secondary: #D4A857;
+  --accent-tertiary: #6B7280;
+  --accent-success: #5C8049;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-3d: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-glow-copper: 0 0 12px rgba(200, 106, 40, 0.15);
+  --shadow-glow-gold: 0 0 12px rgba(180, 130, 40, 0.15);
+}
+
+/* Light mode specific component overrides */
+html[data-theme="light"] body {
+  background-color: var(--bg-primary);
+}
+
+html[data-theme="light"] .card {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+html[data-theme="light"] .card-elevated {
+  background: var(--bg-surface);
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-md);
+}
+
+html[data-theme="light"] .card-interactive:hover {
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-md);
+}
+
+html[data-theme="light"] .stat-tile {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+html[data-theme="light"] .btn-secondary {
+  background: var(--bg-surface);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+html[data-theme="light"] .badge {
+  background: var(--bg-secondary);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .badge-accent {
+  background: rgba(200, 106, 40, 0.10);
+  color: #B25A1E;
+  border-color: rgba(200, 106, 40, 0.25);
+}
+
+html[data-theme="light"] .badge-gold {
+  background: rgba(180, 130, 40, 0.10);
+  color: #966B1E;
+  border-color: rgba(180, 130, 40, 0.25);
+}
+
+html[data-theme="light"] .badge-indigo {
+  background: rgba(59, 75, 107, 0.10);
+  color: #2D3A53;
+  border-color: rgba(59, 75, 107, 0.25);
+}
+
+html[data-theme="light"] .badge-success {
+  background: rgba(92, 128, 73, 0.10);
+  color: #486837;
+  border-color: rgba(92, 128, 73, 0.25);
+}
+
+html[data-theme="light"] .input,
+html[data-theme="light"] .select,
+html[data-theme="light"] .textarea {
+  background: #FFFFFF;
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+html[data-theme="light"] .input:focus,
+html[data-theme="light"] .select:focus,
+html[data-theme="light"] .textarea:focus {
+  background-color: #FFFFFF;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(200, 106, 40, 0.12);
+}
+
+/* Light mode app shell surfaces */
+html[data-theme="light"] .app-sidebar {
+  background: var(--bg-surface) !important;
+  border-right-color: var(--border-subtle) !important;
+}
+
+html[data-theme="light"] .mobile-only-header {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-bottom-color: var(--border-subtle) !important;
+}
+
+html[data-theme="light"] .desktop-topbar {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-bottom-color: var(--border-subtle) !important;
+}
+
+html[data-theme="light"] .bottom-nav {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-top-color: var(--border-subtle) !important;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+html[data-theme="light"] .sidebar-user-card {
+  background: var(--bg-secondary);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+html[data-theme="light"] .sidebar-coach-banner {
+  background: var(--bg-secondary);
+  border-color: var(--border-subtle);
+}
+
+html[data-theme="light"] .sidebar-link {
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .sidebar-link:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .sidebar-link.active {
+  background: var(--accent-primary-muted);
+  color: var(--accent-primary);
+  border-left-color: var(--accent-primary);
+}
+
+html[data-theme="light"] .modal-content {
+  background: #FFFFFF;
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-lg);
+}
+
+html[data-theme="light"] .modal-backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="light"] .drawer {
+  background: #FFFFFF;
+  border-left-color: var(--border-medium);
+  box-shadow: var(--shadow-lg);
+}
+
+html[data-theme="light"] .dashboard-welcome-banner {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-md);
+}
+
+/* Smooth theme transition on all elements */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Exclude elements where transitions would look wrong */
+.spinner, .btn:active, [class*="animation"] {
+  transition: none;
+}
+

@@ -79,6 +79,46 @@ export const streakService = {
     }
   },
 
+  async logRestDay(userId: string, dateStr?: string): Promise<{ success: boolean; error?: string }> {
+    const today = dateStr || new Date().toISOString().split('T')[0];
+    if (!isSupabaseConfigured) {
+      const stored = localStorage.getItem(`streak_${userId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        localStorage.setItem(`streak_${userId}`, JSON.stringify({ ...parsed, lastActivityDate: today }));
+      }
+      return { success: true };
+    }
+
+    try {
+      const { error: eventError } = await supabase
+        .from('streak_events')
+        .insert({
+          user_id: userId,
+          event_date: today,
+          event_type: 'rest_day',
+        });
+
+      if (eventError) {
+        return { success: false, error: eventError.message };
+      }
+
+      // Update streaks record to advance last_activity_date and preserve streak continuity
+      await supabase
+        .from('streaks')
+        .update({
+          last_activity_date: today,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+
+      return { success: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to log rest day';
+      return { success: false, error: message };
+    }
+  },
+
   async useRevive(idempotencyKey: string): Promise<{ success: boolean; currentStreak?: number; error?: string }> {
     if (!isSupabaseConfigured) {
       return { success: true, currentStreak: 7 };

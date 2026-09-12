@@ -10,20 +10,20 @@ const DIRECT_ALTERNATIVES_MAP: Record<string, string[]> = {
   'Push-Up': ['Barbell Bench Press', 'Dumbbell Bench Press', 'Incline Dumbbell Press', 'Cable Chest Fly'],
   'Cable Chest Fly': ['Dumbbell Fly', 'Incline Dumbbell Press', 'Push-Up'],
 
-  // Back
-  'Conventional Deadlift': ['Romanian Deadlift', 'Barbell Bent-Over Row', 'Trap Bar Deadlift'],
+  // Back / Posterior Chain
+  'Conventional Deadlift': ['Romanian Deadlift', 'Trap Bar Deadlift', 'Dumbbell RDL'],
   'Barbell Bent-Over Row': ['Seated Cable Row', 'Dumbbell Single-Arm Row', 'Lat Pulldown'],
   'Lat Pulldown': ['Pull-Up', 'Seated Cable Row', 'Straight-Arm Pulldown'],
   'Seated Cable Row': ['Barbell Bent-Over Row', 'Lat Pulldown', 'Dumbbell Single-Arm Row'],
 
   // Shoulders
-  'Overhead Barbell Press': ['Dumbbell Shoulder Press', 'Arnold Press', 'Dumbbell Lateral Raise', 'Push-Up'],
-  'Dumbbell Lateral Raise': ['Cable Lateral Raise', 'Overhead Barbell Press', 'Face Pull'],
-  'Rear Delt Face Pull': ['Dumbbell Rear Delt Fly', 'Seated Cable Row', 'Dumbbell Lateral Raise'],
+  'Overhead Barbell Press': ['Dumbbell Shoulder Press', 'Arnold Press', 'Dumbbell Lateral Raise', 'Pike Push-Up'],
+  'Dumbbell Lateral Raise': ['Cable Lateral Raise', 'Face Pull'],
+  'Rear Delt Face Pull': ['Dumbbell Rear Delt Fly', 'Dumbbell Lateral Raise'],
 
   // Legs
-  'Barbell Back Squat': ['Goblet Squat', 'Bulgarian Split Squat', 'Leg Press', 'Romanian Deadlift'],
-  'Romanian Deadlift': ['Conventional Deadlift', 'Dumbbell RDL', 'Barbell Back Squat'],
+  'Barbell Back Squat': ['Goblet Squat', 'Bulgarian Split Squat', 'Leg Press', 'Bodyweight Squat'],
+  'Romanian Deadlift': ['Conventional Deadlift', 'Dumbbell RDL', 'Trap Bar Deadlift'],
   'Goblet Squat': ['Barbell Back Squat', 'Bulgarian Split Squat', 'Bodyweight Squat'],
   'Bulgarian Split Squat': ['Goblet Squat', 'Barbell Back Squat', 'Walking Lunge'],
   'Calf Raise': ['Seated Calf Raise', 'Standing Dumbbell Calf Raise'],
@@ -79,26 +79,61 @@ export function findExerciseAlternatives(
 
   // 3. Fallback: match by primary muscle and same/compatible movement pattern
   if (alternatives.length < limit) {
-    const candidateList = allAvailableExercises.filter(ex => {
-      if (addedIds.has(ex.id)) return false;
-      return ex.primaryMuscle.toLowerCase() === targetExercise.primaryMuscle.toLowerCase();
-    });
+    const isHinge =
+      targetExercise.movementPattern.toLowerCase().includes('hinge') ||
+      targetExercise.name.toLowerCase().includes('deadlift');
 
-    // Prefer same movement pattern first
-    for (const candidate of candidateList) {
-      if (alternatives.length >= limit) break;
-      if (candidate.movementPattern.toLowerCase() === targetExercise.movementPattern.toLowerCase()) {
+    if (isHinge) {
+      // Hinge movements must strictly substitute with other hip hinge / deadlift movements
+      const hingeCandidates = allAvailableExercises.filter(ex => {
+        if (addedIds.has(ex.id)) return false;
+        const exPattern = ex.movementPattern.toLowerCase();
+        const exName = ex.name.toLowerCase();
+        return (
+          (exPattern.includes('hinge') || exName.includes('deadlift') || exName.includes('rdl')) &&
+          !exName.includes('row') &&
+          !exPattern.includes('pull')
+        );
+      });
+
+      for (const candidate of hingeCandidates) {
+        if (alternatives.length >= limit) break;
         alternatives.push(candidate);
         addedIds.add(candidate.id);
       }
-    }
+    } else {
+      const candidateList = allAvailableExercises.filter(ex => {
+        if (addedIds.has(ex.id)) return false;
+        return ex.primaryMuscle.toLowerCase() === targetExercise.primaryMuscle.toLowerCase();
+      });
 
-    // Then any other exercise of the same muscle group
-    for (const candidate of candidateList) {
-      if (alternatives.length >= limit) break;
-      if (!addedIds.has(candidate.id)) {
-        alternatives.push(candidate);
-        addedIds.add(candidate.id);
+      // Prefer exact same movement pattern first
+      for (const candidate of candidateList) {
+        if (alternatives.length >= limit) break;
+        if (candidate.movementPattern.toLowerCase() === targetExercise.movementPattern.toLowerCase()) {
+          alternatives.push(candidate);
+          addedIds.add(candidate.id);
+        }
+      }
+
+      // Then compatible movements within the same muscle group
+      const isSquatOrLunge = /squat|lunge/i.test(targetExercise.movementPattern);
+      const isPush = targetExercise.movementPattern.toLowerCase().includes('push');
+      const isPull = targetExercise.movementPattern.toLowerCase().includes('pull');
+
+      for (const candidate of candidateList) {
+        if (alternatives.length >= limit) break;
+        if (!addedIds.has(candidate.id)) {
+          const candPattern = candidate.movementPattern.toLowerCase();
+          // Never substitute squat/lunge with hinge, pull, or isolation
+          if (isSquatOrLunge && !/squat|lunge/i.test(candPattern)) continue;
+          // Never substitute push with pull or vice versa
+          if (isPush && candPattern.includes('pull')) continue;
+          if (isPull && candPattern.includes('push')) continue;
+
+          alternatives.push(candidate);
+          addedIds.add(candidate.id);
+        }
       }
     }
   }

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Menu, X, ArrowRight } from 'lucide-react';
+import { Menu, X, ArrowRight, Moon, Sun } from 'lucide-react';
 import { Footer } from '@/components/layout/Footer';
 import { BrandLogo } from '@/components/common/BrandLogo';
+import { useTheme } from '@/context/ThemeContext';
 
 export const PublicAppShell: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const publicNavLinks = [
@@ -14,6 +16,7 @@ export const PublicAppShell: React.FC = () => {
     { to: '/exercises', label: 'Exercises' },
     { to: '/nutrition', label: 'Nutrition' },
     { to: '/tools', label: 'Free Tools' },
+    { to: '/pricing', label: 'Pricing' },
   ];
 
   return (
@@ -24,7 +27,7 @@ export const PublicAppShell: React.FC = () => {
           position: 'sticky',
           top: 0,
           zIndex: 120,
-          background: 'rgba(20, 18, 15, 0.92)',
+          background: 'rgba(15, 16, 18, 0.92)',
           backdropFilter: 'blur(8px)',
           borderBottom: '1px solid var(--border-subtle)',
           height: '64px',
@@ -89,6 +92,20 @@ export const PublicAppShell: React.FC = () => {
             }}
             className="desktop-nav"
           >
+            {/* Theme Toggle */}
+            <button
+              id="public-desktop-theme-toggle"
+              className="btn btn-ghost btn-sm"
+              onClick={toggleTheme}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              style={{ padding: '0 8px' }}
+            >
+              {isDark
+                ? <Sun size={16} color="var(--accent-gold)" />
+                : <Moon size={16} color="var(--accent-primary)" />
+              }
+            </button>
             <Link to="/signin" className="btn btn-ghost btn-sm" style={{ textDecoration: 'none' }}>
               Sign In
             </Link>
@@ -101,25 +118,50 @@ export const PublicAppShell: React.FC = () => {
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle navigation menu"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'transparent',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '8px',
-              color: 'var(--text-primary)',
-              cursor: 'pointer',
-            }}
-            className="mobile-only-btn"
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          {/* Mobile Right: Theme + Menu Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className="mobile-only-btn">
+            <button
+              id="public-mobile-theme-toggle"
+              onClick={toggleTheme}
+              aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                minWidth: '44px',
+                minHeight: '44px',
+                padding: '8px',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              {isDark ? <Sun size={18} color="var(--accent-gold)" /> : <Moon size={18} color="var(--accent-primary)" />}
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle navigation menu"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                minWidth: '44px',
+                minHeight: '44px',
+                padding: '8px',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
       </header>
 

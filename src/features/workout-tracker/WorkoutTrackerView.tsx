@@ -310,10 +310,9 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
 
   return (
     <div
-      className="container-narrow animate-fade-in"
+      className="container-workout animate-fade-in"
       style={{
-        padding: 'var(--space-4) var(--space-4) calc(var(--bottom-nav-height) + var(--space-12))',
-        maxWidth: '720px',
+        padding: 'var(--space-4) var(--space-4) calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-12))',
       }}
     >
       {/* Gym Top Action Bar */}
@@ -501,151 +500,293 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
                 </span>
               </div>
 
-              {/* Table Column Headers */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '48px 70px 1fr 1fr 70px 48px',
-                  gap: 'var(--space-2)',
-                  padding: 'var(--space-2) var(--space-4)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  alignItems: 'center',
-                  textAlign: 'center',
-                }}
-              >
-                <span>Set</span>
-                <span>Type</span>
-                <span>Weight (kg)</span>
-                <span>Reps</span>
-                <span>RPE</span>
-                <span>Done</span>
+              {/* DESKTOP TABLE VIEW (>= 768px) */}
+              <div className="workout-table-desktop">
+                {/* Table Column Headers */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '48px 70px 1fr 1fr 70px 48px',
+                    gap: 'var(--space-2)',
+                    padding: 'var(--space-2) var(--space-4)',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'var(--text-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                  }}
+                >
+                  <span>Set</span>
+                  <span>Type</span>
+                  <span>Weight (kg)</span>
+                  <span>Reps</span>
+                  <span>RPE</span>
+                  <span>Done</span>
+                </div>
+
+                {/* Sets Rows */}
+                <div style={{ padding: '0 var(--space-4) var(--space-2)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                  {exercise.sets.map((set, setIndex) => (
+                    <div
+                      key={setIndex}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '48px 70px 1fr 1fr 70px 48px',
+                        gap: 'var(--space-2)',
+                        alignItems: 'center',
+                        padding: 'var(--space-2)',
+                        background: set.completed ? 'var(--accent-primary-muted)' : 'var(--bg-input)',
+                        border: `1px solid ${set.completed ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                        borderRadius: 'var(--radius-sm)',
+                        transition: 'background-color var(--transition-fast)',
+                      }}
+                    >
+                      {/* Set Number */}
+                      <span style={{ fontWeight: 700, textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>
+                        {set.setIndex}
+                      </span>
+
+                      {/* Set Type Selector */}
+                      <select
+                        className="select"
+                        value={set.setType || 'normal'}
+                        onChange={e => updateSetValue(exIndex, setIndex, 'setType', e.target.value as SetType)}
+                        style={{ height: '38px', minHeight: '38px', fontSize: '0.75rem', padding: '0 4px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}
+                      >
+                        <option value="normal">Work</option>
+                        <option value="warmup">Warm</option>
+                        <option value="drop">Drop</option>
+                        <option value="failure">Fail</option>
+                      </select>
+
+                      {/* Weight with Quick Steppers */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <input
+                          type="number"
+                          className="input"
+                          value={set.weightKg}
+                          min={0}
+                          step={0.5}
+                          onChange={e => updateSetValue(exIndex, setIndex, 'weightKg', parseFloat(e.target.value) || 0)}
+                          style={{ textAlign: 'center', height: '38px', minHeight: '38px', padding: 0, fontSize: '0.95rem', fontFamily: 'var(--font-mono)', fontWeight: 600 }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ height: '18px', minHeight: '18px', width: '22px', padding: 0, fontSize: '9px', fontWeight: 800 }}
+                            onClick={() => adjustWeight(exIndex, setIndex, 2.5)}
+                            title="+2.5 kg"
+                          >
+                            +
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ height: '18px', minHeight: '18px', width: '22px', padding: 0, fontSize: '9px', fontWeight: 800 }}
+                            onClick={() => adjustWeight(exIndex, setIndex, -2.5)}
+                            title="-2.5 kg"
+                          >
+                            -
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Reps Input */}
+                      <input
+                        type="number"
+                        className="input"
+                        value={set.reps}
+                        min={0}
+                        onChange={e => updateSetValue(exIndex, setIndex, 'reps', parseInt(e.target.value) || 0)}
+                        style={{ textAlign: 'center', height: '38px', minHeight: '38px', padding: 0, fontSize: '0.95rem', fontFamily: 'var(--font-mono)', fontWeight: 600 }}
+                      />
+
+                      {/* RPE Selector */}
+                      <select
+                        className="select"
+                        value={set.rpe || 8}
+                        onChange={e => updateSetValue(exIndex, setIndex, 'rpe', parseFloat(e.target.value))}
+                        style={{ height: '38px', minHeight: '38px', fontSize: '0.8rem', padding: '0 4px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}
+                        title={RPE_DESCRIPTIONS[set.rpe || 8] || 'RPE'}
+                      >
+                        <option value={6}>6</option>
+                        <option value={7}>7</option>
+                        <option value={8}>8</option>
+                        <option value={8.5}>8.5</option>
+                        <option value={9}>9</option>
+                        <option value={9.5}>9.5</option>
+                        <option value={10}>10</option>
+                      </select>
+
+                      {/* Checkbox (Touch Target >= 44px) */}
+                      <button
+                        type="button"
+                        onClick={() => toggleSetCompleted(exIndex, setIndex)}
+                        style={{
+                          height: '44px',
+                          width: '44px',
+                          minHeight: '44px',
+                          minWidth: '44px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: `1px solid ${set.completed ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                          backgroundColor: set.completed ? 'var(--accent-primary)' : 'var(--bg-surface-elevated)',
+                          color: set.completed ? 'var(--accent-primary-text)' : 'var(--text-muted)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'background-color var(--transition-fast)',
+                          margin: '0 auto',
+                        }}
+                        aria-label="Mark set completed"
+                      >
+                        <Check size={20} strokeWidth={set.completed ? 3 : 2} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* Sets Rows */}
-              <div style={{ padding: '0 var(--space-4) var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+              {/* MOBILE ONE-HANDED SET CARDS (< 768px) */}
+              <div className="workout-cards-mobile">
                 {exercise.sets.map((set, setIndex) => (
                   <div
                     key={setIndex}
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: '48px 70px 1fr 1fr 70px 48px',
-                      gap: 'var(--space-2)',
-                      alignItems: 'center',
-                      padding: 'var(--space-2)',
                       background: set.completed ? 'var(--accent-primary-muted)' : 'var(--bg-input)',
-                      border: `1px solid ${set.completed ? 'rgba(224, 139, 76, 0.4)' : 'var(--border-subtle)'}`,
+                      border: `1px solid ${set.completed ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
                       borderRadius: 'var(--radius-sm)',
-                      transition: 'background-color var(--transition-fast)',
+                      padding: 'var(--space-3)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 'var(--space-2)',
                     }}
                   >
-                    {/* Set Number */}
-                    <span style={{ fontWeight: 700, textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>
-                      {set.setIndex}
-                    </span>
-
-                    {/* Set Type Selector */}
-                    <select
-                      className="select"
-                      value={set.setType || 'normal'}
-                      onChange={e => updateSetValue(exIndex, setIndex, 'setType', e.target.value as SetType)}
-                      style={{ height: '38px', minHeight: '38px', fontSize: '0.75rem', padding: '0 4px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}
-                    >
-                      <option value="normal">Work</option>
-                      <option value="warmup">Warm</option>
-                      <option value="drop">Drop</option>
-                      <option value="failure">Fail</option>
-                    </select>
-
-                    {/* Weight with Quick Steppers */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      <input
-                        type="number"
-                        className="input"
-                        value={set.weightKg}
-                        min={0}
-                        step={0.5}
-                        onChange={e => updateSetValue(exIndex, setIndex, 'weightKg', parseFloat(e.target.value) || 0)}
-                        style={{ textAlign: 'center', height: '38px', minHeight: '38px', padding: 0, fontSize: '0.95rem', fontFamily: 'var(--font-mono)', fontWeight: 600 }}
-                      />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ height: '18px', minHeight: '18px', width: '22px', padding: 0, fontSize: '9px', fontWeight: 800 }}
-                          onClick={() => adjustWeight(exIndex, setIndex, 2.5)}
-                          title="+2.5 kg"
+                    {/* Top Row: Set # + Set Type Tag + RPE */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <span style={{ fontWeight: 800, fontFamily: 'var(--font-mono)', fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                          SET {set.setIndex}
+                        </span>
+                        <select
+                          className="select"
+                          value={set.setType || 'normal'}
+                          onChange={e => updateSetValue(exIndex, setIndex, 'setType', e.target.value as SetType)}
+                          style={{ height: '34px', minHeight: '34px', fontSize: '0.78rem', padding: '0 6px', fontFamily: 'var(--font-mono)' }}
                         >
-                          +
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ height: '18px', minHeight: '18px', width: '22px', padding: 0, fontSize: '9px', fontWeight: 800 }}
-                          onClick={() => adjustWeight(exIndex, setIndex, -2.5)}
-                          title="-2.5 kg"
+                          <option value="normal">Work</option>
+                          <option value="warmup">Warmup</option>
+                          <option value="drop">Drop</option>
+                          <option value="failure">Failure</option>
+                        </select>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>RPE</span>
+                        <select
+                          className="select"
+                          value={set.rpe || 8}
+                          onChange={e => updateSetValue(exIndex, setIndex, 'rpe', parseFloat(e.target.value))}
+                          style={{ height: '34px', minHeight: '34px', fontSize: '0.8rem', padding: '0 6px', fontFamily: 'var(--font-mono)' }}
+                          title={RPE_DESCRIPTIONS[set.rpe || 8] || 'RPE'}
                         >
-                          -
-                        </button>
+                          <option value={6}>6</option>
+                          <option value={7}>7</option>
+                          <option value={8}>8</option>
+                          <option value={8.5}>8.5</option>
+                          <option value={9}>9</option>
+                          <option value={9.5}>9.5</option>
+                          <option value={10}>10</option>
+                        </select>
                       </div>
                     </div>
 
-                    {/* Reps Input */}
-                    <input
-                      type="number"
-                      className="input"
-                      value={set.reps}
-                      min={0}
-                      onChange={e => updateSetValue(exIndex, setIndex, 'reps', parseInt(e.target.value) || 0)}
-                      style={{ textAlign: 'center', height: '38px', minHeight: '38px', padding: 0, fontSize: '0.95rem', fontFamily: 'var(--font-mono)', fontWeight: 600 }}
-                    />
+                    {/* Bottom Row: Weight Stepper + Reps + Big 48px Checkmark */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      {/* Weight Stepper */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <small style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '2px', fontWeight: 600 }}>Weight (kg)</small>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ height: '42px', minHeight: '42px', minWidth: '32px', padding: 0, fontWeight: 700 }}
+                            onClick={() => adjustWeight(exIndex, setIndex, -2.5)}
+                            title="-2.5 kg"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            className="input"
+                            value={set.weightKg}
+                            min={0}
+                            step={0.5}
+                            onChange={e => updateSetValue(exIndex, setIndex, 'weightKg', parseFloat(e.target.value) || 0)}
+                            style={{ textAlign: 'center', height: '42px', minHeight: '42px', padding: 0, fontSize: '1rem', fontFamily: 'var(--font-mono)', fontWeight: 700, width: '100%', minWidth: 0 }}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ height: '42px', minHeight: '42px', minWidth: '32px', padding: 0, fontWeight: 700 }}
+                            onClick={() => adjustWeight(exIndex, setIndex, 2.5)}
+                            title="+2.5 kg"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
 
-                    {/* RPE Selector */}
-                    <select
-                      className="select"
-                      value={set.rpe || 8}
-                      onChange={e => updateSetValue(exIndex, setIndex, 'rpe', parseFloat(e.target.value))}
-                      style={{ height: '38px', minHeight: '38px', fontSize: '0.8rem', padding: '0 4px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}
-                      title={RPE_DESCRIPTIONS[set.rpe || 8] || 'RPE'}
-                    >
-                      <option value={6}>6</option>
-                      <option value={7}>7</option>
-                      <option value={8}>8</option>
-                      <option value={8.5}>8.5</option>
-                      <option value={9}>9</option>
-                      <option value={9.5}>9.5</option>
-                      <option value={10}>10</option>
-                    </select>
+                      {/* Reps */}
+                      <div style={{ width: '80px', flexShrink: 0 }}>
+                        <small style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '2px', fontWeight: 600 }}>Reps</small>
+                        <input
+                          type="number"
+                          className="input"
+                          value={set.reps}
+                          min={0}
+                          onChange={e => updateSetValue(exIndex, setIndex, 'reps', parseInt(e.target.value) || 0)}
+                          style={{ textAlign: 'center', height: '42px', minHeight: '42px', padding: 0, fontSize: '1rem', fontFamily: 'var(--font-mono)', fontWeight: 700, width: '100%' }}
+                        />
+                      </div>
 
-                    {/* Checkbox (Touch Target >= 44px) */}
-                    <button
-                      type="button"
-                      onClick={() => toggleSetCompleted(exIndex, setIndex)}
-                      style={{
-                        height: '44px',
-                        width: '44px',
-                        minHeight: '44px',
-                        minWidth: '44px',
-                        borderRadius: 'var(--radius-sm)',
-                        border: 'none',
-                        backgroundColor: set.completed ? 'var(--accent-primary)' : 'var(--bg-surface-elevated)',
-                        color: set.completed ? 'var(--accent-primary-text)' : 'var(--text-muted)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'background-color var(--transition-fast)',
-                        margin: '0 auto',
-                      }}
-                      aria-label="Mark set completed"
-                    >
-                      <Check size={20} strokeWidth={set.completed ? 3 : 2} />
-                    </button>
+                      {/* Checkmark Button (48px x 48px touch target) */}
+                      <div style={{ flexShrink: 0 }}>
+                        <small style={{ fontSize: '0.7rem', color: 'transparent', display: 'block', marginBottom: '2px' }}>.</small>
+                        <button
+                          type="button"
+                          onClick={() => toggleSetCompleted(exIndex, setIndex)}
+                          style={{
+                            height: '48px',
+                            width: '48px',
+                            minHeight: '48px',
+                            minWidth: '48px',
+                            borderRadius: 'var(--radius-sm)',
+                            border: `1px solid ${set.completed ? 'var(--accent-primary)' : 'var(--border-medium)'}`,
+                            backgroundColor: set.completed ? 'var(--accent-primary)' : 'var(--bg-surface-elevated)',
+                            color: set.completed ? 'var(--accent-primary-text)' : 'var(--text-muted)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            touchAction: 'manipulation',
+                            boxShadow: set.completed ? '0 1px 3px rgba(0, 0, 0, 0.35)' : 'none',
+                            transition: 'all var(--transition-fast)',
+                          }}
+                          aria-label="Mark set completed"
+                        >
+                          <Check size={22} strokeWidth={set.completed ? 3 : 2} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
+              </div>
+
+              <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
 
                 {/* Add Set / Remove Set Actions */}
                 <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>

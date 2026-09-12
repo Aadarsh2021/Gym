@@ -6,16 +6,22 @@ import {
   Utensils,
   ArrowRight,
 } from 'lucide-react';
+import { SEOHead } from '@/components/common/SEOHead';
 
 export const PublicHomeView: React.FC = () => {
   return (
     <div className="animate-fade-in" style={{ paddingBottom: 'var(--space-12)' }}>
+      <SEOHead
+        title="Intelligent Strength Training & Nutrition"
+        description="Personalized split design, gym-first workout tracking, Indian-focused nutrition targets, and verified personal records."
+        canonicalPath="/"
+      />
       {/* HERO SECTION */}
       <section
         style={{
           borderBottom: '1px solid var(--border-subtle)',
           padding: 'var(--space-12) var(--space-4) var(--space-12)',
-          background: 'radial-gradient(ellipse at 50% -20%, rgba(224, 139, 76, 0.07), transparent 70%)',
+          background: 'radial-gradient(ellipse at 50% -20%, rgba(229, 138, 79, 0.05), transparent 70%)',
         }}
       >
         <div className="container" style={{ textAlign: 'center', maxWidth: '840px', margin: '0 auto' }}>

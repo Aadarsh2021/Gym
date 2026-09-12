@@ -1,7 +1,15 @@
 User-agent: *
 Allow: /
-Allow: /fitness/
-Allow: /exercises/
-Allow: /nutrition/
+Allow: /how-it-works
+Allow: /workouts
+Allow: /exercises
+Allow: /nutrition
+Allow: /tools
+Allow: /pricing
+Disallow: /app/
+Disallow: /onboarding/
+Disallow: /onboarding
+Disallow: /auth/
+Disallow: /plan/
 
-Sitemap: https://fitness-ai-app.web.app/sitemap.xml
+Sitemap: https://gymbuddy-da185.web.app/sitemap.xml

@@ -6,6 +6,7 @@ import { calculateProteinTarget } from '@/domain/protein';
 import { calculateOneRepMaxEpley } from '@/domain/pr-calculator';
 import { FitnessGoal } from '@/types/user.types';
 import { PRODUCT_NAME } from '@/config/branding';
+import { SEOHead } from '@/components/common/SEOHead';
 
 export const PublicToolsView: React.FC = () => {
   const { toolId } = useParams<{ toolId?: string }>();
@@ -57,8 +58,20 @@ export const PublicToolsView: React.FC = () => {
     else if (tab === '1rm') navigate('/tools/one-rep-max');
   };
 
+  const toolTitle =
+    activeTab === 'protein'
+      ? 'Protein Target Calculator'
+      : activeTab === '1rm'
+      ? '1RM Strength Calculator'
+      : 'BMR & TDEE Calorie Calculator';
+
   return (
     <div className="container animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4) var(--space-12)' }}>
+      <SEOHead
+        title={toolTitle}
+        description="Evidence-based fitness calculators: Mifflin-St Jeor BMR & TDEE, athletic daily protein requirements, and Epley 1-Rep Max estimation."
+        canonicalPath={`/tools${toolId ? `/${toolId}` : ''}`}
+      />
       {/* Header */}
       <div style={{ maxWidth: '720px', margin: '0 auto var(--space-8)', textAlign: 'center' }}>
         <span className="badge badge-fire" style={{ marginBottom: 'var(--space-2)' }}>Free Evidence-Based Tools</span>

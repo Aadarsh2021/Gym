@@ -1,10 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Play,
   Flame,
   Utensils,
-  Sparkles,
   ChevronRight,
   Zap,
   CheckCircle2,
@@ -13,31 +12,32 @@ import {
 } from 'lucide-react';
 import { WorkoutPlan, WorkoutSession, WorkoutPlanDay } from '@/types/workout.types';
 import { UserStreak } from '@/types/streak.types';
-import { NutritionProfile } from '@/types/nutrition.types';
+import { NutritionProfile, DailyMacroTotals } from '@/types/nutrition.types';
 import { AuthSession } from '@/services/auth.service';
 import { getTodaysScheduledWorkout } from '@/domain/scheduled-workout';
+import { streakService } from '@/services/streak.service';
 import { PRODUCT_NAME } from '@/config/branding';
 
 interface DashboardViewProps {
   activePlan: WorkoutPlan | null;
   streak: UserStreak;
   nutritionProfile: NutritionProfile | null;
+  dailyTotals?: DailyMacroTotals;
   recentSessions?: WorkoutSession[];
   coins?: number;
   session?: AuthSession;
   onStartWorkout: (day?: WorkoutPlanDay) => void;
-  onOpenGuruJi: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   activePlan,
   streak,
   nutritionProfile,
+  dailyTotals,
   recentSessions = [],
   coins = 0,
   session,
   onStartWorkout,
-  onOpenGuruJi,
 }) => {
   // Pure deterministic scheduler calculation
   const scheduleResult = useMemo(() => {
@@ -49,6 +49,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [activePlan, recentSessions]);
 
   const scheduledDay = scheduleResult.scheduledDay;
+  const [restDayLogged, setRestDayLogged] = useState(false);
+
+  const handleMarkRestDay = async () => {
+    if (!session?.user?.id) return;
+    await streakService.logRestDay(session.user.id);
+    setRestDayLogged(true);
+  };
 
   // User details & Greeting
   const displayName =
@@ -68,7 +75,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       : 'Good night';
 
   return (
-    <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)' }}>
+    <div className="container-app animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)' }}>
       {/* Personalized Welcome Banner */}
       <div className="dashboard-welcome-banner">
         <div
@@ -89,9 +96,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               className="badge"
               style={{
                 fontSize: '0.74rem',
-                background: 'rgba(0, 242, 157, 0.12)',
-                color: '#00F29D',
-                border: '1px solid rgba(0, 242, 157, 0.32)',
+                background: 'rgba(127, 166, 107, 0.14)',
+                color: 'var(--color-success)',
+                border: '1px solid rgba(127, 166, 107, 0.32)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -102,8 +109,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   width: '7px',
                   height: '7px',
                   borderRadius: '50%',
-                  backgroundColor: '#00F29D',
-                  boxShadow: '0 0 8px #00F29D',
+                  backgroundColor: 'var(--color-success)',
+                  boxShadow: '0 0 8px rgba(127, 166, 107, 0.6)',
                   display: 'inline-block',
                 }}
               />
@@ -158,7 +165,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             alignItems: 'center',
             gap: 'var(--space-3)',
             cursor: scheduledDay && scheduleResult.status === 'scheduled' ? 'pointer' : 'default',
-            borderColor: scheduleResult.status === 'scheduled' ? 'rgba(0, 242, 157, 0.3)' : undefined,
+            borderColor: 'var(--border-subtle)',
           }}
         >
           <div
@@ -175,12 +182,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 scheduleResult.status === 'completed_today'
                   ? 'var(--color-success)'
                   : scheduleResult.status === 'rest_day'
-                  ? '#818CF8'
+                  ? 'var(--color-info)'
                   : 'var(--accent-primary)',
-              boxShadow:
-                scheduleResult.status === 'scheduled'
-                  ? '0 0 16px rgba(0, 242, 157, 0.25)'
-                  : undefined,
             }}
           >
             {scheduleResult.status === 'completed_today' ? (
@@ -286,10 +289,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               Daily Fuel
             </small>
             <div style={{ fontWeight: 700, fontSize: '0.94rem', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-              {nutritionProfile ? `${nutritionProfile.targetCalories} kcal` : '2,200 kcal'}
+              {dailyTotals && dailyTotals.entriesCount > 0
+                ? `${dailyTotals.totalCalories} / ${nutritionProfile?.targetCalories || 2200} kcal`
+                : nutritionProfile ? `${nutritionProfile.targetCalories} kcal` : '2,200 kcal'}
             </div>
             <span style={{ fontSize: '0.78rem', color: 'var(--color-success)', fontWeight: 600 }}>
-              {nutritionProfile ? `${nutritionProfile.targetProteinG}g Protein →` : '140g Protein →'}
+              {dailyTotals && dailyTotals.entriesCount > 0
+                ? `${dailyTotals.totalProteinG}g / ${nutritionProfile?.targetProteinG || 140}g Protein →`
+                : nutritionProfile ? `${nutritionProfile.targetProteinG}g Protein Goal →` : '140g Protein Goal →'}
             </span>
           </div>
         </Link>
@@ -297,18 +304,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Main Grid: Mission + Coach */}
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)' }}>
-        {/* TODAY'S MISSION CARD (3D Elevated) */}
+        {/* TODAY'S MISSION CARD (Modern Graphite Elevated) */}
         <div
           className="card card-elevated"
           style={{
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            borderColor: scheduleResult.status === 'scheduled' ? 'rgba(0, 242, 157, 0.4)' : 'var(--border-medium)',
-            boxShadow:
-              scheduleResult.status === 'scheduled'
-                ? '0 20px 48px -10px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 242, 157, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.18)'
-                : undefined,
+            borderColor: 'var(--border-medium)',
+            boxShadow: 'var(--shadow-md)',
           }}
         >
           <div>
@@ -329,12 +333,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       scheduleResult.status === 'completed_today'
                         ? 'var(--color-success)'
                         : scheduleResult.status === 'rest_day'
-                        ? '#818CF8'
+                        ? 'var(--color-info)'
                         : 'var(--accent-primary)',
-                    boxShadow:
-                      scheduleResult.status === 'scheduled'
-                        ? '0 0 16px rgba(0, 242, 157, 0.28)'
-                        : undefined,
                   }}
                 >
                   {scheduleResult.status === 'completed_today' ? (
@@ -411,17 +411,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 )}
 
                 {/* Off-schedule recovery / catchup */}
-                {scheduleResult.missedPreviousWorkout && (
-                  <div style={{ marginTop: 'var(--space-2)' }}>
-                    <small style={{ color: 'var(--text-muted)', display: 'block', marginBottom: 'var(--space-1)' }}>
-                      Missed previous session ({scheduleResult.missedPreviousWorkout.name})?
+                {scheduleResult.missedPreviousWorkout && !restDayLogged && (
+                  <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                    <small style={{ color: 'var(--text-muted)', display: 'block', marginBottom: 'var(--space-2)', lineHeight: 1.4 }}>
+                      Missed previous session ({scheduleResult.missedPreviousWorkout.name})? You can make it up today or log it as an active recovery day to keep your streak intact.
                     </small>
-                    <button
-                      className="btn btn-outline btn-sm"
-                      onClick={() => onStartWorkout(scheduleResult.missedPreviousWorkout!)}
-                    >
-                      Make Up Missed Session
-                    </button>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => onStartWorkout(scheduleResult.missedPreviousWorkout!)}
+                      >
+                        Make Up Session
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={handleMarkRestDay}
+                      >
+                        Mark as Rest Day
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {restDayLogged && (
+                  <div style={{ marginTop: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', background: 'var(--color-success-muted)', borderRadius: 'var(--radius-sm)', color: 'var(--color-success)', fontSize: '0.82rem' }}>
+                    ✓ Rest day logged. Consistency streak preserved!
                   </div>
                 )}
               </div>
@@ -478,18 +492,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           )}
         </div>
 
-        {/* GURU JI COACH ADVISORY CARD (Cosmic Violet 3D Glass) */}
-        <div
+        {/* DAILY NUTRITION TARGETS CARD (3D Glass) */}
+        <Link
+          to="/app/nutrition"
           className="card card-interactive"
-          onClick={onOpenGuruJi}
           style={{
-            cursor: 'pointer',
+            textDecoration: 'none',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            background: 'linear-gradient(145deg, rgba(28, 22, 58, 0.78) 0%, rgba(13, 12, 28, 0.88) 100%)',
-            borderColor: 'rgba(139, 92, 246, 0.35)',
-            boxShadow: '0 18px 45px -8px rgba(0, 0, 0, 0.75), 0 0 28px rgba(139, 92, 246, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.18)',
+            background: 'linear-gradient(145deg, rgba(16, 24, 40, 0.85) 0%, rgba(10, 14, 26, 0.92) 100%)',
+            borderColor: 'var(--border-medium)',
+            boxShadow: '0 18px 45px -8px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
           }}
         >
           <div>
@@ -498,32 +512,60 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div
                   style={{
                     padding: '10px',
-                    background: 'rgba(139, 92, 246, 0.18)',
+                    background: 'var(--accent-primary-muted)',
                     borderRadius: 'var(--radius-sm)',
-                    color: '#A78BFA',
-                    boxShadow: '0 0 18px rgba(139, 92, 246, 0.3)',
+                    color: 'var(--accent-primary)',
+                    boxShadow: '0 0 16px var(--accent-primary-glow)',
                   }}
                 >
-                  <Sparkles size={24} />
+                  <Utensils size={22} />
                 </div>
                 <div>
-                  <small style={{ color: '#A78BFA', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.72rem' }}>
-                    AI COACH GURU JI
+                  <small style={{ color: 'var(--accent-primary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.72rem' }}>
+                    Daily Nutrition Targets
                   </small>
-                  <h3 style={{ fontSize: '1.3rem', margin: '2px 0 0', fontWeight: 700 }}>Daily Training Insight</h3>
+                  <h3 style={{ fontSize: '1.25rem', margin: '2px 0 0', fontWeight: 700, color: 'var(--text-primary)' }}>Macro & Calorie Fuel</h3>
                 </div>
               </div>
-              <span className="badge badge-purple" style={{ fontSize: '0.7rem' }}>
-                Online
+              <span className="badge badge-accent" style={{ fontSize: '0.7rem' }}>
+                Active Target
               </span>
             </div>
 
-            <p style={{ fontSize: '0.98rem', lineHeight: 1.65, color: '#E2E8F0', fontStyle: 'italic', margin: 'var(--space-3) 0 var(--space-4)' }}>
-              {scheduleResult.status === 'rest_day'
-                ? '"Rest day par hydration aur quality sleep par dhyan dein. Muscles gym me nahi, recovery ke dauraan banti hain."'
-                : scheduleResult.status === 'completed_today'
-                ? '"Shaabash! Aaj ka session complete hua. Agle 2 ghante me protein-rich meal lena mat bhooliyega."'
-                : '"Namaste! Har set me form strict rakhein. Last 2 reps challenging hone chahiye, lekin form break nahi honi chahiye!"'}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-2)', margin: 'var(--space-4) 0' }}>
+              <div style={{ padding: 'var(--space-3)', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Calories (Consumed / Target)</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '2px' }}>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+                    {dailyTotals ? dailyTotals.totalCalories : 0}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>/</span>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                    {nutritionProfile ? nutritionProfile.targetCalories : 2200}
+                  </span>
+                  <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>kcal</small>
+                </div>
+              </div>
+
+              <div style={{ padding: 'var(--space-3)', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Protein (Consumed / Target)</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '2px' }}>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
+                    {dailyTotals ? dailyTotals.totalProteinG : 0}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>/</span>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                    {nutritionProfile ? nutritionProfile.targetProteinG : 140}
+                  </span>
+                  <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>g</small>
+                </div>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.88rem', lineHeight: 1.55, color: 'var(--text-secondary)', margin: '0 0 var(--space-2)' }}>
+              {dailyTotals && dailyTotals.entriesCount > 0
+                ? `${dailyTotals.entriesCount} meal item${dailyTotals.entriesCount > 1 ? 's' : ''} logged today. Target remaining: ${Math.max(0, (nutritionProfile?.targetCalories || 2200) - dailyTotals.totalCalories)} kcal and ${Math.max(0, Math.round(((nutritionProfile?.targetProteinG || 140) - dailyTotals.totalProteinG) * 10) / 10)}g protein.`
+                : 'Hit your daily protein and calorie targets to fuel muscular recovery, support hypertrophy, and maintain energy levels.'}
             </p>
           </div>
 
@@ -532,16 +574,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderTop: '1px solid rgba(139, 92, 246, 0.25)',
+              borderTop: '1px solid var(--border-subtle)',
               paddingTop: 'var(--space-3)',
+              marginTop: 'var(--space-2)',
             }}
           >
-            <span style={{ fontSize: '0.88rem', color: '#A78BFA', fontWeight: 600 }}>
-              Ask Guru Ji for form cues & diet advice →
+            <span style={{ fontSize: '0.86rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+              View Nutrition Plan & Food Diary →
             </span>
-            <ChevronRight size={20} color="#A78BFA" />
+            <ChevronRight size={18} color="var(--accent-primary)" />
           </div>
-        </div>
+        </Link>
       </div>
     </div>
   );

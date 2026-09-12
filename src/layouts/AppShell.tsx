@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Dumbbell,
-  Sparkles,
   Flame,
   Coins,
   User,
@@ -13,15 +12,19 @@ import {
   TrendingUp,
   Settings,
   ShieldCheck,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/context/ThemeContext';
 import { streakService } from '@/services/streak.service';
+import { reminderService } from '@/services/reminder.service';
 import { UserStreak } from '@/types/streak.types';
-import { GuruJiChatDrawer } from '@/features/guru-ji/GuruJiChatDrawer';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
 export const AppShell: React.FC = () => {
   const { session, signOut } = useAuth();
+  const { toggleTheme, isDark } = useTheme();
   const userId = session.user?.id || 'guest-user';
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,7 +35,6 @@ export const AppShell: React.FC = () => {
     lastActivityDate: null,
   });
   const [coins, setCoins] = useState<number>(0);
-  const [isGuruJiOpen, setIsGuruJiOpen] = useState<boolean>(false);
 
   useEffect(() => {
     let mounted = true;
@@ -55,6 +57,21 @@ export const AppShell: React.FC = () => {
       mounted = false;
     };
   }, [userId, location.pathname]);
+
+  // Synchronize active workout reminder timer for current session
+  useEffect(() => {
+    if (userId && userId !== 'guest-user') {
+      reminderService
+        .getReminderPreference(userId)
+        .then(pref => {
+          reminderService.rescheduleSameSessionTimer(pref);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      reminderService.clearScheduledTimers();
+    };
+  }, [userId]);
 
   const displayName =
     session.profile?.displayName ||
@@ -151,60 +168,51 @@ export const AppShell: React.FC = () => {
           })}
         </nav>
 
-        {/* Guru Ji Coach Spotlight (Compact) */}
-        <div className="sidebar-coach-banner">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div
-                style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '6px',
-                  background: 'var(--accent-primary-muted)',
-                  color: 'var(--accent-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Sparkles size={14} />
-              </div>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Guru Ji Coach
-              </span>
-            </div>
-            <span className="badge" style={{ fontSize: '0.65rem' }}>AI</span>
-          </div>
-          <button
-            className="btn btn-ai btn-sm btn-block"
-            onClick={() => setIsGuruJiOpen(true)}
-            style={{ fontSize: '0.78rem', height: '32px' }}
-          >
-            <Sparkles size={13} />
-            <span>Chat with Guru Ji</span>
-          </button>
-        </div>
-
         {/* Sidebar Footer / Connection & Logout */}
         <div className="sidebar-bottom">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.75rem',
-              color: 'var(--color-success)',
-            }}
-            title="Connected to Supabase PostgreSQL & Auth"
-          >
-            <ShieldCheck size={14} />
-            <span style={{ fontWeight: 600 }}>Live DB</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.75rem',
+                color: 'var(--color-success)',
+              }}
+              title="Connected to Supabase PostgreSQL & Auth"
+            >
+              <ShieldCheck size={14} />
+              <span style={{ fontWeight: 600 }}>Live DB</span>
+            </div>
+
+            {/* Theme Toggle */}
+            <button
+              id="sidebar-theme-toggle"
+              className="btn btn-ghost btn-sm"
+              onClick={toggleTheme}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              style={{
+                padding: '4px 8px',
+                height: '32px',
+                color: isDark ? '#94A3B8' : '#64748B',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-xs)',
+                transition: 'all 200ms ease',
+              }}
+            >
+              {isDark
+                ? <Sun size={14} color="var(--accent-gold)" />
+                : <Moon size={14} color="var(--accent-primary)" />
+              }
+            </button>
           </div>
 
           {session.user && (
             <button
               className="btn btn-ghost btn-sm"
               onClick={async () => {
+                reminderService.clearScheduledTimers();
                 await signOut();
                 navigate('/');
               }}
@@ -234,25 +242,29 @@ export const AppShell: React.FC = () => {
           </NavLink>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            {/* Guru Ji Coach Trigger */}
+            {/* Theme Toggle — Mobile */}
             <button
+              id="mobile-theme-toggle"
               className="btn btn-secondary btn-sm"
-              onClick={() => setIsGuruJiOpen(true)}
-              title="Guru Ji Fitness Coach"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              onClick={toggleTheme}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              style={{ minWidth: '40px', minHeight: '40px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              <Sparkles size={14} color="var(--accent-primary)" />
-              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Coach</span>
+              {isDark
+                ? <Sun size={16} color="var(--accent-gold)" />
+                : <Moon size={16} color="var(--accent-primary)" />
+              }
             </button>
 
             {/* Streak Badge */}
             <div
               className="badge badge-gold"
-              style={{ cursor: 'pointer', padding: '5px 9px', fontFamily: 'var(--font-mono)' }}
+              style={{ cursor: 'pointer', minHeight: '36px', padding: '0 10px', fontFamily: 'var(--font-mono)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               onClick={() => navigate('/app/progress')}
               title="Active Workout Streak"
             >
-              <Flame size={14} fill="var(--accent-gold)" />
+              <Flame size={15} fill="var(--accent-gold)" />
               <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
                 {streak.currentStreak}
               </span>
@@ -261,7 +273,7 @@ export const AppShell: React.FC = () => {
             {/* Coins Badge */}
             <div
               className="badge badge-gold hide-on-xs"
-              style={{ cursor: 'pointer', padding: '5px 9px', fontFamily: 'var(--font-mono)' }}
+              style={{ cursor: 'pointer', minHeight: '36px', padding: '0 10px', fontFamily: 'var(--font-mono)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               onClick={() => navigate('/app/progress')}
               title="Fitness Coins"
             >
@@ -276,15 +288,18 @@ export const AppShell: React.FC = () => {
                 `btn btn-sm ${isActive ? 'btn-primary' : 'btn-secondary'}`
               }
               title="Account & Profile Settings"
+              aria-label="Account & Profile Settings"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 textDecoration: 'none',
-                padding: '0 8px',
+                minWidth: '40px',
+                minHeight: '40px',
+                padding: 0,
               }}
             >
-              <User size={14} />
+              <User size={16} />
             </NavLink>
 
             {/* Sign Out */}
@@ -296,9 +311,10 @@ export const AppShell: React.FC = () => {
                   navigate('/');
                 }}
                 title="Sign Out"
-                style={{ padding: '0 8px' }}
+                aria-label="Sign Out"
+                style={{ minWidth: '40px', minHeight: '40px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <LogOut size={14} />
+                <LogOut size={16} />
               </button>
             )}
           </div>
@@ -327,19 +343,25 @@ export const AppShell: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            {/* Theme Toggle — Desktop Topbar */}
             <button
+              id="desktop-theme-toggle"
               className="btn btn-secondary btn-sm"
-              onClick={() => setIsGuruJiOpen(true)}
+              onClick={toggleTheme}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               style={{
-                display: 'flex',
-                alignItems: 'center',
+                padding: '0 10px',
                 gap: '6px',
-                borderColor: 'rgba(139, 92, 246, 0.35)',
-                background: 'rgba(28, 22, 50, 0.6)',
+                fontSize: '0.78rem',
+                fontWeight: 600,
               }}
             >
-              <Sparkles size={14} color="#A78BFA" />
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#E2E8F0' }}>Guru Ji Coach</span>
+              {isDark ? (
+                <><Sun size={14} color="var(--accent-gold)" /><span style={{ color: 'var(--text-secondary)' }}>Light</span></>
+              ) : (
+                <><Moon size={14} color="var(--accent-primary)" /><span style={{ color: 'var(--text-secondary)' }}>Dark</span></>
+              )}
             </button>
 
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -380,22 +402,6 @@ export const AppShell: React.FC = () => {
           })}
         </nav>
       </div>
-
-      {/* Guru Ji Coach Drawer */}
-      <GuruJiChatDrawer
-        isOpen={isGuruJiOpen}
-        onClose={() => setIsGuruJiOpen(false)}
-        onNavigateTab={tab => {
-          setIsGuruJiOpen(false);
-          if (tab === 'dashboard') navigate('/app');
-          else if (tab === 'workout') navigate('/app/workouts');
-          else if (tab === 'exercises') navigate('/app/exercises');
-          else if (tab === 'nutrition') navigate('/app/nutrition');
-          else if (tab === 'progress') navigate('/app/progress');
-          else if (tab === 'streaks') navigate('/app/progress');
-          else if (tab === 'onboarding') navigate('/app/profile');
-        }}
-      />
     </div>
   );
 };

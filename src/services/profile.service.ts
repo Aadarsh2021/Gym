@@ -2,6 +2,51 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { FitnessProfile, UserProfile } from '@/types/user.types';
 import { logger } from '@/lib/logger';
 
+export async function ensureUserProfile(userId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return true;
+
+  try {
+    const { data: existing, error: selectErr } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (existing && !selectErr) return true;
+
+    const { data: authData } = await supabase.auth.getSession();
+    const sessionUser = authData?.session?.user;
+    const meta = sessionUser?.id === userId ? sessionUser.user_metadata || {} : {};
+    const displayName = meta.full_name || meta.name || meta.display_name || sessionUser?.email?.split('@')[0] || 'Athlete';
+    const timezone = meta.timezone || 'Asia/Kolkata';
+    const avatarUrl = meta.avatar_url || meta.picture || null;
+
+    const { error: insertErr } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        display_name: displayName,
+        timezone,
+        avatar_url: avatarUrl,
+      });
+
+    if (insertErr && insertErr.code !== '23505') {
+      logger.error('Error provisioning profile record', { insertErr });
+      return false;
+    }
+
+    // Provision initial streak counter if missing
+    await supabase
+      .from('streaks')
+      .insert({ user_id: userId, current_streak: 0, longest_streak: 0 });
+
+    return true;
+  } catch (err) {
+    logger.error('Exception in ensureUserProfile', { err });
+    return false;
+  }
+}
+
 export const profileService = {
   async getFitnessProfile(userId: string): Promise<FitnessProfile | null> {
     if (!isSupabaseConfigured) {
@@ -47,10 +92,24 @@ export const profileService = {
     }
 
     try {
+      // 1. Authoritative authenticated user verification
+      const { data: { session } } = await supabase.auth.getSession();
+      const authenticatedUserId = session?.user?.id;
+      if (!authenticatedUserId || authenticatedUserId !== profile.userId) {
+        return { success: false, error: 'Unauthorized: Session user ID does not match profile target' };
+      }
+
+      // 2. Ensure authoritative parent row exists in public.profiles
+      const profileReady = await ensureUserProfile(authenticatedUserId);
+      if (!profileReady) {
+        return { success: false, error: 'Failed to provision authoritative profile record' };
+      }
+
+      // 3. Upsert into fitness_profiles (Unique on user_id)
       const { error } = await supabase
         .from('fitness_profiles')
         .upsert({
-          user_id: profile.userId,
+          user_id: authenticatedUserId,
           age: profile.age,
           height_cm: profile.heightCm,
           weight_kg: profile.weightKg,
@@ -65,10 +124,14 @@ export const profileService = {
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        logger.error('Error upserting fitness profile', { error });
+        return { success: false, error: error.message };
+      }
       return { success: true };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save fitness profile';
+      logger.error('Exception in saveFitnessProfile', { err });
       return { success: false, error: message };
     }
   },

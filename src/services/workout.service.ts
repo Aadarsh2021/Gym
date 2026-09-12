@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import { clearActiveSessionDraft } from '@/utils/storage';
 import { calculateWorkoutSummary } from '@/domain/workout-tonnage';
 import { getDayScheduledDays } from '@/domain/scheduled-workout';
+import { ensureUserProfile } from '@/services/profile.service';
 
 export const workoutService = {
   async getActivePlan(userId: string): Promise<WorkoutPlan | null> {
@@ -85,7 +86,7 @@ export const workoutService = {
   async saveGeneratedPlan(userId: string, plan: GeneratedPlan): Promise<WorkoutPlan | null> {
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
-      const mockPlan: WorkoutPlan = {
+      const localPlan: WorkoutPlan = {
         id: 'plan-' + Date.now(),
         userId,
         name: plan.name,
@@ -94,19 +95,95 @@ export const workoutService = {
         isActive: true,
         days: plan.days,
       };
-      localStorage.setItem(`active_workout_plan_${userId}`, JSON.stringify(mockPlan));
-      return mockPlan;
+      localStorage.setItem(`active_workout_plan_${userId}`, JSON.stringify(localPlan));
+      return localPlan;
     }
 
     try {
-      // 1. Deactivate current active plans
-      await supabase.from('workout_plans').update({ is_active: false }).eq('user_id', userId);
+      // 1. Authoritative authenticated user verification
+      const { data: { session } } = await supabase.auth.getSession();
+      const authenticatedUserId = session?.user?.id;
+      if (!authenticatedUserId || authenticatedUserId !== userId) {
+        logger.error('Unauthorized plan save attempt or mismatched user ID');
+        return null;
+      }
 
-      // 2. Insert new workout plan
+      // 2. Ensure authoritative parent row exists in public.profiles
+      const profileReady = await ensureUserProfile(authenticatedUserId);
+      if (!profileReady) {
+        logger.error('Failed to ensure user profile for workout plan save');
+        return null;
+      }
+
+      // 3. Idempotency check (Scenario B & F):
+      // If the user already has an active workout plan with the exact same name, split_type, and day count:
+      const { data: existingActive } = await supabase
+        .from('workout_plans')
+        .select(`
+          id, user_id, name, description, split_type, is_active, created_at,
+          workout_plan_days (
+            id, plan_id, day_number, name, target_muscle_groups,
+            workout_plan_exercises (
+              id, plan_day_id, exercise_id, order_index, target_sets, target_reps_min, target_reps_max, rest_seconds, is_core,
+              exercises (*)
+            )
+          )
+        `)
+        .eq('user_id', authenticatedUserId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (
+        existingActive &&
+        existingActive.name === plan.name &&
+        existingActive.split_type === plan.splitType &&
+        existingActive.workout_plan_days &&
+        existingActive.workout_plan_days.length === plan.days.length
+      ) {
+        logger.info('Idempotent workout plan save: reusing identical active plan', { planId: existingActive.id });
+        return {
+          id: existingActive.id,
+          userId: existingActive.user_id,
+          name: existingActive.name,
+          description: existingActive.description,
+          splitType: existingActive.split_type,
+          isActive: existingActive.is_active,
+          days: (existingActive.workout_plan_days || []).map((d: any) => ({
+            id: d.id,
+            planId: d.plan_id,
+            dayNumber: d.day_number,
+            name: d.name,
+            targetMuscleGroups: d.target_muscle_groups,
+            exercises: (d.workout_plan_exercises || []).map((e: any) => ({
+              id: e.id,
+              planDayId: e.plan_day_id,
+              exerciseId: e.exercise_id,
+              orderIndex: e.order_index,
+              targetSets: e.target_sets,
+              targetRepsMin: e.target_reps_min,
+              targetRepsMax: e.target_reps_max,
+              restSeconds: e.rest_seconds,
+              isCore: e.is_core,
+              exercise: e.exercises,
+            })),
+          })),
+        };
+      }
+
+      // 4. Scenario C / Regeneration: Deactivate previous active plans
+      await supabase
+        .from('workout_plans')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('user_id', authenticatedUserId)
+        .eq('is_active', true);
+
+      // 5. Insert new workout plan with is_active = true
       const { data: newPlan, error: planError } = await supabase
         .from('workout_plans')
         .insert({
-          user_id: userId,
+          user_id: authenticatedUserId,
           name: plan.name,
           description: plan.description,
           split_type: plan.splitType,
@@ -115,7 +192,10 @@ export const workoutService = {
         .select()
         .single();
 
-      if (planError || !newPlan) throw planError;
+      if (planError || !newPlan) {
+        logger.error('Error creating workout plan row', { planError });
+        return null;
+      }
 
       // Fetch system exercises to map any non-UUID or draft exercise IDs to valid database UUIDs
       const { data: catalogExercises } = await supabase
@@ -131,7 +211,7 @@ export const workoutService = {
       });
       const defaultFallbackId = catalogExercises?.[0]?.id;
 
-      // 3. Insert plan days & exercises
+      // 6. Insert plan days & exercises with rollback on failure
       const savedDays = [];
       for (const day of plan.days) {
         const { data: newDay, error: dayError } = await supabase
@@ -146,8 +226,9 @@ export const workoutService = {
           .single();
 
         if (dayError || !newDay) {
-          logger.error('Error inserting workout plan day', { dayError });
-          continue;
+          logger.error('Error inserting workout plan day, rolling back partial plan', { dayError, planId: newPlan.id });
+          await supabase.from('workout_plans').delete().eq('id', newPlan.id);
+          return null;
         }
 
         const exInserts = day.exercises.map(ex => {
@@ -172,7 +253,9 @@ export const workoutService = {
         if (exInserts.length > 0) {
           const { error: exError } = await supabase.from('workout_plan_exercises').insert(exInserts);
           if (exError) {
-            logger.error('Error inserting workout plan exercises', { exError });
+            logger.error('Error inserting workout plan exercises, rolling back partial plan', { exError, planId: newPlan.id });
+            await supabase.from('workout_plans').delete().eq('id', newPlan.id);
+            return null;
           }
         }
         savedDays.push({ ...day, id: newDay.id, planId: newPlan.id });
@@ -461,20 +544,7 @@ export const workoutService = {
       } catch {
         // ignore
       }
-      return [
-        {
-          id: 'mock-session-1',
-          userId,
-          name: 'Chest & Triceps Hypertrophy',
-          status: 'completed',
-          startedAt: new Date(Date.now() - 3600000).toISOString(),
-          completedAt: new Date().toISOString(),
-          durationSeconds: 2700,
-          sessionRating: 'normal',
-          notes: 'Great pump today, hit PR on Incline Press.',
-          exercises: [],
-        },
-      ];
+      return [];
     }
 
     try {

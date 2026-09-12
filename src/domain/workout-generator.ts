@@ -12,6 +12,7 @@ export interface GenerationInputs {
   equipment: string[];
   goal: FitnessGoal;
   availableExercises: Exercise[];
+  limitations?: string[];
 }
 
 export interface GeneratedPlan {
@@ -22,26 +23,94 @@ export interface GeneratedPlan {
 }
 
 /**
- * Filters catalog exercises by user's equipment and muscle group
+ * Non-medical disclaimer regarding conservative movement modifications.
+ */
+export const LIMITATIONS_DISCLAIMER =
+  'APEXFIT movement recommendations are general biomechanical exercise modifications based on joint stress distribution, NOT medical diagnosis, treatment, or rehabilitation. If experiencing pain, consult a physician or licensed physiotherapist.';
+
+/**
+ * Conservative movement preference suggestions.
+ * Replaces high-compression or high-shear movements with joint-sparing alternative candidates.
+ * Non-diagnostic biomechanical preferences.
+ */
+const CONSERVATIVE_SUBSTITUTIONS: Record<string, Record<string, string>> = {
+  'lower back': {
+    'Conventional Deadlift': 'Romanian Deadlift',
+    'Barbell Bent-Over Row': 'Seated Cable Row',
+    'Barbell Back Squat': 'Goblet Squat',
+  },
+  'knees': {
+    'Barbell Back Squat': 'Leg Press',
+    'Walking Lunge': 'Goblet Squat',
+    'Bulgarian Split Squat': 'Goblet Squat',
+  },
+  'shoulders': {
+    'Overhead Barbell Press': 'Dumbbell Lateral Raise',
+    'Incline Dumbbell Press': 'Cable Chest Fly',
+  },
+  'wrists': {
+    'Barbell Bench Press': 'Dumbbell Bench Press',
+    'Barbell Bicep Curl': 'Hammer Curl',
+  },
+  'elbows': {
+    'Skull Crushers': 'Tricep Cable Pushdown',
+    'Barbell Bicep Curl': 'Hammer Curl',
+  },
+  'hips': {
+    'Barbell Back Squat': 'Goblet Squat',
+    'Bulgarian Split Squat': 'Goblet Squat',
+  },
+  'ankles': {
+    'Barbell Back Squat': 'Goblet Squat',
+    'Bulgarian Split Squat': 'Goblet Squat',
+  },
+};
+
+/**
+ * Filters catalog exercises by user's equipment, muscle group, and conservative movement preferences
  */
 function findExercise(
   exercises: Exercise[],
   primaryMuscle: string,
-  allowedEquipment: string[]
+  allowedEquipment: string[],
+  limitations: string[] = []
 ): Exercise | undefined {
   // Normalize equipment names
   const equipSet = new Set(allowedEquipment.map(e => e.toLowerCase()));
   equipSet.add('bodyweight'); // Bodyweight is always available
 
-  return exercises.find(ex => {
+  const matching = exercises.filter(ex => {
     const muscleMatch = ex.primaryMuscle.toLowerCase() === primaryMuscle.toLowerCase();
     const equipMatch = equipSet.has(ex.equipmentRequired.toLowerCase());
     return muscleMatch && equipMatch;
   });
+
+  if (matching.length === 0) return undefined;
+
+  // Check if any limitation suggests a conservative alternative candidate
+  const normalizedLimitations = limitations.map(l => l.toLowerCase()).filter(l => l !== 'none');
+  for (const lim of normalizedLimitations) {
+    const subMap = CONSERVATIVE_SUBSTITUTIONS[lim];
+    if (subMap) {
+      for (const ex of matching) {
+        const altName = subMap[ex.name];
+        if (altName) {
+          const alternativeCandidate =
+            matching.find(c => c.name.toLowerCase() === altName.toLowerCase()) ||
+            exercises.find(c => c.name.toLowerCase() === altName.toLowerCase() && equipSet.has(c.equipmentRequired.toLowerCase()));
+          if (alternativeCandidate) {
+            return alternativeCandidate;
+          }
+        }
+      }
+    }
+  }
+
+  return matching[0];
 }
 
 export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
-  const { daysPerWeek, experienceLevel, equipment, goal, availableExercises } = inputs;
+  const { daysPerWeek, experienceLevel, equipment, goal, availableExercises, limitations = [] } = inputs;
 
   let splitType = 'Full Body';
   let planName = 'Foundational Full Body Routine';
@@ -82,9 +151,9 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
 
   if (splitType === 'Push / Pull / Legs') {
     // Day 1: Push
-    const chestEx = findExercise(availableExercises, 'Chest', equipment) || availableExercises[0];
-    const shoulderEx = findExercise(availableExercises, 'Shoulders', equipment) || availableExercises[1];
-    const tricepEx = findExercise(availableExercises, 'Triceps', equipment) || availableExercises[2];
+    const chestEx = findExercise(availableExercises, 'Chest', equipment, limitations) || availableExercises[0];
+    const shoulderEx = findExercise(availableExercises, 'Shoulders', equipment, limitations) || availableExercises[1];
+    const tricepEx = findExercise(availableExercises, 'Triceps', equipment, limitations) || availableExercises[2];
 
     generatedDays.push({
       id: 'day-1',
@@ -101,9 +170,9 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
     });
 
     // Day 2: Pull
-    const backEx = findExercise(availableExercises, 'Back', equipment) || availableExercises[1];
-    const bicepEx = findExercise(availableExercises, 'Biceps', equipment) || availableExercises[2];
-    const rearDeltEx = findExercise(availableExercises, 'Shoulders', equipment) || availableExercises[0];
+    const backEx = findExercise(availableExercises, 'Back', equipment, limitations) || availableExercises[1];
+    const bicepEx = findExercise(availableExercises, 'Biceps', equipment, limitations) || availableExercises[2];
+    const rearDeltEx = findExercise(availableExercises, 'Shoulders', equipment, limitations) || availableExercises[0];
 
     generatedDays.push({
       id: 'day-2',
@@ -120,8 +189,8 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
     });
 
     // Day 3: Legs
-    const legEx = findExercise(availableExercises, 'Legs', equipment) || availableExercises[0];
-    const coreEx = findExercise(availableExercises, 'Core', equipment) || availableExercises[availableExercises.length - 1];
+    const legEx = findExercise(availableExercises, 'Legs', equipment, limitations) || availableExercises[0];
+    const coreEx = findExercise(availableExercises, 'Core', equipment, limitations) || availableExercises[availableExercises.length - 1];
 
     generatedDays.push({
       id: 'day-3',
@@ -137,9 +206,9 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
     });
   } else if (splitType === 'Upper / Lower') {
     // Upper Day
-    const chestEx = findExercise(availableExercises, 'Chest', equipment) || availableExercises[0];
-    const backEx = findExercise(availableExercises, 'Back', equipment) || availableExercises[1];
-    const shoulderEx = findExercise(availableExercises, 'Shoulders', equipment) || availableExercises[2];
+    const chestEx = findExercise(availableExercises, 'Chest', equipment, limitations) || availableExercises[0];
+    const backEx = findExercise(availableExercises, 'Back', equipment, limitations) || availableExercises[1];
+    const shoulderEx = findExercise(availableExercises, 'Shoulders', equipment, limitations) || availableExercises[2];
 
     generatedDays.push({
       id: 'day-1',
@@ -156,8 +225,8 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
     });
 
     // Lower Day
-    const legEx = findExercise(availableExercises, 'Legs', equipment) || availableExercises[0];
-    const coreEx = findExercise(availableExercises, 'Core', equipment) || availableExercises[1];
+    const legEx = findExercise(availableExercises, 'Legs', equipment, limitations) || availableExercises[0];
+    const coreEx = findExercise(availableExercises, 'Core', equipment, limitations) || availableExercises[1];
 
     generatedDays.push({
       id: 'day-2',
@@ -173,10 +242,10 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
     });
   } else {
     // Full Body Day
-    const chestEx = findExercise(availableExercises, 'Chest', equipment) || availableExercises[0];
-    const backEx = findExercise(availableExercises, 'Back', equipment) || availableExercises[1];
-    const legEx = findExercise(availableExercises, 'Legs', equipment) || availableExercises[2];
-    const coreEx = findExercise(availableExercises, 'Core', equipment) || availableExercises[0];
+    const chestEx = findExercise(availableExercises, 'Chest', equipment, limitations) || availableExercises[0];
+    const backEx = findExercise(availableExercises, 'Back', equipment, limitations) || availableExercises[1];
+    const legEx = findExercise(availableExercises, 'Legs', equipment, limitations) || availableExercises[2];
+    const coreEx = findExercise(availableExercises, 'Core', equipment, limitations) || availableExercises[0];
 
     generatedDays.push({
       id: 'day-1',

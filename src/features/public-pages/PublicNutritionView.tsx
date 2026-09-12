@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { SEOHead } from '@/components/common/SEOHead';
 
 export const PublicNutritionView: React.FC = () => {
   const highProteinIndianFoods = [
@@ -13,6 +14,11 @@ export const PublicNutritionView: React.FC = () => {
 
   return (
     <div className="container animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4) var(--space-12)' }}>
+      <SEOHead
+        title="Indian-Context Hypertrophy Nutrition & Macro Targets"
+        description="ICMR-NIN verified nutritional guidelines, high-protein Indian foods, and personalized vegetarian & non-vegetarian macro planning."
+        canonicalPath="/nutrition"
+      />
       {/* Header */}
       <div style={{ maxWidth: '720px', margin: '0 auto var(--space-10)', textAlign: 'center' }}>
         <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>Nutritional Science</span>

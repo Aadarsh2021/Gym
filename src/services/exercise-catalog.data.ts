@@ -187,7 +187,7 @@ export const CURATED_EXERCISE_CATALOG: Exercise[] = [
       'Jerking the bar off the floor without removing slack.',
       'Hyperextending the lower back at the top.',
     ],
-    alternativeExerciseIds: ['ex-rdl', 'ex-barbell-row'],
+    alternativeExerciseIds: ['ex-rdl'],
     targetMusclesDetail: {
       primary: ['Erector Spinae', 'Latissimus Dorsi'],
       secondary: ['Hamstrings', 'Gluteus Maximus', 'Trapezius'],
@@ -310,7 +310,7 @@ export const CURATED_EXERCISE_CATALOG: Exercise[] = [
       'Over-arching lumbar spine into a standing incline bench press.',
       'Flaring wrists backward instead of keeping them vertical.',
     ],
-    alternativeExerciseIds: ['ex-lateral-raise', 'ex-db-bench-press'],
+    alternativeExerciseIds: ['ex-lateral-raise'],
     targetMusclesDetail: {
       primary: ['Anterior Deltoid', 'Medial Deltoid'],
       secondary: ['Triceps Brachii', 'Clavicular Pec'],
@@ -404,7 +404,7 @@ export const CURATED_EXERCISE_CATALOG: Exercise[] = [
       'Weight shifting onto toes, lifting heels.',
       'Rounding the lower back in the hole (butt wink).',
     ],
-    alternativeExerciseIds: ['ex-goblet-squat', 'ex-split-squat', 'ex-rdl'],
+    alternativeExerciseIds: ['ex-goblet-squat', 'ex-split-squat'],
     targetMusclesDetail: {
       primary: ['Quadriceps', 'Gluteus Maximus'],
       secondary: ['Hamstrings', 'Adductors', 'Core'],
@@ -435,7 +435,7 @@ export const CURATED_EXERCISE_CATALOG: Exercise[] = [
       'Squatting down by bending knees excessively.',
       'Letting the bar drift away from legs.',
     ],
-    alternativeExerciseIds: ['ex-deadlift', 'ex-squat'],
+    alternativeExerciseIds: ['ex-deadlift'],
     targetMusclesDetail: {
       primary: ['Hamstrings (Biceps Femoris, Semitendinosus)'],
       secondary: ['Gluteus Maximus', 'Erector Spinae'],
@@ -525,7 +525,7 @@ export const CURATED_EXERCISE_CATALOG: Exercise[] = [
       'Rapidly bouncing using Achilles tendon elasticity.',
       'Rolling weight to outside edges of feet.',
     ],
-    alternativeExerciseIds: ['ex-squat'],
+    alternativeExerciseIds: [],
     targetMusclesDetail: {
       primary: ['Gastrocnemius', 'Soleus'],
       secondary: ['Tibialis Posterior'],

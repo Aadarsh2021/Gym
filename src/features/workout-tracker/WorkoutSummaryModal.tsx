@@ -28,7 +28,7 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
           particleCount: 65,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ['#D4A857', '#E08B4C', '#F5EFE6'],
+          colors: ['#D4A857', '#E58A4F', '#F2F3F5'],
           disableForReducedMotion: true,
         });
       } catch {

@@ -17,6 +17,23 @@ export const ActiveWorkoutRouteView: React.FC = () => {
 
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showCountdown, setShowCountdown] = useState<boolean>(() => {
+    const draft = loadActiveSessionDraft();
+    return !(draft && draft.status === 'in_progress');
+  });
+  const [countdownSeconds, setCountdownSeconds] = useState<number>(5);
+
+  useEffect(() => {
+    if (!showCountdown) return;
+    if (countdownSeconds <= 0) {
+      setShowCountdown(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCountdownSeconds(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [showCountdown, countdownSeconds]);
 
   useEffect(() => {
     let isMounted = true;
@@ -123,6 +140,58 @@ export const ActiveWorkoutRouteView: React.FC = () => {
             <Link to="/plan/build" className="btn btn-primary">
               Build Training Plan
             </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Pre-Workout Countdown
+  if (showCountdown) {
+    return (
+      <div
+        className="container animate-fade-in"
+        style={{
+          padding: 'var(--space-12) var(--space-4)',
+          maxWidth: '520px',
+          textAlign: 'center',
+          minHeight: '70vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+        }}
+      >
+        <div className="card" style={{ padding: 'var(--space-8)' }}>
+          <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>
+            Workout Countdown
+          </span>
+          <h2 style={{ marginBottom: 'var(--space-1)', fontSize: '1.6rem' }}>Get Ready, Athlete!</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)', fontSize: '0.92rem' }}>
+            Preparing <strong>{activeSession.name}</strong>. Set your mindset, review your weights, and brace your core.
+          </p>
+
+          <div
+            style={{
+              fontSize: '5rem',
+              fontWeight: 900,
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--accent-primary)',
+              lineHeight: 1,
+              margin: 'var(--space-5) 0',
+              letterSpacing: '-0.04em',
+            }}
+          >
+            {countdownSeconds > 0 ? countdownSeconds : 'GO!'}
+          </div>
+
+          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setShowCountdown(false)}
+            >
+              Start Session Now →
+            </button>
           </div>
         </div>
       </div>

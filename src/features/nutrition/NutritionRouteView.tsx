@@ -36,5 +36,5 @@ export const NutritionRouteView: React.FC = () => {
     );
   }
 
-  return <NutritionView nutritionProfile={profile} />;
+  return <NutritionView nutritionProfile={profile} userId={userId} />;
 };

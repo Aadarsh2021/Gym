@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { UserProfile } from '@/types/user.types';
 import { logger } from '@/lib/logger';
+import { ensureUserProfile } from '@/services/profile.service';
 
 export interface AuthSession {
   user: {
@@ -36,11 +37,23 @@ export const authService = {
         return { user: null, profile: null };
       }
 
-      const { data: profile } = await supabase
+      let profile = null;
+      const { data: fetchedProfile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
         .maybeSingle();
+
+      profile = fetchedProfile;
+      if (!profile) {
+        await ensureUserProfile(session.user.id);
+        const { data: refetched } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        profile = refetched;
+      }
 
       const meta = session.user.user_metadata || {};
       const resolvedName = meta.full_name || meta.name || profile?.display_name || 'Athlete';
@@ -152,6 +165,36 @@ export const authService = {
     } catch (err: unknown) {
       logger.error('Google OAuth unexpected exception', { err });
       const message = err instanceof Error ? err.message : 'Google sign-in initiation failed';
+      return { success: false, error: message };
+    }
+  },
+
+  async requestPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured) {
+      return { success: true };
+    }
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://gymbuddy-da185.web.app';
+      const redirectTo = `${origin}/auth/reset-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Password reset request failed';
+      return { success: false, error: message };
+    }
+  },
+
+  async updatePassword(password: string): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured) {
+      return { success: true };
+    }
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Password update failed';
       return { success: false, error: message };
     }
   },

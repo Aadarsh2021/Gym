@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, Shield, Dumbbell, Save, LogOut, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  User,
+  Shield,
+  Dumbbell,
+  Save,
+  LogOut,
+  CheckCircle2,
+  AlertCircle,
+  ShieldAlert,
+  Bell,
+  Clock,
+  Info,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { profileService } from '@/services/profile.service';
 import { nutritionService } from '@/services/nutrition.service';
+import {
+  reminderService,
+  NotificationPermissionStatus,
+} from '@/services/reminder.service';
 import { ExperienceLevel, FitnessGoal, Gender } from '@/types/user.types';
 import { calculateBMR, calculateTDEE, calculateCalorieTarget } from '@/domain/calories';
 import { calculateProteinTarget, calculateMacroSplit } from '@/domain/protein';
@@ -28,12 +44,26 @@ export const ProfileView: React.FC = () => {
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('intermediate');
   const [daysPerWeek, setDaysPerWeek] = useState<number>(4);
   const [equipment, setEquipment] = useState<string[]>(['Barbell', 'Dumbbells', 'Bodyweight']);
+  const [limitations, setLimitations] = useState<string[]>(['None']);
+
+  // Workout Alarm & Reminder state
+  const [reminderId, setReminderId] = useState<string | undefined>(undefined);
+  const [reminderEnabled, setReminderEnabled] = useState<boolean>(false);
+  const [reminderTime, setReminderTime] = useState<string>('07:30');
+  const [reminderDays, setReminderDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus>('default');
+  const [testNoticeMsg, setTestNoticeMsg] = useState<{ success: boolean; text: string } | null>(null);
+  const [snoozeNoticeMsg, setSnoozeNoticeMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     const fetchProfile = async () => {
       try {
-        const profile = await profileService.getFitnessProfile(userId);
+        const [profile, reminderPref] = await Promise.all([
+          profileService.getFitnessProfile(userId),
+          reminderService.getReminderPreference(userId),
+        ]);
+
         if (isMounted && profile) {
           setWeightKg(profile.weightKg || 70);
           setHeightCm(profile.heightCm || 175);
@@ -45,6 +75,17 @@ export const ProfileView: React.FC = () => {
           if (profile.equipment && profile.equipment.length > 0) {
             setEquipment(profile.equipment);
           }
+          if (profile.limitations && profile.limitations.length > 0) {
+            setLimitations(profile.limitations);
+          }
+        }
+
+        if (isMounted && reminderPref) {
+          setReminderId(reminderPref.id);
+          setReminderEnabled(reminderPref.enabled);
+          setReminderTime(reminderPref.time);
+          setReminderDays(reminderPref.days);
+          setPermissionStatus(reminderService.getPermissionStatus());
         }
       } catch {
         // Fallback
@@ -58,6 +99,20 @@ export const ProfileView: React.FC = () => {
     };
   }, [userId]);
 
+  const toggleLimitation = (item: string) => {
+    if (item === 'None') {
+      setLimitations(['None']);
+      return;
+    }
+    let updated = limitations.filter(l => l !== 'None');
+    if (updated.includes(item)) {
+      updated = updated.filter(l => l !== item);
+    } else {
+      updated.push(item);
+    }
+    setLimitations(updated.length === 0 ? ['None'] : updated);
+  };
+
   const toggleEquipment = (item: string) => {
     if (equipment.includes(item)) {
       if (equipment.length > 1) {
@@ -66,6 +121,47 @@ export const ProfileView: React.FC = () => {
     } else {
       setEquipment([...equipment, item]);
     }
+  };
+
+  const toggleReminderDay = (dayNum: number) => {
+    if (reminderDays.includes(dayNum)) {
+      if (reminderDays.length > 1) {
+        setReminderDays(reminderDays.filter(d => d !== dayNum));
+      }
+    } else {
+      setReminderDays([...reminderDays, dayNum].sort((a, b) => a - b));
+    }
+  };
+
+  const handleRequestPermission = async () => {
+    const res = await reminderService.requestPermission();
+    setPermissionStatus(res);
+  };
+
+  const handleSendTestNotification = async () => {
+    setTestNoticeMsg(null);
+    const res = await reminderService.sendTestNotification();
+    setTestNoticeMsg({ success: res.success, text: res.message });
+    setPermissionStatus(reminderService.getPermissionStatus());
+  };
+
+  const handleSnooze = (minutes = 10) => {
+    const res = reminderService.snooze(
+      {
+        id: reminderId,
+        userId,
+        enabled: true,
+        time: reminderTime,
+        days: reminderDays,
+        title: 'Time for Today’s Workout Session',
+        message: 'Your scheduled training session is waiting. Maintain your streak today!',
+      },
+      minutes
+    );
+    const date = new Date(res.snoozedUntil);
+    setSnoozeNoticeMsg(
+      `Alarm snoozed for ${minutes} minutes (fires at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
+    );
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -94,7 +190,7 @@ export const ProfileView: React.FC = () => {
         workoutDurationMinutes: 60,
         equipment,
         dietaryPreference: 'vegetarian',
-        limitations: [],
+        limitations,
       });
 
       // 2. Synchronize calculated nutrition profile
@@ -115,7 +211,18 @@ export const ProfileView: React.FC = () => {
         calculationVersion: 'v1.0-deterministic',
       });
 
-      setSuccessMsg('Profile and updated nutrition targets saved successfully.');
+      // 3. Persist workout reminder preferences
+      await reminderService.saveReminderPreference({
+        id: reminderId,
+        userId,
+        enabled: reminderEnabled,
+        time: reminderTime,
+        days: reminderDays,
+        title: 'Time for Today’s Workout Session',
+        message: 'Your scheduled training session is waiting. Maintain your streak today!',
+      });
+
+      setSuccessMsg('Profile, nutrition baselines, and workout alarms saved successfully.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to update profile';
       setErrorMsg(msg);
@@ -132,8 +239,13 @@ export const ProfileView: React.FC = () => {
     );
   }
 
+  const nextAlarmMs = reminderEnabled
+    ? reminderService.getMillisecondsUntilNextReminder(reminderTime, reminderDays)
+    : null;
+  const timeUntilAlarm = reminderService.formatTimeRemaining(nextAlarmMs);
+
   return (
-    <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4) var(--space-12)', maxWidth: '720px' }}>
+    <div className="container-narrow animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4) calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-8))' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
         <span className="badge badge-accent" style={{ marginBottom: 'var(--space-1)' }}>Athlete Account</span>
@@ -310,6 +422,355 @@ export const ProfileView: React.FC = () => {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Physical Limitations & Movement Focus */}
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <label className="label">Physical Limitations & Movement Focus</label>
+
+          <div
+            style={{
+              padding: 'var(--space-3)',
+              background: 'rgba(59, 75, 107, 0.18)',
+              border: '1px solid var(--accent-indigo)',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: 'var(--space-3)',
+              display: 'flex',
+              gap: 'var(--space-2)',
+              alignItems: 'flex-start',
+            }}
+          >
+            <ShieldAlert size={16} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              <strong style={{ color: 'var(--text-primary)' }}>Non-Medical Disclaimer: </strong>
+              Movement adjustments are general biomechanical exercise modifications based on joint stress distribution, NOT medical diagnosis or physical therapy. Consult a physician for injuries.
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+            {['None', 'Lower Back', 'Knees', 'Shoulders', 'Elbows', 'Wrists', 'Hips', 'Ankles'].map(lim => {
+              const active = limitations.includes(lim);
+              return (
+                <button
+                  key={lim}
+                  type="button"
+                  onClick={() => toggleLimitation(lim)}
+                  className={`badge ${active ? 'badge-accent' : 'badge-secondary'}`}
+                  style={{
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    border: active ? '1px solid var(--accent-primary)' : '1px solid var(--border-medium)',
+                  }}
+                >
+                  {lim} {active ? '✓' : '+'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Workout Alarms & Scheduled Reminders Card */}
+        <div className="card" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-5)' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 'var(--space-3)',
+              flexWrap: 'wrap',
+              gap: 'var(--space-2)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Bell size={20} color="var(--accent-primary)" />
+              <h3 style={{ margin: 0, fontSize: '1.15rem' }}>Workout Alarm & Scheduled Reminders</h3>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={reminderEnabled}
+                onChange={e => setReminderEnabled(e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)' }}
+              />
+              <span
+                style={{
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  color: reminderEnabled ? 'var(--text-primary)' : 'var(--text-muted)',
+                }}
+              >
+                {reminderEnabled ? 'Alarm Active' : 'Alarm Disabled'}
+              </span>
+            </label>
+          </div>
+
+          <p
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: '0.88rem',
+              margin: '0 0 var(--space-4)',
+              lineHeight: 1.5,
+            }}
+          >
+            Schedule session alerts and smart repeat reminders to maintain your training discipline and daily streak.
+          </p>
+
+          {/* Alarm Time & Live Countdown Row */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: 'var(--space-4)',
+              marginBottom: 'var(--space-4)',
+            }}
+          >
+            <div>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: 'var(--space-1)',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                }}
+              >
+                Alarm Time (24-Hour)
+              </label>
+              <input
+                type="time"
+                value={reminderTime}
+                onChange={e => setReminderTime(e.target.value)}
+                disabled={!reminderEnabled}
+                className="input"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '1rem',
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: 'var(--space-1)',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                }}
+              >
+                Next Scheduled Session
+              </label>
+              <div
+                style={{
+                  padding: '9px 12px',
+                  background: 'var(--color-surface-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-subtle)',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.9rem',
+                  color: reminderEnabled ? 'var(--accent-primary)' : 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  minHeight: '42px',
+                }}
+              >
+                <Clock size={15} />
+                <span>{reminderEnabled ? `Fires in ${timeUntilAlarm}` : 'Alarms paused'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Smart Repeat: Day Chips */}
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: 'var(--space-2)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+              }}
+            >
+              Smart Repeat Days
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+              {[
+                { day: 1, label: 'Mon' },
+                { day: 2, label: 'Tue' },
+                { day: 3, label: 'Wed' },
+                { day: 4, label: 'Thu' },
+                { day: 5, label: 'Fri' },
+                { day: 6, label: 'Sat' },
+                { day: 7, label: 'Sun' },
+              ].map(({ day, label }) => {
+                const active = reminderDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    disabled={!reminderEnabled}
+                    onClick={() => toggleReminderDay(day)}
+                    className={`badge ${active && reminderEnabled ? 'badge-accent' : 'badge-secondary'}`}
+                    style={{
+                      padding: '6px 14px',
+                      cursor: reminderEnabled ? 'pointer' : 'not-allowed',
+                      opacity: reminderEnabled ? 1 : 0.6,
+                      border:
+                        active && reminderEnabled
+                          ? '1px solid var(--accent-primary)'
+                          : '1px solid var(--border-medium)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {label} {active ? '✓' : ''}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Browser Permission Status & Action Controls */}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 'var(--space-3)',
+              padding: 'var(--space-3)',
+              background: 'var(--color-surface-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: 'var(--space-4)',
+              border: '1px solid var(--border-subtle)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Browser Alerts:</span>
+              {permissionStatus === 'granted' && (
+                <span
+                  className="badge badge-success"
+                  style={{
+                    fontSize: '0.75rem',
+                    background: 'rgba(127, 166, 107, 0.15)',
+                    color: 'var(--color-success)',
+                    border: '1px solid var(--color-success)',
+                  }}
+                >
+                  ✓ Allowed
+                </span>
+              )}
+              {permissionStatus === 'denied' && (
+                <span
+                  className="badge"
+                  style={{
+                    fontSize: '0.75rem',
+                    background: 'rgba(193, 89, 79, 0.15)',
+                    color: 'var(--color-error)',
+                    border: '1px solid var(--color-error)',
+                  }}
+                >
+                  ✕ Blocked
+                </span>
+              )}
+              {permissionStatus === 'default' && (
+                <span className="badge badge-secondary" style={{ fontSize: '0.75rem' }}>
+                  Permission Needed
+                </span>
+              )}
+              {permissionStatus === 'unsupported' && (
+                <span className="badge badge-secondary" style={{ fontSize: '0.75rem' }}>
+                  Not Supported
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              {permissionStatus !== 'granted' && permissionStatus !== 'unsupported' && (
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={handleRequestPermission}
+                >
+                  Allow Notifications
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={handleSendTestNotification}
+                title="Trigger immediate test alarm"
+              >
+                Send Test Alert
+              </button>
+              {reminderEnabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginRight: '2px' }}>Snooze:</span>
+                  {[5, 10, 15].map(mins => (
+                    <button
+                      key={mins}
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: '2px 8px', fontSize: '0.78rem' }}
+                      onClick={() => handleSnooze(mins)}
+                      title={`Snooze reminder by ${mins} minutes`}
+                    >
+                      {mins}m
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Test & Snooze Feedback alerts */}
+          {testNoticeMsg && (
+            <div
+              style={{
+                fontSize: '0.82rem',
+                color: testNoticeMsg.success ? 'var(--color-success)' : '#EF4444',
+                marginBottom: 'var(--space-3)',
+                padding: '6px 10px',
+                background: 'var(--color-surface-subtle)',
+                borderRadius: 'var(--radius-xs)',
+              }}
+            >
+              {testNoticeMsg.text}
+            </div>
+          )}
+          {snoozeNoticeMsg && (
+            <div
+              style={{
+                fontSize: '0.82rem',
+                color: 'var(--accent-primary)',
+                marginBottom: 'var(--space-3)',
+                padding: '6px 10px',
+                background: 'var(--color-surface-subtle)',
+                borderRadius: 'var(--radius-xs)',
+              }}
+            >
+              {snoozeNoticeMsg}
+            </div>
+          )}
+
+          {/* Mandatory Transparent Session Notification Disclosure */}
+          <div
+            style={{
+              padding: 'var(--space-3)',
+              background: 'rgba(59, 75, 107, 0.15)',
+              border: '1px solid var(--accent-indigo)',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              gap: 'var(--space-2)',
+              alignItems: 'flex-start',
+            }}
+          >
+            <Info size={16} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+              <strong style={{ color: 'var(--text-primary)' }}>Session Notification Notice: </strong>
+              Workout reminders trigger reliably while your application or browser tab is active. Operating system background push across sleeping devices requires native OS push infrastructure. Your workout tracking, PR records, and streak scores never depend on reminders.
+            </span>
           </div>
         </div>
 

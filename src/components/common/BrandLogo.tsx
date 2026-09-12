@@ -42,12 +42,12 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             width: glyphDimensions,
             height: glyphDimensions,
             borderRadius: 'var(--radius-sm)',
-            background: 'linear-gradient(135deg, var(--accent-primary) 0%, #00B377 100%)',
-            boxShadow: '0 0 16px rgba(0, 242, 157, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+            background: 'var(--accent-primary)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#05140E',
+            color: '#0F1012',
             flexShrink: 0,
           }}
           aria-hidden="true"

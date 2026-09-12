@@ -22,7 +22,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPublicTool }) => {
               <BrandLogo size="sm" />
             </div>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-              {BRAND_CONFIG.tagline}. Intelligent training splits, Indian-tailored nutrition planning, authoritative PR tracking, and Guru Ji guidance.
+              {BRAND_CONFIG.tagline}. Intelligent training splits, Indian-tailored nutrition planning, and authoritative PR tracking.
             </p>
           </div>
 

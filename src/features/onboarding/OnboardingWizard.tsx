@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, ArrowRight, ArrowLeft, Target, Award, Dumbbell, Utensils } from 'lucide-react';
+import { Check, ArrowRight, ArrowLeft, Target, Award, Dumbbell, Utensils, Activity, ShieldAlert } from 'lucide-react';
 import { FitnessGoal, ExperienceLevel, DietaryPreference, Gender, FitnessProfile } from '@/types/user.types';
 import { validateBiometrics } from '@/utils/validation';
 import { profileService } from '@/services/profile.service';
@@ -30,6 +30,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [duration, setDuration] = useState(existingProfile?.workoutDurationMinutes || 60);
   const [equipment, setEquipment] = useState<string[]>(existingProfile?.equipment || ['Barbell', 'Dumbbells', 'Bodyweight']);
   const [dietaryPreference, setDietaryPreference] = useState<DietaryPreference>(existingProfile?.dietaryPreference || 'vegetarian');
+  const [limitations, setLimitations] = useState<string[]>(existingProfile?.limitations && existingProfile.limitations.length > 0 ? existingProfile.limitations : ['None']);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -41,6 +42,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     }
   };
 
+  const toggleLimitation = (item: string) => {
+    if (item === 'None') {
+      setLimitations(['None']);
+      return;
+    }
+    let updated = limitations.filter(l => l !== 'None');
+    if (updated.includes(item)) {
+      updated = updated.filter(l => l !== item);
+    } else {
+      updated.push(item);
+    }
+    setLimitations(updated.length === 0 ? ['None'] : updated);
+  };
+
   const handleNext = () => {
     setError(null);
     if (step === 1) {
@@ -50,7 +65,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         return;
       }
     }
-    setStep(prev => Math.min(4, prev + 1));
+    setStep(prev => Math.min(5, prev + 1));
   };
 
   const handleFinish = async () => {
@@ -58,8 +73,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     setSaving(true);
 
     try {
-      // 1. Save fitness profile
-      await profileService.saveFitnessProfile({
+      // 1. Save fitness profile (Authoritative Supabase write)
+      const fitnessRes = await profileService.saveFitnessProfile({
         userId,
         age,
         heightCm,
@@ -71,17 +86,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         workoutDurationMinutes: duration,
         equipment,
         dietaryPreference,
-        limitations: [],
+        limitations,
       });
 
-      // 2. Compute deterministic nutrition targets
+      if (!fitnessRes.success) {
+        throw new Error(fitnessRes.error || 'Failed to persist fitness profile. Please retry.');
+      }
+
+      // 2. Compute deterministic nutrition targets & persist
       const bmr = calculateBMR({ weightKg, heightCm, age, gender });
       const tdee = calculateTDEE(bmr, daysPerWeek);
       const targetCalories = calculateCalorieTarget(tdee, goal);
       const targetProteinG = calculateProteinTarget(weightKg, goal);
       const macros = calculateMacroSplit(targetCalories, targetProteinG);
 
-      await nutritionService.saveNutritionProfile({
+      const nutritionSuccess = await nutritionService.saveNutritionProfile({
         userId,
         bmrCalories: bmr,
         tdeeCalories: tdee,
@@ -92,6 +111,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         calculationVersion: 'v1.0-deterministic',
       });
 
+      if (!nutritionSuccess) {
+        throw new Error('Failed to persist nutrition profile targets. Please retry.');
+      }
+
+      // 3. Telemetry and state progression ONLY after confirmed authoritative writes
       trackEvent('onboarding_completed', { goal, daysPerWeek });
       onComplete();
     } catch (err: unknown) {
@@ -105,9 +129,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   return (
     <div className="container-narrow animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)' }}>
       <div className="card" style={{ padding: 'var(--space-8)', borderColor: 'var(--border-medium)', background: 'var(--bg-surface)' }}>
-        {/* Progress Dots */}
+        {/* Progress Dots (5 Steps) */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-6)' }}>
-          {[1, 2, 3, 4].map(num => (
+          {[1, 2, 3, 4, 5].map(num => (
             <div
               key={num}
               style={{
@@ -376,6 +400,79 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           </div>
         )}
 
+        {/* STEP 5: PHYSICAL LIMITATIONS & MOVEMENT PREFERENCES */}
+        {step === 5 && (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+              <div style={{ display: 'inline-flex', padding: '12px', background: 'var(--accent-primary-muted)', borderRadius: 'var(--radius-full)', color: 'var(--accent-primary)', marginBottom: 'var(--space-2)' }}>
+                <Activity size={24} />
+              </div>
+              <h3 style={{ fontSize: '1.25rem', marginBottom: 'var(--space-1)' }}>Physical Limitations & Movement Preferences</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                Select any joints or areas where you prefer conservative exercise alternatives.
+              </p>
+            </div>
+
+            {/* Non-medical disclaimer alert */}
+            <div
+              style={{
+                padding: 'var(--space-3) var(--space-4)',
+                background: 'rgba(59, 75, 107, 0.18)',
+                border: '1px solid var(--accent-indigo)',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: 'var(--space-5)',
+                display: 'flex',
+                gap: 'var(--space-3)',
+                alignItems: 'flex-start',
+              }}
+            >
+              <ShieldAlert size={18} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                <strong style={{ color: 'var(--text-primary)' }}>Non-Medical Disclaimer: </strong>
+                APEXFIT movement recommendations are biomechanical exercise adjustments designed to reduce joint stress, NOT medical diagnosis or physical therapy. Consult a physician for injury treatment.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))', gap: 'var(--space-3)' }}>
+              {[
+                { id: 'None', label: 'None (Full Range)' },
+                { id: 'Lower Back', label: 'Lower Back' },
+                { id: 'Knees', label: 'Knees' },
+                { id: 'Shoulders', label: 'Shoulders' },
+                { id: 'Elbows', label: 'Elbows' },
+                { id: 'Wrists', label: 'Wrists' },
+                { id: 'Hips', label: 'Hips' },
+                { id: 'Ankles', label: 'Ankles' },
+              ].map(lim => {
+                const isSelected = limitations.includes(lim.id);
+                return (
+                  <button
+                    key={lim.id}
+                    type="button"
+                    onClick={() => toggleLimitation(lim.id)}
+                    className="btn btn-sm"
+                    style={{
+                      height: 'auto',
+                      padding: 'var(--space-3)',
+                      textAlign: 'center',
+                      background: isSelected ? 'var(--accent-primary-muted)' : 'var(--bg-input)',
+                      borderColor: isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)',
+                      color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    {isSelected && <Check size={14} />}
+                    <span style={{ fontWeight: isSelected ? 700 : 500 }}>{lim.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--space-8)' }}>
           {step > 1 ? (
@@ -388,7 +485,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             </button>
           ) : <div />}
 
-          {step < 4 ? (
+          {step < 5 ? (
             <button type="button" className="btn btn-primary" onClick={handleNext}>
               Next Step <ArrowRight size={16} />
             </button>

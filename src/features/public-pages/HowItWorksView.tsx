@@ -2,10 +2,16 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Dumbbell, ArrowRight, ShieldCheck, Flame, Utensils, CheckCircle2 } from 'lucide-react';
 import { PRODUCT_NAME } from '@/config/branding';
+import { SEOHead } from '@/components/common/SEOHead';
 
 export const HowItWorksView: React.FC = () => {
   return (
     <div className="container animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4) var(--space-12)' }}>
+      <SEOHead
+        title={`How ${PRODUCT_NAME} Works — Training Methodology`}
+        description="A structured, science-backed approach to hypertrophy, progressive strength, and sustainable training."
+        canonicalPath="/how-it-works"
+      />
       {/* Header */}
       <div style={{ maxWidth: '720px', margin: '0 auto var(--space-10)', textAlign: 'center' }}>
         <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>System Methodology</span>
