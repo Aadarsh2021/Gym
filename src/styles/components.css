@@ -36,12 +36,12 @@
   box-shadow: none !important;
 }
 
-/* Primary CTA - Solid Modern Ember (#E58A4F) */
+/* Primary CTA - Solid Modern Electric Blue (#4F8CFF) */
 .btn-primary {
   background: var(--accent-primary);
-  color: #0F1012;
+  color: var(--accent-primary-text);
   border: 1px solid transparent;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   font-weight: 700;
   letter-spacing: 0.01em;
 }
@@ -49,7 +49,7 @@
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(229, 138, 79, 0.25);
+  box-shadow: 0 4px 12px rgba(79, 140, 255, 0.25);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -99,26 +99,26 @@
 .btn-danger {
   background-color: var(--color-error-muted);
   color: #F87171;
-  border-color: rgba(239, 68, 68, 0.35);
+  border-color: rgba(212, 91, 91, 0.35);
 }
 
 .btn-danger:hover:not(:disabled) {
   background-color: var(--color-error);
   color: #FFFFFF;
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+  box-shadow: 0 4px 16px rgba(212, 91, 91, 0.35);
 }
 
 /* Guru Ji AI Button (Dormant Phase 2) */
 .btn-ai {
   background: var(--bg-surface-elevated);
-  color: var(--accent-gold);
-  border: 1px solid rgba(212, 168, 87, 0.35);
+  color: var(--accent-primary);
+  border: 1px solid var(--border-medium);
   font-weight: 700;
 }
 
 .btn-ai:hover:not(:disabled) {
   background: var(--bg-hover);
-  border-color: var(--accent-gold);
+  border-color: var(--accent-primary);
   transform: translateY(-1px);
 }
 
@@ -246,7 +246,7 @@
   outline: none;
   border-color: var(--accent-primary);
   background-color: var(--bg-input);
-  box-shadow: 0 0 0 3px rgba(229, 138, 79, 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .textarea {
@@ -282,55 +282,55 @@
 .badge-accent {
   background: var(--accent-primary-muted);
   color: var(--accent-primary);
-  border-color: rgba(229, 138, 79, 0.28);
+  border-color: rgba(79, 140, 255, 0.28);
 }
 
 .badge-gold {
   background: var(--accent-gold-muted);
   color: var(--accent-gold);
-  border-color: rgba(212, 168, 87, 0.28);
+  border-color: rgba(214, 168, 79, 0.28);
 }
 
 .badge-purple, .badge-indigo {
-  background: rgba(59, 75, 107, 0.15);
-  color: #8FA8C7;
-  border-color: rgba(59, 75, 107, 0.30);
+  background: rgba(98, 121, 166, 0.15);
+  color: #9DB4D6;
+  border-color: rgba(98, 121, 166, 0.30);
 }
 
 .badge-success {
   background: var(--color-success-muted);
   color: var(--color-success);
-  border-color: rgba(127, 166, 107, 0.28);
+  border-color: rgba(114, 184, 121, 0.28);
 }
 
 .badge-warning {
   background: var(--color-warning-muted);
   color: var(--color-warning);
-  border-color: rgba(212, 168, 87, 0.28);
+  border-color: rgba(214, 168, 79, 0.28);
 }
 
 .badge-error {
   background: var(--color-error-muted);
   color: var(--color-error);
-  border-color: rgba(193, 89, 79, 0.28);
+  border-color: rgba(212, 91, 91, 0.28);
 }
 
 .badge-info, .badge-cyan {
   background: var(--color-info-muted);
   color: var(--color-info);
-  border-color: rgba(107, 140, 174, 0.28);
+  border-color: rgba(111, 159, 232, 0.28);
 }
 
 .badge-lime {
   background: var(--color-success-muted);
   color: var(--color-success);
-  border-color: rgba(127, 166, 107, 0.28);
+  border-color: rgba(114, 184, 121, 0.28);
 }
 
 .badge-fire {
   background: var(--accent-primary-muted);
   color: var(--accent-primary);
-  border-color: rgba(229, 138, 79, 0.28);
+  border-color: rgba(79, 140, 255, 0.28);
 }
 
 /* ==========================================================================
@@ -340,7 +340,7 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 16, 18, 0.82);
+  background: rgba(11, 13, 16, 0.82);
   display: flex;
   align-items: center;
   justify-content: center;

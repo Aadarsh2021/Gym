@@ -102,7 +102,7 @@ export const PublicAppShell: React.FC = () => {
               style={{ padding: '0 8px' }}
             >
               {isDark
-                ? <Sun size={16} color="var(--accent-gold)" />
+                ? <Sun size={16} color="var(--text-secondary)" />
                 : <Moon size={16} color="var(--accent-primary)" />
               }
             </button>
@@ -139,7 +139,7 @@ export const PublicAppShell: React.FC = () => {
                 touchAction: 'manipulation',
               }}
             >
-              {isDark ? <Sun size={18} color="var(--accent-gold)" /> : <Moon size={18} color="var(--accent-primary)" />}
+              {isDark ? <Sun size={18} color="var(--text-secondary)" /> : <Moon size={18} color="var(--accent-primary)" />}
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

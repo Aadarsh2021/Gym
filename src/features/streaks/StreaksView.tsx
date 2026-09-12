@@ -61,7 +61,7 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
     <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
-        <span className="badge badge-gold" style={{ marginBottom: 'var(--space-2)' }}>Consistency Ledger</span>
+        <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>Consistency Ledger</span>
         <h1>Streaks & Rewards</h1>
         <p style={{ color: 'var(--text-secondary)' }}>Your consistency is recorded authoritatively. Complete scheduled workouts to protect your streak.</p>
       </div>
@@ -83,12 +83,12 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
       <div className="grid grid-cols-2" style={{ gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
         {/* Active Streak Hero Tile */}
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', borderColor: 'var(--border-medium)' }}>
-          <div style={{ padding: '16px', background: 'var(--accent-gold-muted)', borderRadius: 'var(--radius-lg)', color: 'var(--accent-gold)' }}>
-            <Flame size={36} fill="var(--accent-gold)" />
+          <div style={{ padding: '16px', background: 'var(--accent-primary-muted)', borderRadius: 'var(--radius-lg)', color: 'var(--accent-primary)' }}>
+            <Flame size={36} fill="var(--accent-primary)" />
           </div>
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Current Active Streak</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)', lineHeight: 1.1 }}>
               {streak.currentStreak} <span style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Days</span>
             </div>
             <small style={{ color: 'var(--text-muted)' }}>Longest Streak: {streak.longestStreak} days</small>
@@ -97,12 +97,12 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
 
         {/* Coin Balance */}
         <div className="card" style={{ borderColor: 'var(--border-medium)', display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-          <div style={{ padding: '16px', background: 'var(--accent-gold-muted)', borderRadius: 'var(--radius-lg)', color: 'var(--accent-gold)' }}>
+          <div style={{ padding: '16px', background: 'var(--color-warning-muted)', borderRadius: 'var(--radius-lg)', color: 'var(--color-warning)' }}>
             <Coins size={36} />
           </div>
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Coin Balance</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-warning)', lineHeight: 1.1 }}>
               {coins} <span style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Coins</span>
             </div>
             <small style={{ color: 'var(--text-muted)' }}>Earned through workouts & milestones</small>
@@ -143,18 +143,18 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
               className="card"
               style={{
                 opacity: m.unlocked ? 1 : 0.6,
-                borderColor: m.unlocked ? 'var(--accent-gold)' : 'var(--border-subtle)',
+                borderColor: m.unlocked ? 'var(--color-warning)' : 'var(--border-subtle)',
                 background: m.unlocked ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-                <Award size={20} color={m.unlocked ? 'var(--accent-gold)' : 'var(--text-muted)'} />
-                <span className={`badge ${m.unlocked ? 'badge-gold' : ''}`}>
+                <Award size={20} color={m.unlocked ? 'var(--color-warning)' : 'var(--text-muted)'} />
+                <span className={`badge ${m.unlocked ? 'badge-warning' : ''}`}>
                   {m.unlocked ? 'Unlocked' : `${m.days} Days`}
                 </span>
               </div>
               <h4 style={{ fontSize: '1rem', marginBottom: '4px' }}>{m.label}</h4>
-              <small style={{ color: 'var(--accent-gold)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>+{m.coins} Fitness Coins</small>
+              <small style={{ color: 'var(--color-warning)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>+{m.coins} Fitness Coins</small>
             </div>
           ))}
         </div>

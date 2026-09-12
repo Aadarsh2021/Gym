@@ -132,13 +132,13 @@ export const AppShell: React.FC = () => {
             </div>
           </div>
           <div className="sidebar-user-chips">
-            <div className="badge badge-gold" style={{ fontSize: '0.72rem', padding: '2px 7px' }}>
-              <Flame size={12} fill="var(--accent-gold)" />
+            <div className="badge badge-accent" style={{ fontSize: '0.72rem', padding: '2px 7px' }}>
+              <Flame size={12} fill="var(--accent-primary)" />
               <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
                 {streak.currentStreak}d Streak
               </span>
             </div>
-            <div className="badge badge-gold" style={{ fontSize: '0.72rem', padding: '2px 7px' }}>
+            <div className="badge" style={{ fontSize: '0.72rem', padding: '2px 7px' }}>
               <Coins size={12} />
               <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
                 {coins}
@@ -202,7 +202,7 @@ export const AppShell: React.FC = () => {
               }}
             >
               {isDark
-                ? <Sun size={14} color="var(--accent-gold)" />
+                ? <Sun size={14} color="var(--text-secondary)" />
                 : <Moon size={14} color="var(--accent-primary)" />
               }
             </button>
@@ -252,19 +252,19 @@ export const AppShell: React.FC = () => {
               style={{ minWidth: '40px', minHeight: '40px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               {isDark
-                ? <Sun size={16} color="var(--accent-gold)" />
+                ? <Sun size={16} color="var(--text-secondary)" />
                 : <Moon size={16} color="var(--accent-primary)" />
               }
             </button>
 
             {/* Streak Badge */}
             <div
-              className="badge badge-gold"
+              className="badge badge-accent"
               style={{ cursor: 'pointer', minHeight: '36px', padding: '0 10px', fontFamily: 'var(--font-mono)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               onClick={() => navigate('/app/progress')}
               title="Active Workout Streak"
             >
-              <Flame size={15} fill="var(--accent-gold)" />
+              <Flame size={15} fill="var(--accent-primary)" />
               <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
                 {streak.currentStreak}
               </span>
@@ -272,7 +272,7 @@ export const AppShell: React.FC = () => {
 
             {/* Coins Badge */}
             <div
-              className="badge badge-gold hide-on-xs"
+              className="badge hide-on-xs"
               style={{ cursor: 'pointer', minHeight: '36px', padding: '0 10px', fontFamily: 'var(--font-mono)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               onClick={() => navigate('/app/progress')}
               title="Fitness Coins"
@@ -358,7 +358,7 @@ export const AppShell: React.FC = () => {
               }}
             >
               {isDark ? (
-                <><Sun size={14} color="var(--accent-gold)" /><span style={{ color: 'var(--text-secondary)' }}>Light</span></>
+                <><Sun size={14} color="var(--text-secondary)" /><span style={{ color: 'var(--text-secondary)' }}>Light</span></>
               ) : (
                 <><Moon size={14} color="var(--accent-primary)" /><span style={{ color: 'var(--text-secondary)' }}>Dark</span></>
               )}

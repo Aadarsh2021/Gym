@@ -216,10 +216,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div
             style={{
               padding: '10px',
-              background: 'var(--accent-cyan-muted)',
+              background: 'var(--accent-primary-muted)',
               borderRadius: 'var(--radius-sm)',
-              color: 'var(--accent-cyan)',
-              boxShadow: '0 0 14px rgba(6, 182, 212, 0.2)',
+              color: 'var(--accent-primary)',
             }}
           >
             <Zap size={22} />
@@ -231,7 +230,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div style={{ fontWeight: 700, fontSize: '0.94rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {activePlan ? activePlan.name : 'No Active Plan'}
             </div>
-            <span style={{ fontSize: '0.78rem', color: 'var(--accent-cyan)', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
               {activePlan ? `${activePlan.days.length} Days / Week →` : 'Build Plan →'}
             </span>
           </div>
@@ -246,13 +245,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div
             style={{
               padding: '10px',
-              background: 'var(--accent-gold-muted)',
+              background: 'var(--accent-primary-muted)',
               borderRadius: 'var(--radius-sm)',
-              color: 'var(--accent-gold)',
-              boxShadow: '0 0 16px rgba(255, 184, 0, 0.25)',
+              color: 'var(--accent-primary)',
             }}
           >
-            <Flame size={22} fill="var(--accent-gold)" />
+            <Flame size={22} fill="var(--accent-primary)" />
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>

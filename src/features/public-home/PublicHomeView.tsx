@@ -21,7 +21,7 @@ export const PublicHomeView: React.FC = () => {
         style={{
           borderBottom: '1px solid var(--border-subtle)',
           padding: 'var(--space-12) var(--space-4) var(--space-12)',
-          background: 'radial-gradient(ellipse at 50% -20%, rgba(229, 138, 79, 0.05), transparent 70%)',
+          background: 'radial-gradient(ellipse at 50% -20%, rgba(79, 140, 255, 0.04), transparent 70%)',
         }}
       >
         <div className="container" style={{ textAlign: 'center', maxWidth: '840px', margin: '0 auto' }}>

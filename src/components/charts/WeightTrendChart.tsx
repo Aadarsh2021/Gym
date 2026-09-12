@@ -110,7 +110,7 @@ export const WeightTrendChart: React.FC<WeightTrendChartProps> = ({
                 {currentWeight} kg
               </div>
               {deltaWeight !== null && (
-                <small style={{ color: deltaWeight > 0 ? 'var(--accent-amber)' : 'var(--accent-cyan)', fontWeight: 600 }}>
+                <small style={{ color: deltaWeight > 0 ? 'var(--color-warning)' : 'var(--accent-primary)', fontWeight: 600 }}>
                   {deltaWeight > 0 ? `+${deltaWeight}` : deltaWeight} kg net
                 </small>
               )}

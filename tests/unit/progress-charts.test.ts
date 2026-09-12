@@ -177,8 +177,8 @@ describe('Progress Charts & Analytics Suite', () => {
         expect(strengthChartCode).not.toContain(hex);
       }
 
-      // 2. CSS variables must resolve --accent-indigo to #3B4B6B
-      expect(cssVariables).toContain('--accent-indigo: #3B4B6B;');
+      // 2. CSS variables must resolve --accent-indigo to #6279A6
+      expect(cssVariables).toContain('--accent-indigo: #6279A6;');
 
       // 3. Volume chart must NOT have an indigo->emerald gradient
       expect(volumeChartCode.toLowerCase()).not.toContain('gradient');

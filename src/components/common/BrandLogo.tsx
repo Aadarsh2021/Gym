@@ -47,7 +47,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#0F1012',
+            color: '#FFFFFF',
             flexShrink: 0,
           }}
           aria-hidden="true"

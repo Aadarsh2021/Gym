@@ -1,75 +1,76 @@
 :root {
   /* -------------------------------------------------------------------------
-     FORGED IRON & EMBER DESIGN SYSTEM (2026 MODERN GRAPHITE EDITION)
-     Neutral Graphite & Obsidian Surfaces, Restrained Ember Accents, Gold Honors, Indigo Data
+     APEXFIT 2026 MODERN DARK GRAPHITE DESIGN SYSTEM
+     Neutral Graphite Canvas & Surfaces, Restrained Electric Blue Accents,
+     Clean Slate Typography, Minimal Depth & Restrained Semantics
      ------------------------------------------------------------------------- */
 
-  /* Canvas & Backgrounds - Neutral Graphite & Obsidian */
-  --bg-primary: #0F1012;
-  --bg-secondary: #141619;
-  --bg-surface: #181A1D;
-  --bg-surface-elevated: #1E2125;
-  --bg-surface-glass: rgba(24, 26, 29, 0.85);
-  --bg-input: #121417;
-  --bg-hover: #22252A;
+  /* Canvas & Backgrounds - Deep Neutral Graphite */
+  --bg-primary: #0B0D10;
+  --bg-secondary: #111419;
+  --bg-surface: #171A1F;
+  --bg-surface-elevated: #1E2229;
+  --bg-surface-glass: rgba(23, 26, 31, 0.85);
+  --bg-input: #111419;
+  --bg-hover: #222730;
 
-  /* Borders - Precision Graphite Dividers */
-  --border-subtle: #25282D;
-  --border-medium: #30343A;
-  --border-strong: #424750;
-  --border-focus: #E58A4F;
+  /* Borders - Minimal Neutral Graphite Dividers */
+  --border-subtle: #252A31;
+  --border-medium: #303640;
+  --border-strong: #3F4754;
+  --border-focus: #4F8CFF;
   --glass-specular: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
 
-  /* Brand Primary - Restrained Ember / Copper (#E58A4F) */
-  --accent-primary: #E58A4F;
-  --accent-primary-hover: #F09B61;
-  --accent-primary-active: #CC7738;
-  --accent-primary-muted: rgba(229, 138, 79, 0.12);
-  --accent-primary-glow: rgba(229, 138, 79, 0.20);
-  --accent-primary-text: #0F1012;
+  /* Primary Accent - Restrained Electric Blue (#4F8CFF) */
+  --accent-primary: #4F8CFF;
+  --accent-primary-hover: #6AA1FF;
+  --accent-primary-active: #3D78E6;
+  --accent-primary-muted: rgba(79, 140, 255, 0.12);
+  --accent-primary-glow: rgba(79, 140, 255, 0.20);
+  --accent-primary-text: #FFFFFF;
 
-  /* Accent Secondary / Analytics - Indigo (#3B4B6B) for analytics/data only */
-  --accent-indigo: #3B4B6B;
-  --accent-indigo-muted: rgba(59, 75, 107, 0.15);
-  --accent-indigo-border: rgba(59, 75, 107, 0.30);
-  --accent-secondary: #3B4B6B;
-  --accent-purple: #3B4B6B;
-  --accent-purple-hover: #4E628A;
-  --accent-purple-muted: rgba(59, 75, 107, 0.15);
-  --accent-purple-glow: rgba(59, 75, 107, 0.22);
+  /* Analytics & Data Visualization - Indigo (#6279A6) */
+  --accent-indigo: #6279A6;
+  --accent-indigo-muted: rgba(98, 121, 166, 0.12);
+  --accent-indigo-border: rgba(98, 121, 166, 0.28);
+  --accent-secondary: #6279A6;
+  --accent-purple: #6279A6;
+  --accent-purple-hover: #738DBA;
+  --accent-purple-muted: rgba(98, 121, 166, 0.12);
+  --accent-purple-glow: rgba(98, 121, 166, 0.20);
 
-  /* Celebration / Reward - Gold (#D4A857) - Special honors only */
-  --accent-amber: #D4A857;
-  --accent-gold: #D4A857;
-  --accent-gold-hover: #E2BA6E;
-  --accent-gold-muted: rgba(212, 168, 87, 0.12);
-  --accent-gold-glow: rgba(212, 168, 87, 0.20);
-  --accent-fire: #E58A4F;
+  /* Special Honors / PR Milestones - Restrained Gold (#D6A84F) */
+  --accent-amber: #D6A84F;
+  --accent-gold: #D6A84F;
+  --accent-gold-hover: #E4BC6C;
+  --accent-gold-muted: rgba(214, 168, 79, 0.12);
+  --accent-gold-glow: rgba(214, 168, 79, 0.20);
+  --accent-fire: #4F8CFF;
 
-  /* Accent Quaternary / Neutral Accent */
-  --accent-cyan: #6B8CAE;
-  --accent-cyan-muted: rgba(107, 140, 174, 0.12);
-  --accent-cyan-glow: rgba(107, 140, 174, 0.20);
+  /* Neutral Interactive Accents */
+  --accent-cyan: #4F8CFF;
+  --accent-cyan-muted: rgba(79, 140, 255, 0.12);
+  --accent-cyan-glow: rgba(79, 140, 255, 0.20);
 
-  /* Typography - Crisp Neutral Modern Slate */
-  --text-primary: #F2F3F5;
-  --text-secondary: #A9ADB5;
-  --text-tertiary: #777B84;
-  --text-muted: #686C75;
-  --text-inverse: #0F1012;
+  /* Typography - Crisp Slate & Neutral White */
+  --text-primary: #F4F6F8;
+  --text-secondary: #AEB5BF;
+  --text-tertiary: #7D8590;
+  --text-muted: #646C77;
+  --text-inverse: #0B0D10;
 
-  /* Semantic */
-  --color-success: #7FA66B;
-  --color-success-muted: rgba(127, 166, 107, 0.12);
-  --color-warning: #D4A857;
-  --color-warning-muted: rgba(212, 168, 87, 0.12);
-  --color-error: #C1594F;
-  --color-error-muted: rgba(193, 89, 79, 0.12);
-  --color-info: #6B8CAE;
-  --color-info-muted: rgba(107, 140, 174, 0.12);
+  /* Semantic System */
+  --color-success: #72B879;
+  --color-success-muted: rgba(114, 184, 121, 0.12);
+  --color-warning: #D6A84F;
+  --color-warning-muted: rgba(214, 168, 79, 0.12);
+  --color-error: #D45B5B;
+  --color-error-muted: rgba(212, 91, 91, 0.12);
+  --color-info: #6F9FE8;
+  --color-info-muted: rgba(111, 159, 232, 0.12);
 
-  --accent-tertiary: #A9ADB5;
-  --accent-success: #7FA66B;
+  --accent-tertiary: #AEB5BF;
+  --accent-success: #72B879;
 
   /* Typography */
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -96,15 +97,15 @@
   --radius-xl: 22px;
   --radius-full: 9999px;
 
-  /* Shadows - Crisp Depth */
+  /* Shadows - Minimal Depth */
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.35);
   --shadow-md: 0 4px 14px -2px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
   --shadow-3d: 0 8px 24px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
-  --shadow-glow-copper: 0 0 16px rgba(229, 138, 79, 0.18);
-  --shadow-glow-emerald: 0 0 16px rgba(127, 166, 107, 0.18);
-  --shadow-glow-purple: 0 0 16px rgba(59, 75, 107, 0.18);
-  --shadow-glow-gold: 0 0 16px rgba(212, 168, 87, 0.18);
+  --shadow-glow-blue: 0 0 16px rgba(79, 140, 255, 0.18);
+  --shadow-glow-emerald: 0 0 16px rgba(114, 184, 121, 0.18);
+  --shadow-glow-purple: 0 0 16px rgba(98, 121, 166, 0.18);
+  --shadow-glow-gold: 0 0 16px rgba(214, 168, 79, 0.18);
 
   /* Transitions */
   --transition-fast: 120ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -121,7 +122,7 @@
 
 /* ==========================================================================
    LIGHT MODE THEME — Applied via html[data-theme="light"]
-   Clean, airy sports-tech aesthetic — warm whites, rich slate typography
+   Clean, airy sports-tech aesthetic — pure whites, slate typography, blue accents
    ========================================================================== */
 
 html[data-theme="light"] {
@@ -138,26 +139,26 @@ html[data-theme="light"] {
   --border-subtle: #E2E4E8;
   --border-medium: #D1D5DB;
   --border-strong: #9CA3AF;
-  --border-focus: #E58A4F;
+  --border-focus: #4F8CFF;
   --glass-specular: inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
 
-  /* Brand Primary — Restrained Ember */
-  --accent-primary: #C86A28;
-  --accent-primary-hover: #E58A4F;
-  --accent-primary-active: #B25A1E;
-  --accent-primary-muted: rgba(200, 106, 40, 0.10);
-  --accent-primary-glow: rgba(200, 106, 40, 0.15);
+  /* Brand Primary — Restrained Blue */
+  --accent-primary: #2B6BE6;
+  --accent-primary-hover: #4F8CFF;
+  --accent-primary-active: #1D52B8;
+  --accent-primary-muted: rgba(43, 107, 230, 0.10);
+  --accent-primary-glow: rgba(43, 107, 230, 0.15);
   --accent-primary-text: #FFFFFF;
 
   /* Accent Gold / Celebration */
-  --accent-gold: #B48228;
-  --accent-gold-hover: #966B1E;
-  --accent-gold-muted: rgba(180, 130, 40, 0.10);
-  --accent-gold-glow: rgba(180, 130, 40, 0.15);
+  --accent-gold: #B88326;
+  --accent-gold-hover: #9E6C1A;
+  --accent-gold-muted: rgba(184, 131, 38, 0.10);
+  --accent-gold-glow: rgba(184, 131, 38, 0.15);
 
   /* Accent Indigo — Analytics/Data only */
-  --accent-indigo: #3B4B6B;
-  --accent-indigo-muted: rgba(59, 75, 107, 0.10);
+  --accent-indigo: #6279A6;
+  --accent-indigo-muted: rgba(98, 121, 166, 0.10);
 
   /* Typography */
   --text-primary: #111827;
@@ -167,27 +168,27 @@ html[data-theme="light"] {
   --text-inverse: #FFFFFF;
 
   /* Semantic colors */
-  --color-success: #5C8049;
-  --color-success-muted: rgba(92, 128, 73, 0.10);
-  --color-warning: #B48228;
-  --color-warning-muted: rgba(180, 130, 40, 0.10);
-  --color-error: #B84A40;
-  --color-error-muted: rgba(184, 74, 64, 0.10);
-  --color-info: #5A7B9B;
-  --color-info-muted: rgba(90, 123, 155, 0.10);
+  --color-success: #3E8A49;
+  --color-success-muted: rgba(62, 138, 73, 0.10);
+  --color-warning: #B88326;
+  --color-warning-muted: rgba(184, 131, 38, 0.10);
+  --color-error: #C93B3B;
+  --color-error-muted: rgba(201, 59, 59, 0.10);
+  --color-info: #3E72B8;
+  --color-info-muted: rgba(62, 114, 184, 0.10);
 
   /* Aliases */
-  --accent-secondary: #D4A857;
+  --accent-secondary: #6279A6;
   --accent-tertiary: #6B7280;
-  --accent-success: #5C8049;
+  --accent-success: #3E8A49;
 
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --shadow-3d: 0 4px 12px rgba(0, 0, 0, 0.06);
-  --shadow-glow-copper: 0 0 12px rgba(200, 106, 40, 0.15);
-  --shadow-glow-gold: 0 0 12px rgba(180, 130, 40, 0.15);
+  --shadow-glow-blue: 0 0 12px rgba(43, 107, 230, 0.15);
+  --shadow-glow-gold: 0 0 12px rgba(184, 131, 38, 0.15);
 }
 
 /* Light mode specific component overrides */
@@ -236,27 +237,27 @@ html[data-theme="light"] .badge {
 }
 
 html[data-theme="light"] .badge-accent {
-  background: rgba(200, 106, 40, 0.10);
-  color: #B25A1E;
-  border-color: rgba(200, 106, 40, 0.25);
+  background: rgba(43, 107, 230, 0.10);
+  color: #1D52B8;
+  border-color: rgba(43, 107, 230, 0.25);
 }
 
 html[data-theme="light"] .badge-gold {
-  background: rgba(180, 130, 40, 0.10);
-  color: #966B1E;
-  border-color: rgba(180, 130, 40, 0.25);
+  background: rgba(184, 131, 38, 0.10);
+  color: #8C5E14;
+  border-color: rgba(184, 131, 38, 0.25);
 }
 
 html[data-theme="light"] .badge-indigo {
-  background: rgba(59, 75, 107, 0.10);
-  color: #2D3A53;
-  border-color: rgba(59, 75, 107, 0.25);
+  background: rgba(98, 121, 166, 0.10);
+  color: #3C4E6D;
+  border-color: rgba(98, 121, 166, 0.25);
 }
 
 html[data-theme="light"] .badge-success {
-  background: rgba(92, 128, 73, 0.10);
-  color: #486837;
-  border-color: rgba(92, 128, 73, 0.25);
+  background: rgba(62, 138, 73, 0.10);
+  color: #2F6938;
+  border-color: rgba(62, 138, 73, 0.25);
 }
 
 html[data-theme="light"] .input,
@@ -273,7 +274,7 @@ html[data-theme="light"] .select:focus,
 html[data-theme="light"] .textarea:focus {
   background-color: #FFFFFF;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(200, 106, 40, 0.12);
+  box-shadow: 0 0 0 3px rgba(43, 107, 230, 0.15);
 }
 
 /* Light mode app shell surfaces */

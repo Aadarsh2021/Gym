@@ -20,7 +20,7 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
 }) => {
   const summary = calculateWorkoutSummary(session, existingPrsMap);
 
-  // Event-driven celebratory moment: Molten Gold & Forged Copper confetti strictly when a new PR is broken
+  // Event-driven celebratory moment: Electric Blue & Success Green confetti strictly when a new PR is broken
   useEffect(() => {
     if (summary.newPersonalRecords.length > 0) {
       try {
@@ -28,7 +28,7 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
           particleCount: 65,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ['#D4A857', '#E58A4F', '#F2F3F5'],
+          colors: ['#4F8CFF', '#72B879', '#F4F6F8'],
           disableForReducedMotion: true,
         });
       } catch {
@@ -44,24 +44,24 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
         style={{ maxWidth: '520px', padding: 'var(--space-6)', borderColor: 'var(--border-medium)' }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Celebration Header (Molten Gold highlight) */}
+        {/* Completion Header (Restrained Success Green) */}
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
           <div style={{
             width: '56px',
             height: '56px',
             borderRadius: '50%',
-            background: 'var(--accent-gold-muted)',
-            color: 'var(--accent-gold)',
+            background: 'var(--color-success-muted)',
+            color: 'var(--color-success)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto var(--space-3)',
-            border: '1px solid rgba(212, 168, 87, 0.4)',
+            border: '1px solid var(--color-success)',
           }}>
             <Check size={28} strokeWidth={3} />
           </div>
 
-          <span className="badge badge-gold" style={{ marginBottom: 'var(--space-2)' }}>
+          <span className="badge badge-success" style={{ marginBottom: 'var(--space-2)' }}>
             Workout Completed
           </span>
           <h2 style={{ fontSize: '1.6rem', marginBottom: 'var(--space-1)' }}>{session.name}</h2>

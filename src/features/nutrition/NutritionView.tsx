@@ -493,7 +493,7 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                 {dailyTotals.totalFatG} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>/ {targetFat} g</span>
               </div>
               <div style={{ width: '100%', height: '6px', background: 'var(--bg-input)', borderRadius: 'var(--radius-full)', marginTop: 'var(--space-3)', overflow: 'hidden' }}>
-                <div style={{ width: `${fatPercent}%`, height: '100%', background: 'var(--accent-gold)', transition: 'width 0.4s ease' }} />
+                <div style={{ width: `${fatPercent}%`, height: '100%', background: 'var(--color-warning)', transition: 'width 0.4s ease' }} />
               </div>
               <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: 'var(--space-2)' }}>Hormonal & cellular health</small>
             </div>
