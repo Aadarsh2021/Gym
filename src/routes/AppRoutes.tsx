@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 // Layouts
 import { PublicAppShell } from '@/layouts/PublicAppShell';
 import { AppShell } from '@/layouts/AppShell';
+import { OwnerAppShell } from '@/layouts/OwnerAppShell';
 
 // Public Feature Pages
 import { PublicHomeView } from '@/features/public-home/PublicHomeView';
@@ -23,9 +24,17 @@ import { RoleSelectionView } from '@/features/auth/RoleSelectionView';
 import { ForgotPasswordView } from '@/features/auth/ForgotPasswordView';
 import { ResetPasswordView } from '@/features/auth/ResetPasswordView';
 
-// Owner Pages
+// Owner Console Pages
 import { OwnerDashboardView } from '@/features/owner/OwnerDashboardView';
 import { OwnerOnboardingView } from '@/features/owner/OwnerOnboardingView';
+import { OwnerMembersView } from '@/features/owner/OwnerMembersView';
+import { OwnerCommunityView } from '@/features/owner/OwnerCommunityView';
+import { OwnerChallengesView } from '@/features/owner/OwnerChallengesView';
+import { OwnerEventsView } from '@/features/owner/OwnerEventsView';
+import { OwnerAnnouncementsView } from '@/features/owner/OwnerAnnouncementsView';
+import { OwnerRewardsView } from '@/features/owner/OwnerRewardsView';
+import { OwnerProfileView } from '@/features/owner/OwnerProfileView';
+import { OwnerSettingsView } from '@/features/owner/OwnerSettingsView';
 
 // Setup & Plan Flow
 import { OnboardingRouteView } from '@/features/onboarding/OnboardingRouteView';
@@ -113,15 +122,7 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* GYM OWNER ROUTES */}
-        <Route
-          path="/owner/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['gym_owner', 'platform_admin']}>
-              <OwnerDashboardView />
-            </ProtectedRoute>
-          }
-        />
+        {/* GYM OWNER ONBOARDING FLOW */}
         <Route
           path="/owner/onboarding"
           element={
@@ -176,8 +177,29 @@ export const AppRoutes: React.FC = () => {
         <Route path="streaks" element={<StreaksRouteView />} />
         <Route path="profile" element={<ProfileView />} />
       </Route>
+ 
+      {/* 3. AUTHENTICATED GYM OWNER CONSOLE OS ROUTES */}
+      <Route
+        path="/owner"
+        element={
+          <ProtectedRoute allowedRoles={['gym_owner', 'platform_admin']}>
+            <OwnerAppShell />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/owner/dashboard" replace />} />
+        <Route path="dashboard" element={<OwnerDashboardView />} />
+        <Route path="members" element={<OwnerMembersView />} />
+        <Route path="community" element={<OwnerCommunityView />} />
+        <Route path="challenges" element={<OwnerChallengesView />} />
+        <Route path="events" element={<OwnerEventsView />} />
+        <Route path="announcements" element={<OwnerAnnouncementsView />} />
+        <Route path="rewards" element={<OwnerRewardsView />} />
+        <Route path="profile" element={<OwnerProfileView />} />
+        <Route path="settings" element={<OwnerSettingsView />} />
+      </Route>
 
-      {/* 3. CATCH-ALL */}
+      {/* 4. CATCH-ALL */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

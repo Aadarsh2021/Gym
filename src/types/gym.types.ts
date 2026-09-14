@@ -8,6 +8,10 @@ export type GymMembershipStatus = 'active' | 'inactive' | 'frozen' | 'pending';
 
 export type GymVerificationMethod = 'qr_scan' | 'gps_geofence' | 'reception_manual';
 
+export type GymAttendanceStatus = 'active' | 'completed' | 'abandoned';
+
+export type GymCheckoutMethod = 'qr_scan' | 'gps_geofence' | 'manual_button' | 'reception_manual' | 'auto_timeout';
+
 export interface Gym {
   id: string;
   name: string;
@@ -15,10 +19,19 @@ export interface Gym {
   ownerId: string;
   address: string;
   city: string;
+  state?: string;
+  pincode?: string;
+  contactNumber?: string;
+  email?: string;
+  description?: string;
+  openingTime?: string;
+  closingTime?: string;
   latitude: number;
   longitude: number;
   radiusMeters: number;
   qrCodeHash: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
   createdAt?: string;
 }
 
@@ -31,6 +44,23 @@ export interface GymMembership {
   joinedAt: string;
   expiresAt?: string | null;
   gym?: Gym;
+}
+
+export interface GymAttendanceSession {
+  id: string;
+  gymId: string;
+  userId: string;
+  checkInAt: string;
+  checkOutAt?: string | null;
+  durationSeconds?: number | null;
+  verificationMethod: GymVerificationMethod;
+  checkoutMethod?: GymCheckoutMethod | null;
+  status: GymAttendanceStatus;
+  createdAt?: string;
+  userProfile?: {
+    displayName?: string;
+    avatarUrl?: string | null;
+  };
 }
 
 export interface GymCheckin {

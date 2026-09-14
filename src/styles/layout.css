@@ -396,6 +396,13 @@ html, body {
   font-weight: 700;
 }
 
+.sidebar-link.owner-active {
+  background: rgba(214, 168, 79, 0.12);
+  color: var(--accent-gold);
+  border-left-color: var(--accent-gold);
+  font-weight: 700;
+}
+
 .sidebar-coach-banner {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
