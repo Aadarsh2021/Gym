@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Moon,
   Sun,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
@@ -95,6 +96,7 @@ export const AppShell: React.FC = () => {
     { to: '/app', label: 'Home', icon: Home, end: true },
     { to: '/app/workouts', label: 'Workouts', icon: Dumbbell, end: false },
     { to: '/app/exercises', label: 'Exercises', icon: BookOpen, end: false },
+    { to: '/app/gym', label: 'Gym', icon: Building2, end: false },
     { to: '/app/nutrition', label: 'Nutrition', icon: Utensils, end: false },
     { to: '/app/progress', label: 'Progress', icon: TrendingUp, end: false },
     { to: '/app/streaks', label: 'Streaks & Rewards', icon: Flame, end: false },

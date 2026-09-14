@@ -2,10 +2,11 @@ import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
-// Layouts
+// Layouts & Contexts
 import { PublicAppShell } from '@/layouts/PublicAppShell';
 import { AppShell } from '@/layouts/AppShell';
 import { OwnerAppShell } from '@/layouts/OwnerAppShell';
+import { OwnerGymProvider } from '@/context/OwnerGymContext';
 
 // Public Feature Pages
 import { PublicHomeView } from '@/features/public-home/PublicHomeView';
@@ -49,6 +50,7 @@ import { NutritionRouteView } from '@/features/nutrition/NutritionRouteView';
 import { ProgressView } from '@/features/progress/ProgressView';
 import { ProfileView } from '@/features/profile/ProfileView';
 import { StreaksRouteView } from '@/features/streaks/StreaksRouteView';
+import { MemberGymDiscoveryView } from '@/features/gym/MemberGymDiscoveryView';
 
 // Route Guard
 import { ProtectedRoute } from './ProtectedRoute';
@@ -127,7 +129,9 @@ export const AppRoutes: React.FC = () => {
           path="/owner/onboarding"
           element={
             <ProtectedRoute allowedRoles={['gym_owner', 'platform_admin']}>
-              <OwnerOnboardingView />
+              <OwnerGymProvider>
+                <OwnerOnboardingView />
+              </OwnerGymProvider>
             </ProtectedRoute>
           }
         />
@@ -172,6 +176,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="workouts" element={<WorkoutsRouteView />} />
         <Route path="workouts/active" element={<ActiveWorkoutRouteView />} />
         <Route path="exercises" element={<ExerciseLibraryView />} />
+        <Route path="gym" element={<MemberGymDiscoveryView />} />
         <Route path="nutrition" element={<NutritionRouteView />} />
         <Route path="progress" element={<ProgressView />} />
         <Route path="streaks" element={<StreaksRouteView />} />
@@ -183,7 +188,9 @@ export const AppRoutes: React.FC = () => {
         path="/owner"
         element={
           <ProtectedRoute allowedRoles={['gym_owner', 'platform_admin']}>
-            <OwnerAppShell />
+            <OwnerGymProvider>
+              <OwnerAppShell />
+            </OwnerGymProvider>
           </ProtectedRoute>
         }
       >

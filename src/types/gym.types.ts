@@ -12,6 +12,22 @@ export type GymAttendanceStatus = 'active' | 'completed' | 'abandoned';
 
 export type GymCheckoutMethod = 'qr_scan' | 'gps_geofence' | 'manual_button' | 'reception_manual' | 'auto_timeout';
 
+export interface DaySchedule {
+  isOpen: boolean;
+  openTime: string; // e.g. "06:00"
+  closeTime: string; // e.g. "22:00"
+}
+
+export interface WeeklySchedule {
+  monday: DaySchedule;
+  tuesday: DaySchedule;
+  wednesday: DaySchedule;
+  thursday: DaySchedule;
+  friday: DaySchedule;
+  saturday: DaySchedule;
+  sunday: DaySchedule;
+}
+
 export interface Gym {
   id: string;
   name: string;
@@ -26,6 +42,7 @@ export interface Gym {
   description?: string;
   openingTime?: string;
   closingTime?: string;
+  weeklySchedule?: WeeklySchedule;
   latitude: number;
   longitude: number;
   radiusMeters: number;

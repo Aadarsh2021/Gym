@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import {
   Gym,
   GymMembership,
+  GymMembershipStatus,
   GymCheckin,
   GymVerificationMethod,
   GymAttendanceSession,
@@ -15,16 +16,28 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-
 export class GymRepository {
   // ── 1. Gym Discovery & Directory ──────────────────────────────────────────
   async fetchAllGyms(): Promise<Gym[]> {
-    if (!isSupabaseConfigured) return [];
+    if (!isSupabaseConfigured) {
+      const stored = platform.storage.getItem('cached_all_gyms');
+      if (stored && typeof stored === 'string') {
+        try { return JSON.parse(stored); } catch { /* ignore */ }
+      }
+      return [];
+    }
     try {
       const { data, error } = await supabase
         .from('gyms')
         .select('*')
         .order('name', { ascending: true });
 
-      if (error || !data) return [];
+      if (error || !data || data.length === 0) {
+        const stored = platform.storage.getItem('cached_all_gyms');
+        if (stored && typeof stored === 'string') {
+          try { return JSON.parse(stored); } catch { /* ignore */ }
+        }
+        return [];
+      }
 
-      return data.map(g => ({
+      const mapped: Gym[] = data.map(g => ({
         id: g.id,
         name: g.name,
         slug: g.slug,
@@ -38,6 +51,7 @@ export class GymRepository {
         description: g.description || undefined,
         openingTime: g.opening_time || undefined,
         closingTime: g.closing_time || undefined,
+        weeklySchedule: g.weekly_schedule || undefined,
         latitude: Number(g.latitude),
         longitude: Number(g.longitude),
         radiusMeters: g.radius_meters || 200,
@@ -46,14 +60,48 @@ export class GymRepository {
         coverImageUrl: g.cover_image_url || undefined,
         createdAt: g.created_at,
       }));
+
+      platform.storage.setItem('cached_all_gyms', JSON.stringify(mapped));
+      return mapped;
     } catch (err) {
       logger.error('GymRepository: Error fetching gyms', { err });
+      const stored = platform.storage.getItem('cached_all_gyms');
+      if (stored && typeof stored === 'string') {
+        try { return JSON.parse(stored); } catch { /* ignore */ }
+      }
       return [];
     }
   }
 
+  async searchGyms(query: string, city?: string): Promise<Gym[]> {
+    const all = await this.fetchAllGyms();
+    if (!query.trim() && !city?.trim()) return all;
+    const q = query.toLowerCase().trim();
+    const c = city?.toLowerCase().trim();
+    return all.filter(g => {
+      const matchName =
+        !q ||
+        g.name.toLowerCase().includes(q) ||
+        g.slug.toLowerCase().includes(q) ||
+        g.address.toLowerCase().includes(q) ||
+        Boolean(g.description && g.description.toLowerCase().includes(q));
+      const matchCity = !c || g.city.toLowerCase().includes(c);
+      return matchName && matchCity;
+    });
+  }
+
   async fetchGymById(gymId: string): Promise<Gym | null> {
-    if (!isSupabaseConfigured) return null;
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const stored = platform.storage.getItem('cached_all_gyms');
+      if (stored && typeof stored === 'string') {
+        try {
+          const parsed = JSON.parse(stored) as Gym[];
+          const match = parsed.find(g => g.id === gymId);
+          if (match) return match;
+        } catch { /* ignore */ }
+      }
+      return null;
+    }
     try {
       const { data, error } = await supabase
         .from('gyms')
@@ -122,6 +170,7 @@ export class GymRepository {
         description: g.description || undefined,
         openingTime: g.opening_time || undefined,
         closingTime: g.closing_time || undefined,
+        weeklySchedule: g.weekly_schedule || undefined,
         latitude: Number(g.latitude),
         longitude: Number(g.longitude),
         radiusMeters: g.radius_meters || 200,
@@ -139,6 +188,38 @@ export class GymRepository {
     }
   }
 
+  async generateUniqueSlug(baseName: string): Promise<string> {
+    const raw = baseName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'gym';
+
+    let candidate = raw;
+    let counter = 1;
+
+    while (true) {
+      if (!isSupabaseConfigured) {
+        return candidate;
+      }
+      try {
+        const { data } = await supabase
+          .from('gyms')
+          .select('id')
+          .eq('slug', candidate)
+          .maybeSingle();
+
+        if (!data) {
+          return candidate;
+        }
+        counter++;
+        candidate = `${raw}-${counter}`;
+      } catch {
+        return candidate;
+      }
+    }
+  }
+
   async createGym(
     gymData: Omit<Gym, 'id' | 'createdAt'>
   ): Promise<{ success: boolean; gym?: Gym; error?: string }> {
@@ -151,6 +232,17 @@ export class GymRepository {
       const existing = await this.fetchOwnerGyms(gymData.ownerId);
       existing.unshift(mockGym);
       platform.storage.setItem(`owner_gyms_${gymData.ownerId}`, JSON.stringify(existing));
+
+      const allStored = platform.storage.getItem('cached_all_gyms');
+      let allList: Gym[] = [];
+      if (allStored && typeof allStored === 'string') {
+        try { allList = JSON.parse(allStored); } catch { /* ignore */ }
+      }
+      if (!allList.some(g => g.id === mockGym.id)) {
+        allList.unshift(mockGym);
+        platform.storage.setItem('cached_all_gyms', JSON.stringify(allList));
+      }
+
       return { success: true, gym: mockGym };
     }
 
@@ -163,10 +255,20 @@ export class GymRepository {
           owner_id: gymData.ownerId,
           address: gymData.address,
           city: gymData.city,
+          state: gymData.state,
+          pincode: gymData.pincode,
+          contact_number: gymData.contactNumber,
+          email: gymData.email,
+          description: gymData.description,
+          opening_time: gymData.openingTime,
+          closing_time: gymData.closingTime,
+          weekly_schedule: gymData.weeklySchedule,
           latitude: gymData.latitude,
           longitude: gymData.longitude,
           radius_meters: gymData.radiusMeters || 200,
           qr_code_hash: gymData.qrCodeHash,
+          logo_url: gymData.logoUrl,
+          cover_image_url: gymData.coverImageUrl,
         })
         .select('*')
         .single();
@@ -183,16 +285,36 @@ export class GymRepository {
         ownerId: data.owner_id,
         address: data.address,
         city: data.city,
+        state: data.state || undefined,
+        pincode: data.pincode || undefined,
+        contactNumber: data.contact_number || undefined,
+        email: data.email || undefined,
+        description: data.description || undefined,
+        openingTime: data.opening_time || undefined,
+        closingTime: data.closing_time || undefined,
+        weeklySchedule: data.weekly_schedule || undefined,
         latitude: Number(data.latitude),
         longitude: Number(data.longitude),
         radiusMeters: data.radius_meters || 200,
         qrCodeHash: data.qr_code_hash,
+        logoUrl: data.logo_url || undefined,
+        coverImageUrl: data.cover_image_url || undefined,
         createdAt: data.created_at,
       };
 
       const existing = await this.fetchOwnerGyms(gymData.ownerId);
       existing.unshift(created);
       platform.storage.setItem(`owner_gyms_${gymData.ownerId}`, JSON.stringify(existing));
+
+      const allStored = platform.storage.getItem('cached_all_gyms');
+      let allList: Gym[] = [];
+      if (allStored && typeof allStored === 'string') {
+        try { allList = JSON.parse(allStored); } catch { /* ignore */ }
+      }
+      if (!allList.some(g => g.id === created.id)) {
+        allList.unshift(created);
+        platform.storage.setItem('cached_all_gyms', JSON.stringify(allList));
+      }
 
       return { success: true, gym: created };
     } catch (err: unknown) {
@@ -202,44 +324,270 @@ export class GymRepository {
   }
 
   // ── 2. Member Memberships ──────────────────────────────────────────────────
-  async fetchUserMemberships(userId: string): Promise<GymMembership[]> {
-    if (!isSupabaseConfigured) return [];
+  private mapMembershipRow(m: any): GymMembership {
+    return {
+      id: m.id,
+      gymId: m.gym_id,
+      userId: m.user_id,
+      status: m.status,
+      membershipType: m.membership_type,
+      joinedAt: m.joined_at,
+      expiresAt: m.expires_at,
+      gym: m.gyms
+        ? {
+            id: m.gyms.id,
+            name: m.gyms.name,
+            slug: m.gyms.slug,
+            ownerId: m.gyms.owner_id,
+            address: m.gyms.address,
+            city: m.gyms.city,
+            state: m.gyms.state || undefined,
+            pincode: m.gyms.pincode || undefined,
+            contactNumber: m.gyms.contact_number || undefined,
+            email: m.gyms.email || undefined,
+            description: m.gyms.description || undefined,
+            openingTime: m.gyms.opening_time || undefined,
+            closingTime: m.gyms.closing_time || undefined,
+            latitude: Number(m.gyms.latitude),
+            longitude: Number(m.gyms.longitude),
+            radiusMeters: m.gyms.radius_meters || 200,
+            qrCodeHash: m.gyms.qr_code_hash,
+          }
+        : undefined,
+    };
+  }
+
+  private saveMembershipToStorage(userId: string, membership: GymMembership): void {
+    const raw = platform.storage.getItem(`user_memberships_${userId}`);
+    let list: GymMembership[] = [];
+    if (raw && typeof raw === 'string') {
+      try { list = JSON.parse(raw); } catch { list = []; }
+    }
+    const idx = list.findIndex(m => m.gymId === membership.gymId);
+    if (idx >= 0) {
+      list[idx] = membership;
+    } else {
+      list.push(membership);
+    }
+    platform.storage.setItem(`user_memberships_${userId}`, JSON.stringify(list));
+  }
+
+  async getMyGymMembership(gymId: string, userId: string): Promise<GymMembership | null> {
+    if (!gymId || !userId) return null;
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId) || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`user_memberships_${userId}`);
+      if (raw && typeof raw === 'string') {
+        try {
+          const list: GymMembership[] = JSON.parse(raw);
+          const found = list.find(m => m.gymId === gymId && m.userId === userId);
+          if (found) return found;
+        } catch { /* ignore */ }
+      }
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_memberships')
+        .select('*, gyms(*)')
+        .eq('gym_id', gymId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error || !data) {
+        const raw = platform.storage.getItem(`user_memberships_${userId}`);
+        if (raw && typeof raw === 'string') {
+          try {
+            const list: GymMembership[] = JSON.parse(raw);
+            const found = list.find(m => m.gymId === gymId && m.userId === userId);
+            if (found) return found;
+          } catch { /* ignore */ }
+        }
+        return null;
+      }
+
+      return this.mapMembershipRow(data);
+    } catch {
+      return null;
+    }
+  }
+
+  async getMyGymMemberships(userId: string): Promise<GymMembership[]> {
+    if (!userId) return [];
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const raw = platform.storage.getItem(`user_memberships_${userId}`);
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { /* ignore */ }
+      }
+      return [];
+    }
+
     try {
       const { data, error } = await supabase
         .from('gym_memberships')
         .select('*, gyms(*)')
         .eq('user_id', userId)
-        .eq('status', 'active');
+        .order('joined_at', { ascending: false });
 
-      if (error || !data) return [];
+      if (error || !data || data.length === 0) {
+        const raw = platform.storage.getItem(`user_memberships_${userId}`);
+        if (raw && typeof raw === 'string') {
+          try { return JSON.parse(raw); } catch { /* ignore */ }
+        }
+        return [];
+      }
 
-      return data.map(m => ({
-        id: m.id,
-        gymId: m.gym_id,
-        userId: m.user_id,
-        status: m.status,
-        membershipType: m.membership_type,
-        joinedAt: m.joined_at,
-        expiresAt: m.expires_at,
-        gym: m.gyms
-          ? {
-              id: m.gyms.id,
-              name: m.gyms.name,
-              slug: m.gyms.slug,
-              ownerId: m.gyms.owner_id,
-              address: m.gyms.address,
-              city: m.gyms.city,
-              latitude: Number(m.gyms.latitude),
-              longitude: Number(m.gyms.longitude),
-              radiusMeters: m.gyms.radius_meters || 200,
-              qrCodeHash: m.gyms.qr_code_hash,
-            }
-          : undefined,
-      }));
+      const mapped = data.map(m => this.mapMembershipRow(m));
+      platform.storage.setItem(`user_memberships_${userId}`, JSON.stringify(mapped));
+      return mapped;
     } catch (err) {
-      logger.error('GymRepository: Error fetching memberships', { err });
+      logger.error('GymRepository: Error fetching all user memberships', { err });
+      const raw = platform.storage.getItem(`user_memberships_${userId}`);
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { /* ignore */ }
+      }
       return [];
     }
+  }
+
+  async getMembershipStatus(gymId: string, userId: string): Promise<GymMembershipStatus | 'none'> {
+    const membership = await this.getMyGymMembership(gymId, userId);
+    return membership ? membership.status : 'none';
+  }
+
+  async requestGymMembership(
+    gymId: string,
+    userId: string,
+    membershipType: string = 'monthly'
+  ): Promise<{ success: boolean; membership?: GymMembership; error?: string; status?: GymMembershipStatus | 'none' }> {
+    if (!gymId || !userId) {
+      return { success: false, error: 'Invalid gym or user ID', status: 'none' };
+    }
+
+    // 1. Check existing membership to prevent duplicate rows & handle states
+    const existing = await this.getMyGymMembership(gymId, userId);
+    if (existing) {
+      if (existing.status === 'active') {
+        return {
+          success: false,
+          error: 'You are already an active member of this gym.',
+          membership: existing,
+          status: 'active',
+        };
+      }
+      if (existing.status === 'pending') {
+        return {
+          success: false,
+          error: 'A membership request for this gym is already pending approval.',
+          membership: existing,
+          status: 'pending',
+        };
+      }
+      if (existing.status === 'frozen') {
+        return {
+          success: false,
+          error: 'Your membership is currently frozen. Please contact gym administration.',
+          membership: existing,
+          status: 'frozen',
+        };
+      }
+      if (existing.status === 'inactive') {
+        // Reactivate inactive record by transitioning back to pending
+        if (!isSupabaseConfigured || !UUID_REGEX.test(userId) || !UUID_REGEX.test(gymId)) {
+          const updated: GymMembership = {
+            ...existing,
+            status: 'pending',
+            membershipType,
+            joinedAt: new Date().toISOString(),
+            expiresAt: null,
+          };
+          this.saveMembershipToStorage(userId, updated);
+          return { success: true, membership: updated, status: 'pending' };
+        }
+
+        try {
+          const { data, error } = await supabase
+            .from('gym_memberships')
+            .update({
+              status: 'pending',
+              membership_type: membershipType,
+              joined_at: new Date().toISOString(),
+              expires_at: null,
+            })
+            .eq('id', existing.id)
+            .eq('user_id', userId)
+            .select('*, gyms(*)')
+            .single();
+
+          if (error) {
+            logger.error('GymRepository: Error reactivating membership', { error });
+            return { success: false, error: error.message, status: existing.status };
+          }
+
+          const mapped = this.mapMembershipRow(data);
+          this.saveMembershipToStorage(userId, mapped);
+          return { success: true, membership: mapped, status: 'pending' };
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : 'Reactivation failed';
+          return { success: false, error: msg, status: existing.status };
+        }
+      }
+    }
+
+    // 2. New membership request -> status = 'pending'
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId) || !UUID_REGEX.test(gymId)) {
+      const created: GymMembership = {
+        id: `mem-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        gymId,
+        userId,
+        status: 'pending',
+        membershipType,
+        joinedAt: new Date().toISOString(),
+        expiresAt: null,
+      };
+      this.saveMembershipToStorage(userId, created);
+      return { success: true, membership: created, status: 'pending' };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_memberships')
+        .insert({
+          gym_id: gymId,
+          user_id: userId,
+          status: 'pending',
+          membership_type: membershipType,
+          joined_at: new Date().toISOString(),
+        })
+        .select('*, gyms(*)')
+        .single();
+
+      if (error) {
+        if (error.code === '23505' || error.message.includes('uq_gym_user_membership')) {
+          const recheck = await this.getMyGymMembership(gymId, userId);
+          return {
+            success: false,
+            error: 'Membership record already exists for this facility.',
+            membership: recheck || undefined,
+            status: recheck?.status || 'pending',
+          };
+        }
+        logger.error('GymRepository: Error requesting gym membership', { error });
+        return { success: false, error: error.message, status: 'none' };
+      }
+
+      const mapped = this.mapMembershipRow(data);
+      this.saveMembershipToStorage(userId, mapped);
+      return { success: true, membership: mapped, status: 'pending' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Membership request failed';
+      return { success: false, error: msg, status: 'none' };
+    }
+  }
+
+  async fetchUserMemberships(userId: string): Promise<GymMembership[]> {
+    const all = await this.getMyGymMemberships(userId);
+    return all.filter(m => m.status === 'active');
   }
 
   // ── 3. Gym Attendance Sessions (Check-in -> Active Session -> Check-out) ───
@@ -478,6 +826,137 @@ export class GymRepository {
     } catch (err) {
       logger.error('GymRepository: Error fetching active gym attendance', { err });
       return [];
+    }
+  }
+
+  async updateGym(
+    gymId: string,
+    ownerId: string,
+    updates: Partial<Gym>
+  ): Promise<{ success: boolean; gym?: Gym; error?: string }> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(ownerId)) {
+      const existing = await this.fetchOwnerGyms(ownerId);
+      const idx = existing.findIndex(g => g.id === gymId);
+      if (idx === -1) {
+        return { success: false, error: 'Gym not found or unauthorized' };
+      }
+      const updated: Gym = { ...existing[idx], ...updates };
+      existing[idx] = updated;
+      platform.storage.setItem(`owner_gyms_${ownerId}`, JSON.stringify(existing));
+      return { success: true, gym: updated };
+    }
+
+    try {
+      const dbPayload: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      };
+      if (updates.name !== undefined) dbPayload.name = updates.name.trim();
+      if (updates.slug !== undefined) dbPayload.slug = updates.slug.trim();
+      if (updates.address !== undefined) dbPayload.address = updates.address.trim();
+      if (updates.city !== undefined) dbPayload.city = updates.city.trim();
+      if (updates.state !== undefined) dbPayload.state = updates.state.trim() || null;
+      if (updates.pincode !== undefined) dbPayload.pincode = updates.pincode.trim() || null;
+      if (updates.contactNumber !== undefined) dbPayload.contact_number = updates.contactNumber.trim() || null;
+      if (updates.email !== undefined) dbPayload.email = updates.email.trim() || null;
+      if (updates.description !== undefined) dbPayload.description = updates.description.trim() || null;
+      if (updates.openingTime !== undefined) dbPayload.opening_time = updates.openingTime;
+      if (updates.closingTime !== undefined) dbPayload.closing_time = updates.closingTime;
+      if (updates.weeklySchedule !== undefined) dbPayload.weekly_schedule = updates.weeklySchedule;
+      if (updates.latitude !== undefined) dbPayload.latitude = updates.latitude;
+      if (updates.longitude !== undefined) dbPayload.longitude = updates.longitude;
+      if (updates.radiusMeters !== undefined) dbPayload.radius_meters = updates.radiusMeters;
+      if (updates.logoUrl !== undefined) dbPayload.logo_url = updates.logoUrl.trim() || null;
+      if (updates.coverImageUrl !== undefined) dbPayload.cover_image_url = updates.coverImageUrl.trim() || null;
+
+      const { data, error } = await supabase
+        .from('gyms')
+        .update(dbPayload)
+        .eq('id', gymId)
+        .eq('owner_id', ownerId)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        logger.error('GymRepository: Error updating gym', { error });
+        return { success: false, error: error?.message || 'Failed to update gym' };
+      }
+
+      const updatedGym: Gym = {
+        id: data.id,
+        name: data.name,
+        slug: data.slug,
+        ownerId: data.owner_id,
+        address: data.address,
+        city: data.city,
+        state: data.state || undefined,
+        pincode: data.pincode || undefined,
+        contactNumber: data.contact_number || undefined,
+        email: data.email || undefined,
+        description: data.description || undefined,
+        openingTime: data.opening_time || undefined,
+        closingTime: data.closing_time || undefined,
+        weeklySchedule: data.weekly_schedule || undefined,
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
+        radiusMeters: data.radius_meters || 200,
+        qrCodeHash: data.qr_code_hash,
+        logoUrl: data.logo_url || undefined,
+        coverImageUrl: data.cover_image_url || undefined,
+        createdAt: data.created_at,
+      };
+
+      const existing = await this.fetchOwnerGyms(ownerId);
+      const idx = existing.findIndex(g => g.id === gymId);
+      if (idx !== -1) {
+        existing[idx] = updatedGym;
+      } else {
+        existing.unshift(updatedGym);
+      }
+      platform.storage.setItem(`owner_gyms_${ownerId}`, JSON.stringify(existing));
+
+      return { success: true, gym: updatedGym };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Update failed';
+      return { success: false, error: msg };
+    }
+  }
+
+  async fetchGymMemberCount(gymId: string): Promise<number> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      return 0;
+    }
+    try {
+      const { count, error } = await supabase
+        .from('gym_memberships')
+        .select('id', { count: 'exact', head: true })
+        .eq('gym_id', gymId)
+        .eq('status', 'active');
+
+      if (error) return 0;
+      return count || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  async fetchGymTodayCheckinsCount(gymId: string): Promise<number> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      return 0;
+    }
+    try {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const { count, error } = await supabase
+        .from('gym_attendance_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('gym_id', gymId)
+        .gte('check_in_at', todayStart.toISOString());
+
+      if (error) return 0;
+      return count || 0;
+    } catch {
+      return 0;
     }
   }
 

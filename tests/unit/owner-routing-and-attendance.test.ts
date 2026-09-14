@@ -131,13 +131,35 @@ describe('Gym Owner Web Experience & Attendance Sessions Lifecycle', () => {
   });
 
   describe('2. Gym Ownership & Multi-Tenancy Isolation', () => {
-    it('creates gym under authenticated owner and retrieves only owned facilities', async () => {
+    it('generates URL-safe slugs from gym names', async () => {
+      const slug = await gymRepository.generateUniqueSlug('Gold Fitness & Spa Mumbai');
+      expect(slug).toBe('gold-fitness-spa-mumbai');
+
+      const fallbackSlug = await gymRepository.generateUniqueSlug('   ');
+      expect(fallbackSlug).toBe('gym');
+    });
+
+    it('creates gym under authenticated owner and retrieves only owned facilities with extended metadata', async () => {
       const gymData = {
         name: 'Iron Forge Club',
         slug: 'iron-forge',
         ownerId: testOwnerId,
         address: '100 Fitness Way',
         city: 'Mumbai',
+        state: 'Maharashtra',
+        pincode: '400050',
+        contactNumber: '+91 98765 43210',
+        email: 'info@ironforge.com',
+        description: 'Elite powerlifting and strength center',
+        weeklySchedule: {
+          monday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+          tuesday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+          wednesday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+          thursday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+          friday: { isOpen: true, openTime: '06:00', closeTime: '22:00' },
+          saturday: { isOpen: true, openTime: '07:00', closeTime: '21:00' },
+          sunday: { isOpen: false, openTime: '08:00', closeTime: '20:00' },
+        },
         latitude: 19.0760,
         longitude: 72.8777,
         radiusMeters: 200,
@@ -148,6 +170,8 @@ describe('Gym Owner Web Experience & Attendance Sessions Lifecycle', () => {
       expect(createdRes.success).toBe(true);
       expect(createdRes.gym?.ownerId).toBe(testOwnerId);
       expect(createdRes.gym?.name).toBe('Iron Forge Club');
+      expect(createdRes.gym?.state).toBe('Maharashtra');
+      expect(createdRes.gym?.weeklySchedule?.sunday.isOpen).toBe(false);
 
       // Fetch gyms for this owner
       const ownerGyms = await gymRepository.fetchOwnerGyms(testOwnerId);

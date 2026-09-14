@@ -22,8 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
-import { gymRepository } from '@/repositories/gym.repository';
-import { Gym } from '@/types/gym.types';
+import { useOwnerGym } from '@/context/OwnerGymContext';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
 export const OwnerAppShell: React.FC = () => {
@@ -32,44 +31,13 @@ export const OwnerAppShell: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const userId = session.user?.id || '';
-  const [gyms, setGyms] = useState<Gym[]>([]);
-  const [activeGym, setActiveGym] = useState<Gym | null>(null);
+  const { ownedGyms: gyms, activeGym, switchActiveGym, loading: loadingGyms } = useOwnerGym();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [loadingGyms, setLoadingGyms] = useState(true);
 
   // Close mobile drawer on route transition
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
-
-  // Fetch gyms owned by authenticated user
-  useEffect(() => {
-    let isMounted = true;
-    const fetchGyms = async () => {
-      if (!userId) {
-        setLoadingGyms(false);
-        return;
-      }
-      try {
-        const owned = await gymRepository.fetchOwnerGyms(userId);
-        if (isMounted) {
-          setGyms(owned);
-          if (owned.length > 0) {
-            setActiveGym(owned[0]);
-          }
-          setLoadingGyms(false);
-        }
-      } catch {
-        if (isMounted) setLoadingGyms(false);
-      }
-    };
-
-    fetchGyms();
-    return () => {
-      isMounted = false;
-    };
-  }, [userId]);
 
   const displayName =
     session.profile?.displayName ||
@@ -173,10 +141,7 @@ export const OwnerAppShell: React.FC = () => {
               {gyms.length > 1 && (
                 <select
                   value={activeGym.id}
-                  onChange={e => {
-                    const sel = gyms.find(g => g.id === e.target.value);
-                    if (sel) setActiveGym(sel);
-                  }}
+                  onChange={e => switchActiveGym(e.target.value)}
                   className="input"
                   style={{ width: '100%', fontSize: '0.75rem', marginTop: '6px', padding: '3px 6px', height: '28px' }}
                   aria-label="Switch active gym"
