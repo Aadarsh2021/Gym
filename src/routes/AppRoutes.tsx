@@ -7,6 +7,7 @@ import { PublicAppShell } from '@/layouts/PublicAppShell';
 import { AppShell } from '@/layouts/AppShell';
 import { OwnerAppShell } from '@/layouts/OwnerAppShell';
 import { OwnerGymProvider } from '@/context/OwnerGymContext';
+import { MemberGymProvider } from '@/context/MemberGymContext';
 
 // Public Feature Pages
 import { PublicHomeView } from '@/features/public-home/PublicHomeView';
@@ -168,7 +169,9 @@ export const AppRoutes: React.FC = () => {
         path="/app"
         element={
           <ProtectedRoute>
-            <AppShell />
+            <MemberGymProvider>
+              <AppShell />
+            </MemberGymProvider>
           </ProtectedRoute>
         }
       >

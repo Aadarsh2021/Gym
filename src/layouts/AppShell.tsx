@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
+import { useMemberGymContext } from '@/context/MemberGymContext';
 import { streakService } from '@/services/streak.service';
 import { reminderService } from '@/services/reminder.service';
 import { UserStreak } from '@/types/streak.types';
@@ -81,6 +82,14 @@ export const AppShell: React.FC = () => {
   const userEmail = session.user?.email || 'athlete@fitness.local';
   const avatarUrl = session.profile?.avatarUrl;
   const initial = (displayName.charAt(0) || 'A').toUpperCase();
+
+  let memberGymContext: ReturnType<typeof useMemberGymContext> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    memberGymContext = useMemberGymContext();
+  } catch {
+    // Safe fallback if rendered without provider in standalone tests
+  }
 
   // Mobile bottom nav: Home, Workouts, Nutrition, Streaks, Progress
   // (Exercises accessible from Workouts hub and desktop sidebar)
@@ -153,6 +162,44 @@ export const AppShell: React.FC = () => {
                 {coins}
               </span>
             </div>
+            {memberGymContext?.mode === 'integrated' && memberGymContext.activeGym && (
+              <div
+                className="badge"
+                style={{
+                  fontSize: '0.72rem',
+                  padding: '2px 7px',
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  color: 'var(--color-success)',
+                  border: '1px solid rgba(34, 197, 94, 0.25)',
+                  maxWidth: '120px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={`Active Gym: ${memberGymContext.activeGym.name}`}
+              >
+                <Building2 size={12} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {memberGymContext.activeGym.name}
+                </span>
+              </div>
+            )}
+            {memberGymContext?.mode === 'non_integrated' && (
+              <div
+                className="badge"
+                style={{
+                  fontSize: '0.72rem',
+                  padding: '2px 7px',
+                  background: 'rgba(79, 140, 255, 0.12)',
+                  color: 'var(--accent-primary)',
+                  border: '1px solid rgba(79, 140, 255, 0.25)',
+                }}
+                title="Personal Non-Integrated Gym"
+              >
+                <Building2 size={12} />
+                <span>Personal Gym</span>
+              </div>
+            )}
           </div>
         </NavLink>
 
@@ -171,7 +218,21 @@ export const AppShell: React.FC = () => {
                 }
               >
                 <Icon size={18} />
-                <span>{item.label}</span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.to === '/app/gym' && memberGymContext?.mode === 'integrated' && (
+                  <span
+                    className="badge"
+                    style={{
+                      fontSize: '0.62rem',
+                      padding: '1px 5px',
+                      background: 'rgba(34, 197, 94, 0.18)',
+                      color: 'var(--color-success)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Active
+                  </span>
+                )}
               </NavLink>
             );
           })}

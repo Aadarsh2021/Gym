@@ -4,6 +4,29 @@
 
 export type MemberTrainingContext = 'home' | 'non_integrated_gym' | 'integrated_gym';
 
+export type MemberGymMode = 'home' | 'non_integrated' | 'integrated';
+
+export type MemberGymContextState =
+  | {
+      mode: 'home';
+      activeGym: null;
+      activeMembership: null;
+      memberships: GymMembership[];
+    }
+  | {
+      mode: 'non_integrated';
+      activeGym: null;
+      activeMembership: null;
+      memberships: GymMembership[];
+      customGymLocation?: { latitude: number; longitude: number; radiusMeters: number };
+    }
+  | {
+      mode: 'integrated';
+      activeGym: Gym;
+      activeMembership: GymMembership;
+      memberships: GymMembership[];
+    };
+
 export type GymMembershipStatus = 'active' | 'inactive' | 'frozen' | 'pending';
 
 export type GymVerificationMethod = 'qr_scan' | 'gps_geofence' | 'reception_manual';

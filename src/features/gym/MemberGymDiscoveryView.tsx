@@ -20,11 +20,20 @@ import {
 import { gymRepository } from '@/repositories/gym.repository';
 import { Gym, GymMembership, GymMembershipStatus } from '@/types/gym.types';
 import { useAuth } from '@/hooks/useAuth';
+import { useMemberGymContext } from '@/context/MemberGymContext';
 import { logger } from '@/lib/logger';
 
 export const MemberGymDiscoveryView: React.FC = () => {
   const { session } = useAuth();
   const userId = session?.user?.id;
+
+  let memberGymCtx: ReturnType<typeof useMemberGymContext> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    memberGymCtx = useMemberGymContext();
+  } catch {
+    // Safe fallback if rendered without provider in standalone tests
+  }
 
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -134,6 +143,9 @@ export const MemberGymDiscoveryView: React.FC = () => {
           ...prev,
           [selectedGym.id]: res.membership!.status,
         }));
+        if (memberGymCtx?.refreshContext) {
+          memberGymCtx.refreshContext().catch(() => {});
+        }
       } else {
         setMembershipError(res.error || 'Failed to request membership.');
         if (res.membership) {

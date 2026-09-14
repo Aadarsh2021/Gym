@@ -3,6 +3,7 @@ import { profileRepository } from '@/repositories/profile.repository';
 import { isWithinGymRadius } from '@/utils/geo';
 import {
   MemberTrainingContext,
+  MemberGymContextState,
   GymVerificationResult,
   GymMembership,
   Gym,
@@ -10,9 +11,138 @@ import {
 import { platform } from '@/platform';
 import { logger } from '@/lib/logger';
 
+/**
+ * Pure domain function to derive member gym context from memberships and custom coordinates.
+ * Deterministic, framework-independent, containing zero DOM/React/Supabase dependencies.
+ */
+export function deriveMemberGymContext(
+  memberships: GymMembership[],
+  customGymLocation?: { latitude: number; longitude: number; radiusMeters: number },
+  preferredGymId?: string | null
+): MemberGymContextState {
+  // 1. Authoritative active memberships only: pending, inactive, frozen are excluded
+  const activeMemberships = memberships.filter(m => m.status === 'active');
+
+  if (activeMemberships.length > 0) {
+    let chosenMembership: GymMembership | undefined;
+
+    // Multi-gym selection: check if user has an explicit preferred active gym
+    if (preferredGymId) {
+      chosenMembership = activeMemberships.find(m => m.gymId === preferredGymId);
+    }
+
+    // Deterministic fallback: sort by joinedAt descending, tie-break by gymId ascending
+    if (!chosenMembership) {
+      const sorted = [...activeMemberships].sort((a, b) => {
+        const timeDiff = new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return a.gymId.localeCompare(b.gymId);
+      });
+      chosenMembership = sorted[0];
+    }
+
+    if (chosenMembership) {
+      const activeGym: Gym = chosenMembership.gym || {
+        id: chosenMembership.gymId,
+        name: 'Integrated Gym',
+        slug: chosenMembership.gymId,
+        ownerId: '',
+        address: '',
+        city: '',
+        latitude: 0,
+        longitude: 0,
+        radiusMeters: 200,
+        qrCodeHash: '',
+      };
+
+      return {
+        mode: 'integrated',
+        activeGym,
+        activeMembership: chosenMembership,
+        memberships,
+      };
+    }
+  }
+
+  // 2. Non-Integrated Gym Context (User configured custom non-integrated gym coordinates)
+  if (customGymLocation && customGymLocation.latitude && customGymLocation.longitude) {
+    return {
+      mode: 'non_integrated',
+      activeGym: null,
+      activeMembership: null,
+      memberships,
+      customGymLocation,
+    };
+  }
+
+  // 3. Default: Home / Independent
+  return {
+    mode: 'home',
+    activeGym: null,
+    activeMembership: null,
+    memberships,
+  };
+}
+
 export const gymContextService = {
   /**
-   * Resolves the current member training context:
+   * Resolves the current member gym context for an authenticated user.
+   * Loads user memberships via gymRepository and fitnessProfile via profileRepository,
+   * then applies pure domain derivation.
+   */
+  async resolveMemberGymContext(userId: string): Promise<MemberGymContextState> {
+    if (!userId || userId === 'guest-user') {
+      return {
+        mode: 'home',
+        activeGym: null,
+        activeMembership: null,
+        memberships: [],
+      };
+    }
+
+    try {
+      // 1. Fetch all memberships for this user
+      const memberships = await gymRepository.getMyGymMemberships(userId);
+
+      // 2. Fetch custom location if any from fitness profile
+      let customLocation: { latitude: number; longitude: number; radiusMeters: number } | undefined;
+      const fitnessProfile = await profileRepository.fetchFitnessProfile(userId);
+      if (fitnessProfile?.gymLatitude && fitnessProfile?.gymLongitude) {
+        customLocation = {
+          latitude: fitnessProfile.gymLatitude,
+          longitude: fitnessProfile.gymLongitude,
+          radiusMeters: fitnessProfile.gymRadiusMeters || 200,
+        };
+      }
+
+      // 3. Check for preferred active gym in platform storage
+      const rawPreferred = platform.storage.getItem(`active_member_gym_id_${userId}`);
+      const preferredGymId = typeof rawPreferred === 'string' ? rawPreferred : null;
+
+      // 4. Derive context
+      return deriveMemberGymContext(memberships, customLocation, preferredGymId);
+    } catch (err) {
+      logger.error('gymContextService: Error resolving member gym context', { err });
+      return {
+        mode: 'home',
+        activeGym: null,
+        activeMembership: null,
+        memberships: [],
+      };
+    }
+  },
+
+  /**
+   * Sets the user's active gym preference for multi-gym members.
+   */
+  setActiveGymPreference(userId: string, gymId: string): void {
+    if (userId && gymId) {
+      platform.storage.setItem(`active_member_gym_id_${userId}`, gymId);
+    }
+  },
+
+  /**
+   * Resolves the current member training context (backward-compatible adapter):
    * 1. 'integrated_gym' if user belongs to an active FitBoost-registered gym
    * 2. 'non_integrated_gym' if user has set custom gym GPS coordinates
    * 3. 'home' if no gym coordinates or memberships exist
@@ -22,31 +152,19 @@ export const gymContextService = {
     activeMembership?: GymMembership;
     customGymLocation?: { latitude: number; longitude: number; radiusMeters: number };
   }> {
-    try {
-      const memberships = await gymRepository.fetchUserMemberships(userId);
-      const activeMembership = memberships.find(m => m.status === 'active');
+    const derived = await this.resolveMemberGymContext(userId);
+    const legacyContext: MemberTrainingContext =
+      derived.mode === 'integrated'
+        ? 'integrated_gym'
+        : derived.mode === 'non_integrated'
+        ? 'non_integrated_gym'
+        : 'home';
 
-      if (activeMembership) {
-        return { context: 'integrated_gym', activeMembership };
-      }
-
-      const fitnessProfile = await profileRepository.fetchFitnessProfile(userId);
-      if (fitnessProfile?.gymLatitude && fitnessProfile?.gymLongitude) {
-        return {
-          context: 'non_integrated_gym',
-          customGymLocation: {
-            latitude: fitnessProfile.gymLatitude,
-            longitude: fitnessProfile.gymLongitude,
-            radiusMeters: fitnessProfile.gymRadiusMeters || 200,
-          },
-        };
-      }
-
-      return { context: 'home' };
-    } catch (err) {
-      logger.error('gymContextService: Error resolving training context', { err });
-      return { context: 'home' };
-    }
+    return {
+      context: legacyContext,
+      activeMembership: derived.activeMembership || undefined,
+      customGymLocation: derived.mode === 'non_integrated' ? derived.customGymLocation : undefined,
+    };
   },
 
   /**
