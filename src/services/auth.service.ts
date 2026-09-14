@@ -14,7 +14,11 @@ export interface AuthSession {
 export const authService = {
   async getSession(): Promise<AuthSession> {
     if (!isSupabaseConfigured) {
-      // Local preview fallback
+      if (import.meta.env.PROD) {
+        logger.error('Supabase authentication is not configured in production environment.');
+        return { user: null, profile: null };
+      }
+      // Local preview fallback (DEV only)
       const localUser = localStorage.getItem('mock_auth_user');
       if (localUser) {
         const parsed = JSON.parse(localUser);
@@ -25,6 +29,7 @@ export const authService = {
             displayName: parsed.displayName || 'Fitness Warrior',
             unitSystem: 'metric',
             timezone: 'Asia/Kolkata',
+            accountRole: 'member',
             planType: (parsed.planType as 'free' | 'premium') || 'free',
           },
         };
@@ -81,6 +86,7 @@ export const authService = {
               unitSystem: profile.unit_system as 'metric' | 'imperial',
               timezone: profile.timezone,
               avatarUrl: resolvedAvatar,
+              accountRole: (profile.account_role as any) || 'member',
               planType: (profile.plan_type as 'free' | 'premium') || 'free',
             }
           : {
@@ -89,6 +95,7 @@ export const authService = {
               unitSystem: 'metric',
               timezone: 'Asia/Kolkata',
               avatarUrl: resolvedAvatar,
+              accountRole: 'member',
               planType: 'free',
             },
       };
@@ -100,6 +107,9 @@ export const authService = {
 
   async signUp(email: string, password: string, displayName: string): Promise<{ success: boolean; error?: string }> {
     if (!isSupabaseConfigured) {
+      if (import.meta.env.PROD) {
+        return { success: false, error: 'Authentication service is unconfigured in production environment.' };
+      }
       const mockId = 'mock-user-' + Math.random().toString(36).substring(2, 9);
       localStorage.setItem('mock_auth_user', JSON.stringify({ id: mockId, email, displayName }));
       return { success: true };
@@ -124,6 +134,9 @@ export const authService = {
 
   async signIn(email: string, password: string): Promise<{ success: boolean; error?: string }> {
     if (!isSupabaseConfigured) {
+      if (import.meta.env.PROD) {
+        return { success: false, error: 'Authentication service is unconfigured in production environment.' };
+      }
       const mockId = 'mock-user-12345';
       localStorage.setItem('mock_auth_user', JSON.stringify({ id: mockId, email, displayName: 'Fitness Explorer' }));
       return { success: true };

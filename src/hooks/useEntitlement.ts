@@ -15,7 +15,7 @@ export interface EntitlementState {
 }
 
 /**
- * FitSphere V1 Centralized Entitlement Hook
+ * FitBoost Centralized Entitlement Hook
  * Single source of truth for feature access gating across the app.
  * Gracefully defaults to 'free' tier if session or profile is uninitialized.
  */

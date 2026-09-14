@@ -19,7 +19,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
     if (saved === "light" || saved === "dark") return saved;
 
-    // 2. Migrate from legacy key (APEXFIT → FitSphere) — preserves user's dark/light preference
+    // 2. Migrate from legacy key (preserves user's dark/light preference)
     const legacy = localStorage.getItem(LEGACY_STORAGE_KEY) as Theme | null;
     if (legacy === "light" || legacy === "dark") {
       localStorage.setItem(STORAGE_KEY, legacy);

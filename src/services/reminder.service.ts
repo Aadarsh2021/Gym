@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { entitlementService } from '@/services/entitlement.service';
 import { logger } from '@/lib/logger';
+import { platform } from '@/platform';
 
 export type AlarmMotivationStyle = 'basic' | 'gentle' | 'motivational' | 'tough_love';
 
@@ -19,21 +20,21 @@ export const MOTIVATION_TEMPLATES: Record<
     label: 'Gentle Motivation',
     description: 'Supportive and encouraging prompt focused on well-being.',
     isPremium: true,
-    title: 'FitSphere Daily Movement',
+    title: 'FitBoost Daily Movement',
     message: 'Every workout counts. Take a deep breath, step into your space, and enjoy building your strength today.',
   },
   motivational: {
     label: 'Motivational Push',
     description: 'High-energy athletic drive emphasizing consistency and ambition.',
     isPremium: true,
-    title: 'FitSphere Championship Mindset',
+    title: 'FitBoost Championship Mindset',
     message: 'Consistency separates ambition from accomplishment. Your future PRs are earned right now. Let’s crush this session!',
   },
   tough_love: {
     label: 'Tough-Love Discipline',
     description: 'Direct, focused discipline protocol. Zero rationalizing delays.',
     isPremium: true,
-    title: 'FitSphere Discipline Protocol',
+    title: 'FitBoost Discipline Protocol',
     message: 'No compromises, no rationalizing delays. Put your training gear on and execute your sets. Discipline over excuses.',
   },
 };
@@ -58,28 +59,17 @@ let activeSnoozeHandle: any = null;
 
 export const reminderService = {
   /**
-   * Check current browser Notification API permission status
+   * Check current notification permission status via platform
    */
   getPermissionStatus(): NotificationPermissionStatus {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      return 'unsupported';
-    }
-    return Notification.permission as NotificationPermissionStatus;
+    return platform.notifications.getPermissionStatus();
   },
 
   /**
-   * Request browser notification permission
+   * Request notification permission via platform
    */
   async requestPermission(): Promise<NotificationPermissionStatus> {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      return 'unsupported';
-    }
-    try {
-      const result = await Notification.requestPermission();
-      return result as NotificationPermissionStatus;
-    } catch {
-      return 'denied';
-    }
+    return platform.notifications.requestPermission();
   },
 
   /**
@@ -405,41 +395,29 @@ export const reminderService = {
   },
 
   /**
-   * Dispatch system notification and fallback gracefully
+   * Dispatch notification via platform adapter
    */
   triggerNotification(title: string, body: string): boolean {
-    if (typeof window === 'undefined') return false;
-
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        new Notification(title, {
-          body,
-          icon: '/vite.svg',
-          badge: '/vite.svg',
-        });
-        return true;
-      } catch {
-        return false;
-      }
-    }
-    return false;
+    if (platform.notifications.getPermissionStatus() !== 'granted') return false;
+    platform.notifications.dispatchImmediate({ title, body });
+    return true;
   },
 
   /**
    * Immediate test notification dispatch
    */
   async sendTestNotification(
-    title = 'FitSphere Workout Alarm Test',
+    title = 'FitBoost Workout Alarm Test',
     message = 'Workout reminder test successful! Reminders will trigger during your active sessions.'
   ): Promise<{ success: boolean; message: string }> {
     const perm = this.getPermissionStatus();
     if (perm === 'unsupported') {
-      return { success: false, message: 'Browser Notification API is not supported on this browser.' };
+      return { success: false, message: 'Notification API is not supported on this device/browser.' };
     }
     if (perm === 'denied') {
       return {
         success: false,
-        message: 'Notification permission is blocked. Please allow notifications in your browser address bar.',
+        message: 'Notification permission is blocked. Please allow notifications in your device or browser settings.',
       };
     }
     if (perm === 'default') {

@@ -429,7 +429,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <ShieldAlert size={18} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
               <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
                 <strong style={{ color: 'var(--text-primary)' }}>Non-Medical Disclaimer: </strong>
-                FitSphere movement recommendations are biomechanical exercise adjustments designed to reduce joint stress, NOT medical diagnosis or physical therapy. Consult a physician for injury treatment.
+                FitBoost movement recommendations are biomechanical exercise adjustments designed to reduce joint stress, NOT medical diagnosis or physical therapy. Consult a physician for injury treatment.
               </p>
             </div>
 

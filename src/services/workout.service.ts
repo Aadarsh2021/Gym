@@ -7,6 +7,7 @@ import { calculateWorkoutSummary } from '@/domain/workout-tonnage';
 import { getDayScheduledDays } from '@/domain/scheduled-workout';
 import { hasCompletedCoreExercise } from '@/domain/streak-calculator';
 import { ensureUserProfile } from '@/services/profile.service';
+import { workoutRepository } from '@/repositories/workout.repository';
 
 export const workoutService = {
   async getActivePlan(userId: string): Promise<WorkoutPlan | null> {
@@ -549,54 +550,7 @@ export const workoutService = {
   },
 
   async getWorkoutHistory(userId: string, limit = 20): Promise<WorkoutSession[]> {
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
-      try {
-        const raw = localStorage.getItem(`workout_history_${userId}`);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed.slice(0, limit);
-        }
-      } catch {
-        // ignore
-      }
-      return [];
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('workout_sessions')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'completed')
-        .order('completed_at', { ascending: false })
-        .limit(limit);
-
-      if (error) {
-        logger.error('Error fetching workout history from Supabase', { error });
-        return [];
-      }
-      if (!data || data.length === 0) {
-        return [];
-      }
-
-      return data.map(s => ({
-        id: s.id,
-        userId: s.user_id,
-        planId: s.plan_id,
-        name: s.name,
-        status: s.status,
-        startedAt: s.started_at,
-        completedAt: s.completed_at,
-        durationSeconds: s.duration_seconds,
-        sessionRating: s.session_rating as any,
-        notes: s.notes || undefined,
-        exercises: [],
-      }));
-    } catch (err) {
-      logger.error('Exception in getWorkoutHistory', { err });
-      return [];
-    }
+    return workoutRepository.fetchWorkoutHistory(userId, limit);
   },
 
   /**

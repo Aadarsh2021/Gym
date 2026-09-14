@@ -1,5 +1,5 @@
 /**
- * Geolocation & Haversine Distance Utilities for FitSphere Gym Verification.
+ * Geolocation & Haversine Distance Utilities for FitBoost Gym Verification.
  */
 
 /**

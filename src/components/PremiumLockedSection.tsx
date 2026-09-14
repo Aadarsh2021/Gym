@@ -136,7 +136,7 @@ export const PremiumLockedSection: React.FC<PremiumLockedSectionProps> = ({
           <ArrowRight size={18} />
         </Link>
         <small style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-          Available with FitSphere Pro & Premium plans.
+          Available with FitBoost Pro & Premium plans.
         </small>
       </div>
     </div>

@@ -902,7 +902,7 @@ export const ProfileView: React.FC = () => {
           </div>
 
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', lineHeight: 1.5, marginBottom: 'var(--space-4)' }}>
-            Optionally save the GPS coordinates of your gym or home training center. FitSphere uses this for soft proximity check-ins when starting a session.
+            Optionally save the GPS coordinates of your gym or home training center. FitBoost uses this for soft proximity check-ins when starting a session.
           </p>
 
           {locationSuccess && (

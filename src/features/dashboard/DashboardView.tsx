@@ -28,6 +28,7 @@ import { calculateWorkoutSummary } from '@/domain/workout-tonnage';
 import { isToday, getTodayIST } from '@/utils/date';
 import { isWithinGymRadius } from '@/utils/geo';
 import { PRODUCT_NAME } from '@/config/branding';
+import { platform } from '@/platform';
 
 interface DashboardViewProps {
   activePlan: WorkoutPlan | null;
@@ -80,29 +81,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setGymCheckStatus('checking');
     setGymDistanceMeters(null);
 
-    if (!navigator.geolocation) {
+    if (!platform.location.isSupported() || !fitnessProfile?.gymLatitude || !fitnessProfile?.gymLongitude) {
       setGymCheckStatus('error');
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const { latitude, longitude } = pos.coords;
+    platform.location
+      .getCurrentPosition({ enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 })
+      .then(coords => {
         const res = isWithinGymRadius(
-          latitude,
-          longitude,
-          fitnessProfile!.gymLatitude!,
-          fitnessProfile!.gymLongitude!,
-          fitnessProfile!.gymRadiusMeters || 200
+          coords.latitude,
+          coords.longitude,
+          fitnessProfile.gymLatitude as number,
+          fitnessProfile.gymLongitude as number,
+          fitnessProfile.gymRadiusMeters || 200
         );
         setGymDistanceMeters(res.distanceMeters);
         setGymCheckStatus(res.isNearby ? 'verified' : 'outside');
-      },
-      () => {
+      })
+      .catch(() => {
         setGymCheckStatus('error');
-      },
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
-    );
+      });
   };
 
   const handleStartWorkoutWithCheck = (day?: WorkoutPlanDay, mode: 'standard' | 'quick' = 'standard') => {

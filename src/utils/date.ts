@@ -1,8 +1,8 @@
 /**
  * IST-aware date utilities.
- * FitSphere targets Indian users (Asia/Kolkata, UTC+5:30).
+ * FitBoost targets Indian users (Asia/Kolkata, UTC+5:30).
  * Always use these helpers instead of raw Date().toISOString().split("T")[0]
- * which returns UTC dates — wrong after 18:30 IST.
+ * which returns UTC dates â€” wrong after 18:30 IST.
  */
 
 const IST_TZ = 'Asia/Kolkata';

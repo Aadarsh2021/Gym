@@ -55,6 +55,7 @@ export interface WorkoutPlan {
   description?: string;
   splitType: string;
   isActive: boolean;
+  createdAt?: string;
   days: WorkoutPlanDay[];
 }
 
@@ -100,6 +101,7 @@ export interface WorkoutSession {
   durationSeconds: number;
   sessionRating?: SessionRating;
   notes?: string;
+  gymId?: string | null;
   gymVerified?: boolean;
   exercises: WorkoutSessionExercise[];
 }
