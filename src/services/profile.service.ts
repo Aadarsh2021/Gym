@@ -1,8 +1,9 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { FitnessProfile, UserProfile } from '@/types/user.types';
+import { profileRepository } from '@/repositories/profile.repository';
 import { logger } from '@/lib/logger';
 
-export async function ensureUserProfile(userId: string): Promise<boolean> {
+export async function ensureUserProfile(userId: string, roleSelected: boolean = false): Promise<boolean> {
   if (!isSupabaseConfigured) return true;
 
   try {
@@ -28,6 +29,8 @@ export async function ensureUserProfile(userId: string): Promise<boolean> {
         display_name: displayName,
         timezone,
         avatar_url: avatarUrl,
+        account_role: 'member',
+        role_selected: roleSelected,
       });
 
     if (insertErr && insertErr.code !== '23505') {
@@ -178,6 +181,14 @@ export const profileService = {
       const msg = err instanceof Error ? err.message : 'Failed to update gym location';
       return { success: false, error: msg };
     }
+  },
+
+  async getProfile(userId: string): Promise<UserProfile | null> {
+    return profileRepository.fetchProfile(userId);
+  },
+
+  async selectAccountRole(userId: string, role: 'member' | 'gym_owner'): Promise<{ success: boolean; error?: string }> {
+    return profileRepository.updateAccountRole(userId, role);
   },
 
   async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<boolean> {

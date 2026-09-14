@@ -1,42 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-
-/**
- * Web Audio chime player for gym rest timer completion.
- * Pure native Web Audio API: Zero external mp3 dependencies, 100% offline capable.
- */
-function playRestTimerChime() {
-  if (typeof window === 'undefined') return;
-  try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-
-    // Two-tone gym chime (High ding -> Resolve)
-    const playTone = (freq: number, startTime: number, duration: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, startTime);
-
-      gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(0.2, startTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    };
-
-    const now = ctx.currentTime;
-    playTone(784, now, 0.25);        // G5
-    playTone(1046.5, now + 0.2, 0.4); // C6
-  } catch {
-    // AudioContext blocked or not allowed by browser autoplay policy
-  }
-}
+import { platform } from '@/platform';
 
 export function useRestTimer() {
   const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
@@ -90,17 +53,12 @@ export function useRestTimer() {
             setIsActive(false);
             setIsPaused(false);
 
-            // 1. Play native Web Audio chime
-            playRestTimerChime();
+            // 1. Play platform rest timer completion chime
+            platform.audio.playRestTimerChime();
 
-            // 2. Trigger mobile haptic vibration if supported
-            if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-              try {
-                navigator.vibrate([200, 100, 200]);
-              } catch {
-                // Ignore if browser restricts vibration
-              }
-            }
+            // 2. Trigger platform haptic vibration
+            platform.audio.vibrate([200, 100, 200]);
+
             return 0;
           }
           return prev - 1;

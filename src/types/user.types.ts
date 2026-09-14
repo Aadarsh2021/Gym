@@ -28,6 +28,7 @@ export interface UserProfile {
   avatarUrl?: string | null;
   accountRole?: AccountRole;
   planType?: PlanType;
+  roleSelected?: boolean;
 }
 
 export interface FitnessProfile {

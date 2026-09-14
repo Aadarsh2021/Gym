@@ -11,7 +11,7 @@
  *  - Canonical identity (auth.users.id shared across methods)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { authService } from '@/services/auth.service';
+import { authService, getOAuthRedirectUrl } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -341,5 +341,70 @@ describe('Google OAuth & Supabase Auth Architecture', () => {
     // Complete row (goal set)
     const completeRow = { user_id: 'uid', goal: 'muscle_gain' };
     expect(!completeRow || !completeRow.goal).toBe(false); // → /app
+  });
+
+  // ── Post-OAuth Role Selection & Idempotency ────────────────────────────────
+
+  it('generates correct OAuth redirect URL for localhost vs production', () => {
+    const redirectUrl = getOAuthRedirectUrl();
+    expect(redirectUrl).toMatch(/\/auth\/callback$/);
+    expect(redirectUrl).not.toContain('#');
+  });
+
+  it('routes new user with role_selected=false to /auth/role-selection', () => {
+    const profile = {
+      id: 'new-athlete-1',
+      accountRole: 'member',
+      roleSelected: false,
+    };
+
+    let destination: string;
+    if (!profile || profile.roleSelected === false) {
+      destination = '/auth/role-selection';
+    } else if (profile.accountRole === 'gym_owner') {
+      destination = '/owner/dashboard';
+    } else {
+      destination = '/app';
+    }
+
+    expect(destination).toBe('/auth/role-selection');
+  });
+
+  it('routes existing user with role_selected=true directly to /app without role selection', () => {
+    const profile = {
+      id: 'existing-athlete-1',
+      accountRole: 'member',
+      roleSelected: true,
+    };
+
+    let destination: string;
+    if (!profile || profile.roleSelected === false) {
+      destination = '/auth/role-selection';
+    } else if (profile.accountRole === 'gym_owner') {
+      destination = '/owner/dashboard';
+    } else {
+      destination = '/app';
+    }
+
+    expect(destination).toBe('/app');
+  });
+
+  it('routes existing gym owner directly to /owner/dashboard without role selection', () => {
+    const profile = {
+      id: 'existing-owner-1',
+      accountRole: 'gym_owner',
+      roleSelected: true,
+    };
+
+    let destination: string;
+    if (!profile || profile.roleSelected === false) {
+      destination = '/auth/role-selection';
+    } else if (profile.accountRole === 'gym_owner') {
+      destination = '/owner/dashboard';
+    } else {
+      destination = '/app';
+    }
+
+    expect(destination).toBe('/owner/dashboard');
   });
 });

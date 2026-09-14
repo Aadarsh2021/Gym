@@ -2,17 +2,20 @@ import { IPlatformStorage } from './contracts/storage.interface';
 import { IPlatformNotifications } from './contracts/notifications.interface';
 import { IPlatformLocation } from './contracts/location.interface';
 import { IPlatformCamera } from './contracts/camera.interface';
+import { IPlatformAudio } from './contracts/audio.interface';
 
 import { webStorage } from './web/WebStorageAdapter';
 import { webNotifications } from './web/WebNotificationAdapter';
 import { webLocation } from './web/WebLocationAdapter';
 import { webCamera } from './web/WebCameraAdapter';
+import { webAudio } from './web/WebAudioAdapter';
 
 export interface PlatformContext {
   storage: IPlatformStorage;
   notifications: IPlatformNotifications;
   location: IPlatformLocation;
   camera: IPlatformCamera;
+  audio: IPlatformAudio;
 }
 
 /**
@@ -25,12 +28,14 @@ class PlatformManager implements PlatformContext {
   notifications: IPlatformNotifications = webNotifications;
   location: IPlatformLocation = webLocation;
   camera: IPlatformCamera = webCamera;
+  audio: IPlatformAudio = webAudio;
 
   configure(adapters: Partial<PlatformContext>): void {
     if (adapters.storage) this.storage = adapters.storage;
     if (adapters.notifications) this.notifications = adapters.notifications;
     if (adapters.location) this.location = adapters.location;
     if (adapters.camera) this.camera = adapters.camera;
+    if (adapters.audio) this.audio = adapters.audio;
   }
 }
 
@@ -40,3 +45,4 @@ export * from './contracts/storage.interface';
 export * from './contracts/notifications.interface';
 export * from './contracts/location.interface';
 export * from './contracts/camera.interface';
+export * from './contracts/audio.interface';

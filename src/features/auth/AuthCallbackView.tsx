@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { profileService } from '@/services/profile.service';
+import { profileService, ensureUserProfile } from '@/services/profile.service';
 import { Dumbbell, AlertCircle } from 'lucide-react';
 import { PRODUCT_NAME } from '@/config/branding';
 
@@ -14,9 +14,14 @@ import { PRODUCT_NAME } from '@/config/branding';
  * exchange to complete via onAuthStateChange (SIGNED_IN / INITIAL_SESSION events),
  * then checks the user's onboarding status and routes accordingly.
  *
- * Routing logic:
- *   fitness_profiles row with goal set → /app (existing user)
- *   no row or no goal                  → /onboarding (new user)
+ * Post-Auth Routing Logic:
+ *   1. Check account_role & role_selected:
+ *      - If role_selected is false: /auth/role-selection
+ *   2. If gym_owner:
+ *      - /owner/dashboard
+ *   3. If member:
+ *      - fitness_profiles row with goal set → /app (existing user)
+ *      - no row or no goal                  → /onboarding (new user)
  */
 export const AuthCallbackView: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState('Verifying Google authentication...');
@@ -78,43 +83,51 @@ export const AuthCallbackView: React.FC = () => {
     }
 
     // ── 3. Core: wait for Supabase to complete the token exchange ────────────
-    //
-    // Supabase sets detectSessionInUrl:true, which parses the #access_token
-    // fragment from the callback URL and exchanges it for a session. This
-    // happens asynchronously after the page loads.
-    //
-    // The SIGNED_IN / INITIAL_SESSION event from onAuthStateChange fires
-    // *after* the exchange completes — this is the correct hook point.
-    //
-    // We also do a single delayed getSession() poll (150ms) as a fallback for
-    // cases where the exchange finishes before we set up the subscription.
-
     const processSession = async (userId: string) => {
       if (handledRef.current) return;
       handledRef.current = true;
 
       try {
         if (isMountedRef.current) {
-          setStatusMessage('Preparing your athlete profile...');
+          setStatusMessage('Setting up your athlete profile...');
         }
 
-        // Determine onboarding destination based on fitness_profiles
-        const fitnessProfile = await profileService.getFitnessProfile(userId);
+        // 1. Ensure profile exists in public.profiles
+        await ensureUserProfile(userId, false);
+
+        // 2. Fetch profile to check role selection state
+        const profile = await profileService.getProfile(userId);
 
         if (!isMountedRef.current) return;
 
+        // 3. Brand-new user: role not yet explicitly selected
+        if (!profile || profile.roleSelected === false) {
+          navigate('/auth/role-selection', { replace: true });
+          return;
+        }
+
+        // 4. Gym Owner: route to owner console
+        if (profile.accountRole === 'gym_owner') {
+          navigate('/owner/dashboard', { replace: true });
+          return;
+        }
+
+        // 5. Member: verify fitness profile setup
+        const fitnessProfile = await profileService.getFitnessProfile(userId);
+        if (!isMountedRef.current) return;
+
         if (!fitnessProfile || !fitnessProfile.goal) {
-          // New Google user — begin onboarding funnel
+          // New personal user — begin fitness onboarding
           navigate('/onboarding', { replace: true });
         } else {
-          // Returning user with completed profile — go directly to app
+          // Returning personal user with completed profile — go directly to app
           navigate('/app', { replace: true });
         }
       } catch {
-        // Profile lookup failed — default to onboarding (safe fallback)
+        // Fallback to role selection
         if (isMountedRef.current && !handledRef.current) {
           handledRef.current = true;
-          navigate('/onboarding', { replace: true });
+          navigate('/auth/role-selection', { replace: true });
         }
       }
     };

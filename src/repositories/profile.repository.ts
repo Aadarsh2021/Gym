@@ -32,10 +32,51 @@ export class ProfileRepository {
         avatarUrl: data.avatar_url,
         accountRole: (data.account_role as any) || 'member',
         planType: (data.plan_type as any) || 'free',
+        roleSelected: data.role_selected ?? true,
       };
     } catch (err) {
       logger.error('ProfileRepository: Error fetching profile', { err });
       return null;
+    }
+  }
+
+  async updateAccountRole(userId: string, role: 'member' | 'gym_owner'): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const existing = await this.fetchProfile(userId);
+      const updated: UserProfile = existing
+        ? { ...existing, accountRole: role, roleSelected: true }
+        : {
+            id: userId,
+            displayName: 'Athlete',
+            unitSystem: 'metric',
+            timezone: 'Asia/Kolkata',
+            accountRole: role,
+            planType: 'free',
+            roleSelected: true,
+          };
+      platform.storage.setItem(`profile_${userId}`, JSON.stringify(updated));
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          account_role: role,
+          role_selected: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
+      if (error) {
+        logger.error('ProfileRepository: Error updating account role', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update account role';
+      return { success: false, error: msg };
     }
   }
 

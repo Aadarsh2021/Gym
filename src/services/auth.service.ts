@@ -11,6 +11,32 @@ export interface AuthSession {
   profile: UserProfile | null;
 }
 
+/**
+ * Resolves the OAuth callback URL in an environment-aware manner.
+ * - Local dev (localhost / 127.0.0.1): uses current origin (e.g. http://localhost:3000/auth/callback or http://localhost:5173/auth/callback)
+ * - Production: uses configured VITE_SITE_URL or default production web app URL (https://gymbuddy-da185.web.app/auth/callback)
+ * No hardcoded tokens, refresh tokens, or fragments.
+ */
+export function getOAuthRedirectUrl(): string {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return `${window.location.origin}/auth/callback`;
+    }
+  }
+
+  const configuredSiteUrl = import.meta.env.VITE_SITE_URL;
+  if (configuredSiteUrl && typeof configuredSiteUrl === 'string' && configuredSiteUrl.trim().length > 0) {
+    return `${configuredSiteUrl.replace(/\/$/, '')}/auth/callback`;
+  }
+
+  if (typeof window !== 'undefined' && window.location.origin) {
+    return `${window.location.origin}/auth/callback`;
+  }
+
+  return 'https://gymbuddy-da185.web.app/auth/callback';
+}
+
 export const authService = {
   async getSession(): Promise<AuthSession> {
     if (!isSupabaseConfigured) {
@@ -88,6 +114,7 @@ export const authService = {
               avatarUrl: resolvedAvatar,
               accountRole: (profile.account_role as any) || 'member',
               planType: (profile.plan_type as 'free' | 'premium') || 'free',
+              roleSelected: profile.role_selected ?? true,
             }
           : {
               id: session.user.id,
@@ -97,6 +124,7 @@ export const authService = {
               avatarUrl: resolvedAvatar,
               accountRole: 'member',
               planType: 'free',
+              roleSelected: false,
             },
       };
     } catch (err) {
@@ -164,8 +192,7 @@ export const authService = {
     }
 
     try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://gymbuddy-da185.web.app';
-      const redirectUrl = `${origin}/auth/callback`;
+      const redirectUrl = getOAuthRedirectUrl();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -174,7 +201,7 @@ export const authService = {
       });
 
       if (error) {
-        logger.error('Google OAuth initialization error', { error });
+        logger.error('Google OAuth initialization error', { error, redirectUrl });
         return { success: false, error: error.message };
       }
       return { success: true };

@@ -131,6 +131,9 @@ export class GymRepository {
         .single();
 
       if (error) {
+        if (error.code === '23505' || error.message.includes('uq_gym_user_daily_checkin') || error.message.includes('duplicate key')) {
+          return { success: false, error: 'You have already checked in to this gym today.' };
+        }
         logger.error('GymRepository: Error recording gym check-in', { error });
         return { success: false, error: error.message };
       }

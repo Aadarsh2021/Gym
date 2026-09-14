@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 // Layouts
@@ -19,8 +19,13 @@ import { ExerciseLibraryView } from '@/features/exercise-library/ExerciseLibrary
 import { SignInView } from '@/features/auth/SignInView';
 import { SignUpView } from '@/features/auth/SignUpView';
 import { AuthCallbackView } from '@/features/auth/AuthCallbackView';
+import { RoleSelectionView } from '@/features/auth/RoleSelectionView';
 import { ForgotPasswordView } from '@/features/auth/ForgotPasswordView';
 import { ResetPasswordView } from '@/features/auth/ResetPasswordView';
+
+// Owner Pages
+import { OwnerDashboardView } from '@/features/owner/OwnerDashboardView';
+import { OwnerOnboardingView } from '@/features/owner/OwnerOnboardingView';
 
 // Setup & Plan Flow
 import { OnboardingRouteView } from '@/features/onboarding/OnboardingRouteView';
@@ -43,23 +48,32 @@ import { ProtectedRoute } from './ProtectedRoute';
  * SmartHomeRoute
  *
  * Renders the public home page for unauthenticated visitors.
- * Redirects authenticated users to /app, preventing the confusing state
- * where a successfully logged-in user sees "Sign In / Get Started" CTAs.
- *
- * Does NOT redirect during the initial auth loading window — it waits until
- * the session state is resolved to avoid a flash-redirect on cold load.
+ * Redirects authenticated users to their corresponding destination (/app, /owner/dashboard, /auth/role-selection).
+ * Automatically forwards OAuth hash fragments if an external provider redirects to the root URL.
  */
 const SmartHomeRoute: React.FC = () => {
   const { session, loading } = useAuth();
+  const location = useLocation();
 
-  // While session state is being restored (e.g. on page refresh), render
-  // the public home temporarily. This avoids a redirect loop and looks
-  // natural — the user sees the page briefly, then gets redirected.
+  // If OAuth token or error is in hash/search at root URL, forward immediately to /auth/callback
+  if (location.hash.includes('access_token=') || location.hash.includes('error=')) {
+    return <Navigate to={`/auth/callback${location.hash}`} replace />;
+  }
+  if (location.search.includes('error=')) {
+    return <Navigate to={`/auth/callback${location.search}`} replace />;
+  }
+
   if (loading) {
     return <PublicHomeView />;
   }
 
   if (session.user) {
+    if (session.profile?.roleSelected === false) {
+      return <Navigate to="/auth/role-selection" replace />;
+    }
+    if (session.profile?.accountRole === 'gym_owner') {
+      return <Navigate to="/owner/dashboard" replace />;
+    }
     return <Navigate to="/app" replace />;
   }
 
@@ -71,7 +85,7 @@ export const AppRoutes: React.FC = () => {
     <Routes>
       {/* 1. PUBLIC MARKETING & DISCOVERY ROUTES */}
       <Route element={<PublicAppShell />}>
-        {/* Home: redirects authenticated users to /app */}
+        {/* Home: redirects authenticated users based on role */}
         <Route path="/" element={<SmartHomeRoute />} />
         <Route path="/how-it-works" element={<HowItWorksView />} />
         <Route path="/workouts" element={<PublicWorkoutsView />} />
@@ -86,14 +100,42 @@ export const AppRoutes: React.FC = () => {
         <Route path="/signup" element={<SignUpView />} />
         <Route path="/forgot-password" element={<ForgotPasswordView />} />
         <Route path="/auth/reset-password" element={<ResetPasswordView />} />
-        {/* OAuth callback — must remain a public route, never inside ProtectedRoute */}
+        {/* OAuth callback — public route, exchanges tokens & routes */}
         <Route path="/auth/callback" element={<AuthCallbackView />} />
+
+        {/* POST-AUTH ROLE SELECTION */}
+        <Route
+          path="/auth/role-selection"
+          element={
+            <ProtectedRoute>
+              <RoleSelectionView />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* GYM OWNER ROUTES */}
+        <Route
+          path="/owner/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['gym_owner', 'platform_admin']}>
+              <OwnerDashboardView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/onboarding"
+          element={
+            <ProtectedRoute allowedRoles={['gym_owner', 'platform_admin']}>
+              <OwnerOnboardingView />
+            </ProtectedRoute>
+          }
+        />
 
         {/* SETUP & PLAN CREATION FLOW */}
         <Route
           path="/onboarding"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['member', 'platform_admin']}>
               <OnboardingRouteView />
             </ProtectedRoute>
           }
@@ -101,7 +143,7 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/plan/build"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['member', 'platform_admin']}>
               <PlanBuilderView />
             </ProtectedRoute>
           }
@@ -109,14 +151,14 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/plan/review"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['member', 'platform_admin']}>
               <PlanReviewView />
             </ProtectedRoute>
           }
         />
       </Route>
 
-      {/* 2. AUTHENTICATED APPLICATION OS ROUTES */}
+      {/* 2. AUTHENTICATED ATHLETE APPLICATION OS ROUTES */}
       <Route
         path="/app"
         element={
