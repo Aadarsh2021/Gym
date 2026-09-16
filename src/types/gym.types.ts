@@ -81,9 +81,13 @@ export interface GymMembership {
   userId: string;
   status: GymMembershipStatus;
   membershipType: string;
-  joinedAt: string;
+  joinedAt?: string | null;
   expiresAt?: string | null;
   gym?: Gym;
+  userProfile?: {
+    displayName?: string;
+    avatarUrl?: string | null;
+  };
 }
 
 export interface GymAttendanceSession {

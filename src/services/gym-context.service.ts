@@ -34,7 +34,9 @@ export function deriveMemberGymContext(
     // Deterministic fallback: sort by joinedAt descending, tie-break by gymId ascending
     if (!chosenMembership) {
       const sorted = [...activeMemberships].sort((a, b) => {
-        const timeDiff = new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
+        const bTime = b.joinedAt ? new Date(b.joinedAt).getTime() : 0;
+        const aTime = a.joinedAt ? new Date(a.joinedAt).getTime() : 0;
+        const timeDiff = bTime - aTime;
         if (timeDiff !== 0) return timeDiff;
         return a.gymId.localeCompare(b.gymId);
       });

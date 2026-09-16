@@ -97,3 +97,23 @@ export function formatVisitTimeIST(isoString: string): string {
     hour12: true,
   }).format(date);
 }
+
+/**
+ * Returns the start (inclusive) and end (exclusive) ISO timestamp boundaries
+ * for today in IST (Asia/Kolkata).
+ */
+export function getTodayRangeIST(): { startIso: string; endIso: string } {
+  const todayStr = getTodayIST(); // "YYYY-MM-DD"
+  const [yearStr, monthStr, dayStr] = todayStr.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+
+  const startUtc = new Date(Date.UTC(year, month - 1, day, 0, 0, 0) - 5.5 * 3600 * 1000);
+  const endUtc = new Date(Date.UTC(year, month - 1, day + 1, 0, 0, 0) - 5.5 * 3600 * 1000);
+
+  return {
+    startIso: startUtc.toISOString(),
+    endIso: endUtc.toISOString(),
+  };
+}

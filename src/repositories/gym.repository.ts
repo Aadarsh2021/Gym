@@ -10,6 +10,7 @@ import {
 } from '@/types/gym.types';
 import { logger } from '@/lib/logger';
 import { platform } from '@/platform';
+import { getTodayRangeIST } from '@/utils/date';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -878,13 +879,32 @@ export class GymRepository {
   }
 
   async fetchGymActiveAttendance(gymId: string): Promise<GymAttendanceSession[]> {
-    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) return [];
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`attendance_sessions_${gymId}`);
+      if (raw && typeof raw === 'string') {
+        try {
+          const list: GymAttendanceSession[] = JSON.parse(raw);
+          return list.filter(s => s.status === 'active' && s.gymId === gymId);
+        } catch { return []; }
+      }
+      return [];
+    }
     try {
       const { data, error } = await supabase
         .from('gym_attendance_sessions')
         .select(`
-          *,
+          id,
+          gym_id,
+          user_id,
+          check_in_at,
+          check_out_at,
+          duration_seconds,
+          verification_method,
+          checkout_method,
+          status,
+          created_at,
           profiles:user_id (
+            id,
             display_name,
             avatar_url
           )
@@ -895,24 +915,27 @@ export class GymRepository {
 
       if (error || !data) return [];
 
-      return data.map((row: any) => ({
-        id: row.id,
-        gymId: row.gym_id,
-        userId: row.user_id,
-        checkInAt: row.check_in_at,
-        checkOutAt: row.check_out_at,
-        durationSeconds: row.duration_seconds,
-        verificationMethod: row.verification_method,
-        checkoutMethod: row.checkout_method,
-        status: row.status,
-        createdAt: row.created_at,
-        userProfile: row.profiles
-          ? {
-              displayName: row.profiles.display_name || 'Athlete',
-              avatarUrl: row.profiles.avatar_url,
-            }
-          : undefined,
-      }));
+      return data.map((row: any) => {
+        const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        return {
+          id: row.id,
+          gymId: row.gym_id,
+          userId: row.user_id,
+          checkInAt: row.check_in_at,
+          checkOutAt: row.check_out_at,
+          durationSeconds: row.duration_seconds,
+          verificationMethod: row.verification_method,
+          checkoutMethod: row.checkout_method,
+          status: row.status,
+          createdAt: row.created_at,
+          userProfile: prof
+            ? {
+                displayName: prof.display_name || 'Athlete',
+                avatarUrl: prof.avatar_url,
+              }
+            : undefined,
+        };
+      });
     } catch (err) {
       logger.error('GymRepository: Error fetching active gym attendance', { err });
       return [];
@@ -1357,6 +1380,13 @@ export class GymRepository {
 
   async fetchGymMemberCount(gymId: string): Promise<number> {
     if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`gym_members_${gymId}`);
+      if (raw && typeof raw === 'string') {
+        try {
+          const list: GymMembership[] = JSON.parse(raw);
+          return list.filter(m => m.status === 'active').length;
+        } catch { return 0; }
+      }
       return 0;
     }
     try {
@@ -1374,23 +1404,375 @@ export class GymRepository {
   }
 
   async fetchGymTodayCheckinsCount(gymId: string): Promise<number> {
+    const { startIso, endIso } = getTodayRangeIST();
+
     if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`attendance_sessions_${gymId}`);
+      if (raw && typeof raw === 'string') {
+        try {
+          const list: GymAttendanceSession[] = JSON.parse(raw);
+          const startMs = new Date(startIso).getTime();
+          const endMs = new Date(endIso).getTime();
+          return list.filter(s => {
+            const checkInMs = new Date(s.checkInAt).getTime();
+            return checkInMs >= startMs && checkInMs < endMs;
+          }).length;
+        } catch { return 0; }
+      }
       return 0;
     }
     try {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
       const { count, error } = await supabase
         .from('gym_attendance_sessions')
         .select('id', { count: 'exact', head: true })
         .eq('gym_id', gymId)
-        .gte('check_in_at', todayStart.toISOString());
+        .gte('check_in_at', startIso)
+        .lt('check_in_at', endIso);
 
       if (error) return 0;
       return count || 0;
     } catch {
       return 0;
+    }
+  }
+
+  // ── 5. Facility Operations & Owner Sync (Phase C7) ───────────────────────────
+
+  /**
+   * Fetches paginated completed gym attendance history for an owned facility.
+   * Scoped to gym_id at the database level.
+   */
+  async fetchGymAttendanceHistory(
+    gymId: string,
+    options: {
+      limit?: number;
+      offset?: number;
+      search?: string;
+      startDateIso?: string;
+      endDateIso?: string;
+    } = {}
+  ): Promise<{ sessions: GymAttendanceSession[]; totalCount: number }> {
+    const limit = Math.max(1, Math.min(options.limit || 20, 100));
+    const offset = Math.max(0, options.offset || 0);
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`attendance_sessions_${gymId}`);
+      let list: GymAttendanceSession[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      let completed = list.filter(s => s.status === 'completed');
+      if (options.startDateIso) {
+        const startMs = new Date(options.startDateIso).getTime();
+        completed = completed.filter(s => new Date(s.checkInAt).getTime() >= startMs);
+      }
+      if (options.endDateIso) {
+        const endMs = new Date(options.endDateIso).getTime();
+        completed = completed.filter(s => new Date(s.checkInAt).getTime() <= endMs);
+      }
+      if (options.search) {
+        const q = options.search.toLowerCase();
+        completed = completed.filter(s =>
+          s.userProfile?.displayName?.toLowerCase().includes(q)
+        );
+      }
+      completed.sort((a, b) => new Date(b.checkInAt).getTime() - new Date(a.checkInAt).getTime());
+      return {
+        sessions: completed.slice(offset, offset + limit),
+        totalCount: completed.length,
+      };
+    }
+
+    try {
+      let query = supabase
+        .from('gym_attendance_sessions')
+        .select(`
+          id,
+          gym_id,
+          user_id,
+          check_in_at,
+          check_out_at,
+          duration_seconds,
+          verification_method,
+          checkout_method,
+          status,
+          created_at,
+          profiles:user_id (
+            id,
+            display_name,
+            avatar_url
+          )
+        `, { count: 'exact' })
+        .eq('gym_id', gymId)
+        .eq('status', 'completed');
+
+      if (options.startDateIso) {
+        query = query.gte('check_in_at', options.startDateIso);
+      }
+      if (options.endDateIso) {
+        query = query.lte('check_in_at', options.endDateIso);
+      }
+
+      query = query.order('check_in_at', { ascending: false });
+
+      const { data, count, error } = await query.range(offset, offset + limit - 1);
+
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching gym attendance history', { error });
+        return { sessions: [], totalCount: 0 };
+      }
+
+      let mapped: GymAttendanceSession[] = data.map((row: any) => {
+        const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        return {
+          id: row.id,
+          gymId: row.gym_id,
+          userId: row.user_id,
+          checkInAt: row.check_in_at,
+          checkOutAt: row.check_out_at,
+          durationSeconds: row.duration_seconds,
+          verificationMethod: row.verification_method,
+          checkoutMethod: row.checkout_method,
+          status: row.status,
+          createdAt: row.created_at,
+          userProfile: prof
+            ? {
+                displayName: prof.display_name || 'Athlete',
+                avatarUrl: prof.avatar_url,
+              }
+            : undefined,
+        };
+      });
+
+      if (options.search) {
+        const q = options.search.toLowerCase();
+        mapped = mapped.filter(s =>
+          s.userProfile?.displayName?.toLowerCase().includes(q)
+        );
+      }
+
+      return {
+        sessions: mapped,
+        totalCount: count || mapped.length,
+      };
+    } catch (err: unknown) {
+      logger.error('GymRepository: Exception fetching gym attendance history', { err });
+      return { sessions: [], totalCount: 0 };
+    }
+  }
+
+  /**
+   * Fetches member counts breakdown for a facility: active, pending, inactive/frozen, total.
+   */
+  async fetchGymMemberCounts(gymId: string): Promise<{
+    active: number;
+    pending: number;
+    inactive: number;
+    total: number;
+  }> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`gym_members_${gymId}`);
+      let list: GymMembership[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      const active = list.filter(m => m.status === 'active').length;
+      const pending = list.filter(m => m.status === 'pending').length;
+      const inactive = list.filter(m => m.status === 'inactive' || m.status === 'frozen').length;
+      return { active, pending, inactive, total: list.length };
+    }
+
+    try {
+      const [activeRes, pendingRes, inactiveRes, totalRes] = await Promise.all([
+        supabase
+          .from('gym_memberships')
+          .select('id', { count: 'exact', head: true })
+          .eq('gym_id', gymId)
+          .eq('status', 'active'),
+        supabase
+          .from('gym_memberships')
+          .select('id', { count: 'exact', head: true })
+          .eq('gym_id', gymId)
+          .eq('status', 'pending'),
+        supabase
+          .from('gym_memberships')
+          .select('id', { count: 'exact', head: true })
+          .eq('gym_id', gymId)
+          .in('status', ['inactive', 'frozen']),
+        supabase
+          .from('gym_memberships')
+          .select('id', { count: 'exact', head: true })
+          .eq('gym_id', gymId),
+      ]);
+
+      return {
+        active: activeRes.count || 0,
+        pending: pendingRes.count || 0,
+        inactive: inactiveRes.count || 0,
+        total: totalRes.count || 0,
+      };
+    } catch {
+      return { active: 0, pending: 0, inactive: 0, total: 0 };
+    }
+  }
+
+  /**
+   * Fetches gym members with joined profile details, status filtering, and pagination.
+   */
+  async fetchGymMembers(
+    gymId: string,
+    options: {
+      status?: GymMembershipStatus | 'all';
+      limit?: number;
+      offset?: number;
+      search?: string;
+    } = {}
+  ): Promise<{ members: GymMembership[]; totalCount: number }> {
+    const limit = Math.max(1, Math.min(options.limit || 20, 100));
+    const offset = Math.max(0, options.offset || 0);
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`gym_members_${gymId}`);
+      let list: GymMembership[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      let filtered = list;
+      if (options.status && options.status !== 'all') {
+        filtered = filtered.filter(m => m.status === options.status);
+      }
+      if (options.search) {
+        const q = options.search.toLowerCase();
+        filtered = filtered.filter(m =>
+          m.userProfile?.displayName?.toLowerCase().includes(q) ||
+          m.membershipType.toLowerCase().includes(q)
+        );
+      }
+      const totalCount = filtered.length;
+      return {
+        members: filtered.slice(offset, offset + limit),
+        totalCount,
+      };
+    }
+
+    try {
+      let query = supabase
+        .from('gym_memberships')
+        .select(`
+          id,
+          gym_id,
+          user_id,
+          status,
+          membership_type,
+          joined_at,
+          expires_at,
+          profiles:user_id (
+            id,
+            display_name,
+            avatar_url
+          )
+        `, { count: 'exact' })
+        .eq('gym_id', gymId);
+
+      if (options.status && options.status !== 'all') {
+        query = query.eq('status', options.status);
+      }
+
+      query = query.order('joined_at', { ascending: false });
+
+      const { data, count, error } = await query.range(offset, offset + limit - 1);
+
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching gym members', { error });
+        return { members: [], totalCount: 0 };
+      }
+
+      let mapped: GymMembership[] = data.map((row: any) => {
+        const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        return {
+          id: row.id,
+          gymId: row.gym_id,
+          userId: row.user_id,
+          status: row.status,
+          membershipType: row.membership_type,
+          joinedAt: row.joined_at,
+          expiresAt: row.expires_at,
+          userProfile: prof
+            ? {
+                displayName: prof.display_name || 'Athlete',
+                avatarUrl: prof.avatar_url,
+              }
+            : undefined,
+        };
+      });
+
+      if (options.search) {
+        const q = options.search.toLowerCase();
+        mapped = mapped.filter(m =>
+          m.userProfile?.displayName?.toLowerCase().includes(q) ||
+          m.membershipType.toLowerCase().includes(q)
+        );
+      }
+
+      return {
+        members: mapped,
+        totalCount: count || mapped.length,
+      };
+    } catch (err: unknown) {
+      logger.error('GymRepository: Exception fetching gym members', { err });
+      return { members: [], totalCount: 0 };
+    }
+  }
+
+  /**
+   * Updates membership status authoritatively using database RPC or local storage fallback.
+   * State transitions strictly enforced:
+   * pending -> active | active -> frozen | frozen -> active | active/frozen -> inactive
+   */
+  async updateMembershipStatus(
+    membershipId: string,
+    gymId: string,
+    targetStatus: GymMembershipStatus,
+    _callerOwnerId?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!membershipId || !gymId) {
+      return { success: false, error: 'Membership ID and Gym ID required' };
+    }
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(membershipId)) {
+      const raw = platform.storage.getItem(`gym_members_${gymId}`);
+      let list: GymMembership[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      const idx = list.findIndex(m => m.id === membershipId);
+      if (idx >= 0) {
+        list[idx] = {
+          ...list[idx],
+          status: targetStatus,
+          joinedAt: targetStatus === 'active' && !list[idx].joinedAt ? new Date().toISOString() : list[idx].joinedAt,
+        };
+        platform.storage.setItem(`gym_members_${gymId}`, JSON.stringify(list));
+      }
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase.rpc('update_gym_membership_status', {
+        p_membership_id: membershipId,
+        p_target_status: targetStatus,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error updating membership status via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update membership status';
+      logger.error('GymRepository: Exception updating membership status', { err });
+      return { success: false, error: msg };
     }
   }
 
