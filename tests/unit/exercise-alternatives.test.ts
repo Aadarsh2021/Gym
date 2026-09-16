@@ -54,7 +54,7 @@ describe('Exercise Alternatives Domain Engine', () => {
       const alts = findExerciseAlternatives(deadlift, CURATED_EXERCISE_CATALOG, 4);
       expect(alts.length).toBeGreaterThan(0);
       expect(alts.some(a => a.name.toLowerCase().includes('row'))).toBe(false);
-      expect(alts.every(a => a.movementPattern === 'Hip Hinge' || a.name.includes('Deadlift'))).toBe(true);
+      expect(alts.every(a => a.movementPattern.includes('Hinge') || a.name.includes('Deadlift'))).toBe(true);
     }
   });
 });

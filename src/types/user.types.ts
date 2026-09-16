@@ -31,9 +31,16 @@ export interface UserProfile {
   roleSelected?: boolean;
 }
 
+export type WorkoutEnvironment =
+  | 'home_equipped'
+  | 'home_bodyweight'
+  | 'external_gym'
+  | 'connected_gym';
+
 export interface FitnessProfile {
   id: string;
   userId: string;
+  workoutEnvironment?: WorkoutEnvironment | null;
   age: number;
   heightCm: number;
   weightKg: number;

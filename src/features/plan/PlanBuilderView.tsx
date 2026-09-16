@@ -6,7 +6,7 @@ import { profileService } from '@/services/profile.service';
 import { exerciseService, FALLBACK_EXERCISES } from '@/services/exercise.service';
 import { generateWorkoutPlan } from '@/domain/workout-generator';
 import { saveDraftPlan } from '@/utils/storage';
-import { ExperienceLevel, FitnessGoal } from '@/types/user.types';
+import { ExperienceLevel, FitnessGoal, WorkoutEnvironment } from '@/types/user.types';
 
 export const PlanBuilderView: React.FC = () => {
   const { session } = useAuth();
@@ -17,9 +17,11 @@ export const PlanBuilderView: React.FC = () => {
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('intermediate');
   const [goal, setGoal] = useState<FitnessGoal>('muscle_gain');
   const [equipment, setEquipment] = useState<string[]>(['Barbell', 'Dumbbells', 'Bodyweight']);
+  const [workoutEnvironment, setWorkoutEnvironment] = useState<WorkoutEnvironment | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchingProfile, setFetchingProfile] = useState(true);
   const [limitations, setLimitations] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,7 +32,16 @@ export const PlanBuilderView: React.FC = () => {
           if (profile.daysPerWeek) setDaysPerWeek(profile.daysPerWeek);
           if (profile.experienceLevel) setExperienceLevel(profile.experienceLevel);
           if (profile.goal) setGoal(profile.goal);
-          if (profile.equipment && profile.equipment.length > 0) setEquipment(profile.equipment);
+          if (profile.workoutEnvironment) {
+            setWorkoutEnvironment(profile.workoutEnvironment);
+            if (profile.workoutEnvironment === 'home_bodyweight') {
+              setEquipment(['Bodyweight']);
+            } else if (profile.equipment && profile.equipment.length > 0) {
+              setEquipment(profile.equipment);
+            }
+          } else if (profile.equipment && profile.equipment.length > 0) {
+            setEquipment(profile.equipment);
+          }
           if (profile.limitations && profile.limitations.length > 0) setLimitations(profile.limitations);
         }
       } catch {
@@ -46,6 +57,7 @@ export const PlanBuilderView: React.FC = () => {
   }, [userId]);
 
   const toggleEquipment = (item: string) => {
+    if (workoutEnvironment === 'home_bodyweight') return; // Locked to bodyweight
     if (equipment.includes(item)) {
       if (equipment.length > 1) {
         setEquipment(equipment.filter(e => e !== item));
@@ -57,19 +69,28 @@ export const PlanBuilderView: React.FC = () => {
 
   const handleGeneratePlan = async () => {
     setLoading(true);
+    setError(null);
     try {
       const exercises = await exerciseService.getExercises().catch(() => FALLBACK_EXERCISES);
       const availableExercises = exercises.length > 0 ? exercises : FALLBACK_EXERCISES;
 
-      // Pure deterministic plan generation with conservative movement preferences
+      // Pure deterministic plan generation with authoritative workout environment
       const generatedPlan = generateWorkoutPlan({
         daysPerWeek,
         experienceLevel,
         equipment,
+        workoutEnvironment,
         goal,
         availableExercises,
         limitations,
       });
+
+      if (!generatedPlan.isValid) {
+        setError(
+          'Workout plan generation failed: Insufficient exercise coverage for your selected training environment and limitations. Please adjust your equipment or limitations.'
+        );
+        return;
+      }
 
       // Save to temporary draft storage across refreshes (Safe across refreshes)
       saveDraftPlan(generatedPlan);
@@ -77,7 +98,7 @@ export const PlanBuilderView: React.FC = () => {
       // Navigate to review screen without persisting to Supabase active plan yet
       navigate('/plan/review');
     } catch {
-      // Fallback
+      setError('An error occurred while generating your workout plan. Please retry.');
     } finally {
       setLoading(false);
     }
@@ -199,6 +220,23 @@ export const PlanBuilderView: React.FC = () => {
             })}
           </div>
         </div>
+
+        {error && (
+          <div
+            style={{
+              padding: 'var(--space-3) var(--space-4)',
+              background: 'rgba(255, 77, 77, 0.15)',
+              border: '1px solid var(--accent-fire)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--accent-fire)',
+              fontSize: '0.88rem',
+              marginBottom: 'var(--space-4)',
+              lineHeight: 1.4,
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         {/* Action button */}
         <button

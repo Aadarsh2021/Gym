@@ -5,6 +5,13 @@ export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
 export type SessionRating = 'easy' | 'normal' | 'exhausting';
 export type SetType = 'warmup' | 'normal' | 'drop' | 'failure';
 
+export interface ExerciseVisualCues {
+  setup: string;
+  movement: string;
+  breathing: string;
+  commonMistake: string;
+}
+
 export interface Exercise {
   id: string;
   name: string;
@@ -23,6 +30,14 @@ export interface Exercise {
   };
   muscleGraphicKey?: string;
   isSystem: boolean;
+
+  // Phase C8: Visual Exercise Guide Models
+  demoVideoUrl?: string;
+  demoImageUrl?: string;
+  thumbnailUrl?: string;
+  visualCues?: ExerciseVisualCues;
+  instructionSteps?: string[];
+  commonMistakes?: string[];
 }
 
 export interface WorkoutPlanExercise {
@@ -87,6 +102,16 @@ export interface WorkoutSessionExercise {
   notes?: string;
   isCore?: boolean;
   sets: WorkoutSet[];
+  equipmentRequired?: string;
+  demoVideoUrl?: string;
+  demoImageUrl?: string;
+  thumbnailUrl?: string;
+  instructionSteps?: string[];
+  instructions?: string[];
+  commonMistakes?: string[];
+  cues?: string[];
+  visualCues?: ExerciseVisualCues;
+  exercise?: Exercise;
 }
 
 export interface WorkoutSession {

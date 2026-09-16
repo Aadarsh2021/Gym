@@ -1,4 +1,6 @@
 import { Exercise } from '@/types/workout.types';
+import { WorkoutEnvironment } from '@/types/user.types';
+import { isExerciseCompatible } from './exercise-compatibility';
 
 /**
  * Direct substitution graph mapping canonical exercise IDs or names to alternative IDs/names.
@@ -48,15 +50,22 @@ const DIRECT_ALTERNATIVES_MAP: Record<string, string[]> = {
 export function findExerciseAlternatives(
   targetExercise: Exercise,
   allAvailableExercises: Exercise[],
-  limit = 4
+  limit = 4,
+  workoutEnvironment?: WorkoutEnvironment | null,
+  availableEquipment: string[] = []
 ): Exercise[] {
+  // Pre-filter available exercises by compatibility
+  const compatiblePool = allAvailableExercises.filter(ex =>
+    isExerciseCompatible(ex, workoutEnvironment, availableEquipment)
+  );
+
   const alternatives: Exercise[] = [];
   const addedIds = new Set<string>([targetExercise.id]);
 
   // 1. Check explicit alternative IDs on target exercise
   if (targetExercise.alternativeExerciseIds && targetExercise.alternativeExerciseIds.length > 0) {
     for (const altId of targetExercise.alternativeExerciseIds) {
-      const match = allAvailableExercises.find(ex => ex.id === altId && !addedIds.has(ex.id));
+      const match = compatiblePool.find(ex => ex.id === altId && !addedIds.has(ex.id));
       if (match) {
         alternatives.push(match);
         addedIds.add(match.id);
@@ -68,7 +77,7 @@ export function findExerciseAlternatives(
   const mappedNames = DIRECT_ALTERNATIVES_MAP[targetExercise.name] || [];
   for (const name of mappedNames) {
     if (alternatives.length >= limit) break;
-    const match = allAvailableExercises.find(
+    const match = compatiblePool.find(
       ex => ex.name.toLowerCase() === name.toLowerCase() && !addedIds.has(ex.id)
     );
     if (match) {
@@ -85,7 +94,7 @@ export function findExerciseAlternatives(
 
     if (isHinge) {
       // Hinge movements must strictly substitute with other hip hinge / deadlift movements
-      const hingeCandidates = allAvailableExercises.filter(ex => {
+      const hingeCandidates = compatiblePool.filter(ex => {
         if (addedIds.has(ex.id)) return false;
         const exPattern = ex.movementPattern.toLowerCase();
         const exName = ex.name.toLowerCase();
@@ -102,7 +111,7 @@ export function findExerciseAlternatives(
         addedIds.add(candidate.id);
       }
     } else {
-      const candidateList = allAvailableExercises.filter(ex => {
+      const candidateList = compatiblePool.filter(ex => {
         if (addedIds.has(ex.id)) return false;
         return ex.primaryMuscle.toLowerCase() === targetExercise.primaryMuscle.toLowerCase();
       });

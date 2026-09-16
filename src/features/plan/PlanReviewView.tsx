@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Check, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Check, AlertCircle, Eye, X, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { loadDraftPlan, clearDraftPlan } from '@/utils/storage';
 import { supabase } from '@/lib/supabase';
 import { workoutService } from '@/services/workout.service';
 import { GeneratedPlan } from '@/domain/workout-generator';
+import { Exercise } from '@/types/workout.types';
+import { ExerciseVisualGuide } from '@/components/exercise/ExerciseVisualGuide';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const PlanReviewView: React.FC = () => {
-  const { session } = useAuth();
   const navigate = useNavigate();
+  const { session } = useAuth();
 
   const [draftPlan, setDraftPlan] = useState<GeneratedPlan | null>(null);
   const [activating, setActivating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedExerciseForGuide, setSelectedExerciseForGuide] = useState<Exercise | null>(null);
 
   useEffect(() => {
     // Safe across refreshes: load draft plan from session storage
@@ -150,6 +153,7 @@ export const PlanReviewView: React.FC = () => {
                 {day.exercises.map((ex, exIdx) => (
                   <div
                     key={ex.id || exIdx}
+                    onClick={() => ex.exercise && setSelectedExerciseForGuide(ex.exercise)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -158,10 +162,26 @@ export const PlanReviewView: React.FC = () => {
                       background: 'var(--bg-input)',
                       borderRadius: 'var(--radius-sm)',
                       fontSize: '0.9rem',
+                      cursor: ex.exercise ? 'pointer' : 'default',
+                      transition: 'border-color 0.15s ease',
+                      border: '1px solid transparent',
+                    }}
+                    onMouseEnter={e => {
+                      if (ex.exercise) (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-primary)';
+                    }}
+                    onMouseLeave={e => {
+                      if (ex.exercise) (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
                     }}
                   >
                     <div>
-                      <span style={{ fontWeight: 600 }}>{ex.exercise?.name || 'Movement'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontWeight: 600 }}>{ex.exercise?.name || 'Movement'}</span>
+                        {ex.exercise && (
+                          <span className="badge" style={{ fontSize: '0.68rem', padding: '1px 6px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <Eye size={11} /> Guide
+                          </span>
+                        )}
+                      </div>
                       <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                         {ex.exercise?.primaryMuscle} • {ex.isCore ? 'Compound Core' : 'Accessory'}
                       </small>
@@ -217,6 +237,48 @@ export const PlanReviewView: React.FC = () => {
           {activating ? 'Activating Plan...' : 'Activate This Plan'} <Check size={18} />
         </button>
       </div>
+
+      {/* Exercise Visual Guide Modal */}
+      {selectedExerciseForGuide && (
+        <div className="modal-backdrop" onClick={() => setSelectedExerciseForGuide(null)}>
+          <div
+            className="modal-content animate-fade-in"
+            style={{ maxWidth: '640px', padding: 0, overflow: 'hidden' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: 'var(--space-3) var(--space-4)',
+                background: 'var(--bg-surface-elevated)',
+                borderBottom: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Eye size={16} color="var(--accent-primary)" />
+                <strong style={{ fontSize: '0.95rem' }}>Visual Exercise Guide</strong>
+              </div>
+              <button
+                className="btn btn-ghost"
+                onClick={() => setSelectedExerciseForGuide(null)}
+                style={{ width: '32px', height: '32px', padding: 0, borderRadius: '50%' }}
+                aria-label="Close guide modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: 'var(--space-4)', maxHeight: '80vh', overflowY: 'auto' }}>
+              <ExerciseVisualGuide
+                exercise={selectedExerciseForGuide}
+                variant="full"
+                showCues={true}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

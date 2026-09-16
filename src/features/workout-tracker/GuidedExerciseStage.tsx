@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { WorkoutSessionExercise, WorkoutSet } from '@/types/workout.types';
 import { ProgressionRecommendation } from '@/domain/progression';
-import { ExerciseMotionVisualizer } from '@/components/workout/ExerciseMotionVisualizer';
+import { ExerciseVisualGuide } from '@/components/exercise/ExerciseVisualGuide';
 
 interface GuidedExerciseStageProps {
   exercise: WorkoutSessionExercise;
@@ -198,12 +198,24 @@ export const GuidedExerciseStage: React.FC<GuidedExerciseStageProps> = ({
           </div>
         </div>
 
-        {/* Biomechanical Exercise Motion Demonstration Visualizer */}
+        {/* Visual Exercise Guide: Demonstration & Biomechanical Motion */}
         <div style={{ marginBottom: 'var(--space-4)' }}>
-          <ExerciseMotionVisualizer
-            exerciseName={exercise.exerciseName}
-            primaryMuscle={exercise.primaryMuscle}
-            isCompact={false}
+          <ExerciseVisualGuide
+            exercise={{
+              name: exercise.exerciseName,
+              primaryMuscle: exercise.primaryMuscle,
+              equipmentRequired: exercise.equipmentRequired,
+              demoVideoUrl: exercise.demoVideoUrl,
+              demoImageUrl: exercise.demoImageUrl,
+              thumbnailUrl: exercise.thumbnailUrl,
+              instructionSteps: exercise.instructionSteps,
+              instructions: exercise.instructions,
+              commonMistakes: exercise.commonMistakes,
+              cues: exercise.cues,
+              visualCues: exercise.visualCues,
+            }}
+            variant="full"
+            showCues={true}
           />
         </div>
 
@@ -430,12 +442,24 @@ export const GuidedExerciseStage: React.FC<GuidedExerciseStageProps> = ({
         </div>
       </div>
 
-      {/* Biomechanical Live Motion Cadence Loop */}
+      {/* Biomechanical Live Motion Cadence Loop & Visual Guide */}
       <div style={{ margin: 'var(--space-2) 0 var(--space-3)' }}>
-        <ExerciseMotionVisualizer
-          exerciseName={exercise.exerciseName}
-          primaryMuscle={exercise.primaryMuscle}
-          isCompact={true}
+        <ExerciseVisualGuide
+          exercise={{
+            name: exercise.exerciseName,
+            primaryMuscle: exercise.primaryMuscle,
+            equipmentRequired: exercise.equipmentRequired,
+            demoVideoUrl: exercise.demoVideoUrl,
+            demoImageUrl: exercise.demoImageUrl,
+            thumbnailUrl: exercise.thumbnailUrl,
+            instructionSteps: exercise.instructionSteps,
+            instructions: exercise.instructions,
+            commonMistakes: exercise.commonMistakes,
+            cues: exercise.cues,
+            visualCues: exercise.visualCues,
+          }}
+          variant="compact"
+          showCues={showInstructions}
         />
       </div>
 

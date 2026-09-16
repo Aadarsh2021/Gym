@@ -26,7 +26,7 @@ import {
   AlarmMotivationStyle,
   MOTIVATION_TEMPLATES,
 } from '@/services/reminder.service';
-import { ExperienceLevel, FitnessGoal, Gender } from '@/types/user.types';
+import { ExperienceLevel, FitnessGoal, Gender, WorkoutEnvironment } from '@/types/user.types';
 import { calculateBMR, calculateTDEE, calculateCalorieTarget } from '@/domain/calories';
 import { calculateProteinTarget, calculateMacroSplit } from '@/domain/protein';
 import { validateBiometrics } from '@/utils/validation';
@@ -50,6 +50,7 @@ export const ProfileView: React.FC = () => {
   const [goal, setGoal] = useState<FitnessGoal>('muscle_gain');
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('intermediate');
   const [daysPerWeek, setDaysPerWeek] = useState<number>(4);
+  const [workoutEnvironment, setWorkoutEnvironment] = useState<WorkoutEnvironment | null>(null);
   const [equipment, setEquipment] = useState<string[]>(['Barbell', 'Dumbbells', 'Bodyweight']);
   const [limitations, setLimitations] = useState<string[]>(['None']);
 
@@ -88,6 +89,9 @@ export const ProfileView: React.FC = () => {
           setGoal(profile.goal || 'muscle_gain');
           setExperienceLevel(profile.experienceLevel || 'intermediate');
           setDaysPerWeek(profile.daysPerWeek || 4);
+          if (profile.workoutEnvironment) {
+            setWorkoutEnvironment(profile.workoutEnvironment);
+          }
           if (profile.equipment && profile.equipment.length > 0) {
             setEquipment(profile.equipment);
           }
@@ -239,7 +243,8 @@ export const ProfileView: React.FC = () => {
         experienceLevel,
         daysPerWeek,
         workoutDurationMinutes: 60,
-        equipment,
+        workoutEnvironment: workoutEnvironment || undefined,
+        equipment: workoutEnvironment === 'home_bodyweight' ? ['Bodyweight'] : equipment,
         dietaryPreference: 'vegetarian',
         limitations,
         gymLatitude,
@@ -466,19 +471,100 @@ export const ProfileView: React.FC = () => {
           </div>
         </div>
 
+        {/* Phase C8: Workout Environment Selector */}
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+            <label className="label" style={{ margin: 0 }}>Primary Workout Environment</label>
+            {!workoutEnvironment && (
+              <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#EAB308', fontSize: '0.75rem' }}>
+                Confirmation Required
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-3)' }}>
+            {[
+              {
+                id: 'home_bodyweight' as WorkoutEnvironment,
+                title: 'Home + No Equipment',
+                desc: 'Bodyweight calisthenics only. No weights required.',
+              },
+              {
+                id: 'home_equipped' as WorkoutEnvironment,
+                title: 'Home + Equipment',
+                desc: 'Trained with dumbbells, barbell, or home gear.',
+              },
+              {
+                id: 'external_gym' as WorkoutEnvironment,
+                title: 'Gym + Not Connected',
+                desc: 'Independent gym. Autonomous workout plan.',
+              },
+              {
+                id: 'connected_gym' as WorkoutEnvironment,
+                title: 'Gym + FitSphere Connected',
+                desc: 'Integrated partner facility with QR attendance.',
+              },
+            ].map(env => {
+              const selected = workoutEnvironment === env.id;
+              return (
+                <div
+                  key={env.id}
+                  onClick={() => {
+                    setWorkoutEnvironment(env.id);
+                    if (env.id === 'home_bodyweight') {
+                      setEquipment(['Bodyweight']);
+                    }
+                  }}
+                  className="card card-interactive"
+                  style={{
+                    padding: 'var(--space-3) var(--space-4)',
+                    cursor: 'pointer',
+                    borderColor: selected ? 'var(--accent-primary)' : 'var(--border-subtle)',
+                    background: selected ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: selected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                      {env.title}
+                    </span>
+                    {selected && <CheckCircle2 size={16} color="var(--accent-primary)" />}
+                  </div>
+                  <p style={{ margin: 'var(--space-1) 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                    {env.desc}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Equipment Selector */}
         <div style={{ marginBottom: 'var(--space-6)' }}>
-          <label className="label">Available Equipment</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+            <label className="label" style={{ margin: 0 }}>Available Equipment</label>
+            {workoutEnvironment === 'home_bodyweight' && (
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Locked to Bodyweight for Home + No Equipment
+              </span>
+            )}
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
             {['Barbell', 'Dumbbells', 'Cable', 'Bodyweight', 'Machines'].map(item => {
               const active = equipment.includes(item);
+              const disabled = workoutEnvironment === 'home_bodyweight';
               return (
                 <button
                   key={item}
                   type="button"
+                  disabled={disabled}
                   onClick={() => toggleEquipment(item)}
                   className={`badge ${active ? 'badge-accent' : 'badge-secondary'}`}
-                  style={{ padding: '6px 12px', cursor: 'pointer', border: active ? '1px solid var(--accent-primary)' : '1px solid var(--border-medium)' }}
+                  style={{
+                    padding: '6px 12px',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    opacity: disabled && item !== 'Bodyweight' ? 0.4 : 1,
+                    border: active ? '1px solid var(--accent-primary)' : '1px solid var(--border-medium)',
+                  }}
                 >
                   {item} {active ? '✓' : '+'}
                 </button>

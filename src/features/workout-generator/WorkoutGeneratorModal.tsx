@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Sparkles, Check } from 'lucide-react';
 import { Exercise, WorkoutPlan } from '@/types/workout.types';
-import { ExperienceLevel, FitnessGoal } from '@/types/user.types';
+import { ExperienceLevel, FitnessGoal, WorkoutEnvironment } from '@/types/user.types';
 import { generateWorkoutPlan } from '@/domain/workout-generator';
 import { workoutService } from '@/services/workout.service';
 
@@ -10,6 +10,7 @@ interface WorkoutGeneratorModalProps {
   onClose: () => void;
   userId: string;
   availableExercises: Exercise[];
+  workoutEnvironment?: WorkoutEnvironment | null;
   onPlanGenerated: (plan: WorkoutPlan) => void;
 }
 
@@ -18,17 +19,22 @@ export const WorkoutGeneratorModal: React.FC<WorkoutGeneratorModalProps> = ({
   onClose,
   userId,
   availableExercises,
+  workoutEnvironment,
   onPlanGenerated,
 }) => {
   const [daysPerWeek, setDaysPerWeek] = useState<number>(4);
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('intermediate');
-  const [equipment, setEquipment] = useState<string[]>(['Barbell', 'Dumbbells', 'Bodyweight']);
+  const [equipment, setEquipment] = useState<string[]>(
+    workoutEnvironment === 'home_bodyweight' ? ['Bodyweight'] : ['Barbell', 'Dumbbells', 'Bodyweight']
+  );
   const [goal, setGoal] = useState<FitnessGoal>('muscle_gain');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const toggleEquipment = (item: string) => {
+    if (workoutEnvironment === 'home_bodyweight') return;
     if (equipment.includes(item)) {
       setEquipment(equipment.filter(e => e !== item));
     } else {
@@ -38,14 +44,23 @@ export const WorkoutGeneratorModal: React.FC<WorkoutGeneratorModalProps> = ({
 
   const handleGenerate = async () => {
     setLoading(true);
+    setError(null);
     try {
       const generated = generateWorkoutPlan({
         daysPerWeek,
         experienceLevel,
         equipment,
+        workoutEnvironment,
         goal,
         availableExercises,
       });
+
+      if (!generated.isValid) {
+        setError(
+          'Generation failed: Insufficient exercise coverage for your selected training environment. Please add available equipment.'
+        );
+        return;
+      }
 
       const saved = await workoutService.saveGeneratedPlan(userId, generated);
       if (saved) {
@@ -53,7 +68,7 @@ export const WorkoutGeneratorModal: React.FC<WorkoutGeneratorModalProps> = ({
         onClose();
       }
     } catch {
-      // ignore
+      setError('An error occurred while generating your plan. Please retry.');
     } finally {
       setLoading(false);
     }
@@ -76,6 +91,23 @@ export const WorkoutGeneratorModal: React.FC<WorkoutGeneratorModalProps> = ({
             <X size={20} />
           </button>
         </div>
+
+        {error && (
+          <div
+            style={{
+              padding: 'var(--space-3) var(--space-4)',
+              background: 'rgba(255, 77, 77, 0.15)',
+              border: '1px solid var(--accent-fire)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--accent-fire)',
+              fontSize: '0.85rem',
+              marginBottom: 'var(--space-4)',
+              lineHeight: 1.4,
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         {/* Days Per Week */}
         <div className="input-group">

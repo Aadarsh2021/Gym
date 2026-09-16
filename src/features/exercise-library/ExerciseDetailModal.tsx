@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, CheckCircle, ArrowRightLeft, Dumbbell, ShieldAlert, Target } from 'lucide-react';
 import { Exercise } from '@/types/workout.types';
+import { ExerciseVisualGuide } from '@/components/exercise/ExerciseVisualGuide';
 
 interface ExerciseDetailModalProps {
   exercise: Exercise;
@@ -55,6 +56,14 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
         {/* Modal Scrollable Body */}
         <div style={{ padding: 'var(--space-5)', maxHeight: '78vh', overflowY: 'auto' }}>
+          {/* Visual Exercise Guide: Visual Demonstration & 4 Key Cues */}
+          <div style={{ marginBottom: 'var(--space-5)' }}>
+            <ExerciseVisualGuide
+              exercise={exercise}
+              variant="full"
+              showCues={true}
+            />
+          </div>
           {/* Swap Action Banner (If in workout swap mode) */}
           {isWorkoutSwapMode && onSwapInWorkout && (
             <div style={{

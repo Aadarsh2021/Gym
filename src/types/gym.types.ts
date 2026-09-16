@@ -2,6 +2,8 @@
  * Gym Ecosystem & Multi-Tenant Context Types
  */
 
+import { WorkoutEnvironment } from './user.types';
+
 export type MemberTrainingContext = 'home' | 'non_integrated_gym' | 'integrated_gym';
 
 export type MemberGymMode = 'home' | 'non_integrated' | 'integrated';
@@ -9,12 +11,14 @@ export type MemberGymMode = 'home' | 'non_integrated' | 'integrated';
 export type MemberGymContextState =
   | {
       mode: 'home';
+      workoutEnvironment?: WorkoutEnvironment | null;
       activeGym: null;
       activeMembership: null;
       memberships: GymMembership[];
     }
   | {
       mode: 'non_integrated';
+      workoutEnvironment?: WorkoutEnvironment | null;
       activeGym: null;
       activeMembership: null;
       memberships: GymMembership[];
@@ -22,6 +26,7 @@ export type MemberGymContextState =
     }
   | {
       mode: 'integrated';
+      workoutEnvironment?: WorkoutEnvironment | null;
       activeGym: Gym;
       activeMembership: GymMembership;
       memberships: GymMembership[];

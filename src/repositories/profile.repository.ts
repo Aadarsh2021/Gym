@@ -114,6 +114,7 @@ export class ProfileRepository {
       return {
         id: data.id,
         userId: data.user_id,
+        workoutEnvironment: data.workout_environment || null,
         age: data.age || 25,
         heightCm: Number(data.height_cm) || 175,
         weightKg: Number(data.weight_kg) || 70,
@@ -147,6 +148,7 @@ export class ProfileRepository {
         .upsert(
           {
             user_id: profile.userId,
+            workout_environment: profile.workoutEnvironment || null,
             age: profile.age,
             height_cm: profile.heightCm,
             weight_kg: profile.weightKg,

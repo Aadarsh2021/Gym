@@ -40,6 +40,16 @@ function mapDatabaseToDomainExercise(dbRecord: any): Exercise {
       secondary: dbRecord.secondary_muscles || [],
     },
     muscleGraphicKey: curatedMatch?.muscleGraphicKey,
+    demoVideoUrl: dbRecord.demo_video_url || curatedMatch?.demoVideoUrl,
+    demoImageUrl: dbRecord.demo_image_url || curatedMatch?.demoImageUrl,
+    thumbnailUrl: dbRecord.thumbnail_url || curatedMatch?.thumbnailUrl,
+    instructionSteps: (Array.isArray(dbRecord.instruction_steps) && dbRecord.instruction_steps.length > 0)
+      ? dbRecord.instruction_steps
+      : (curatedMatch?.instructionSteps || []),
+    commonMistakes: (Array.isArray(dbRecord.common_mistakes) && dbRecord.common_mistakes.length > 0)
+      ? dbRecord.common_mistakes
+      : (curatedMatch?.commonMistakes || curatedMatch?.mistakesToAvoid || []),
+    visualCues: curatedMatch?.visualCues,
     isSystem: dbRecord.is_system,
   };
 }

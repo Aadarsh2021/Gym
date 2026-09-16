@@ -8,18 +8,44 @@ import {
   GymMembership,
   Gym,
 } from '@/types/gym.types';
+import { WorkoutEnvironment } from '@/types/user.types';
 import { platform } from '@/platform';
 import { logger } from '@/lib/logger';
 
 /**
- * Pure domain function to derive member gym context from memberships and custom coordinates.
+ * Pure domain function to derive member gym context from memberships, custom coordinates,
+ * and authoritative workoutEnvironment.
  * Deterministic, framework-independent, containing zero DOM/React/Supabase dependencies.
  */
 export function deriveMemberGymContext(
   memberships: GymMembership[],
   customGymLocation?: { latitude: number; longitude: number; radiusMeters: number },
-  preferredGymId?: string | null
+  preferredGymId?: string | null,
+  workoutEnvironment?: WorkoutEnvironment | null
 ): MemberGymContextState {
+  // Explicit Home training environment
+  if (workoutEnvironment === 'home_bodyweight' || workoutEnvironment === 'home_equipped') {
+    return {
+      mode: 'home',
+      workoutEnvironment,
+      activeGym: null,
+      activeMembership: null,
+      memberships,
+    };
+  }
+
+  // Explicit External (Unconnected) Gym environment
+  if (workoutEnvironment === 'external_gym') {
+    return {
+      mode: 'non_integrated',
+      workoutEnvironment,
+      activeGym: null,
+      activeMembership: null,
+      memberships,
+      customGymLocation,
+    };
+  }
+
   // 1. Authoritative active memberships only: pending, inactive, frozen are excluded
   const activeMemberships = memberships.filter(m => m.status === 'active');
 
@@ -59,6 +85,7 @@ export function deriveMemberGymContext(
 
       return {
         mode: 'integrated',
+        workoutEnvironment: workoutEnvironment || 'connected_gym',
         activeGym,
         activeMembership: chosenMembership,
         memberships,
@@ -70,6 +97,7 @@ export function deriveMemberGymContext(
   if (customGymLocation && customGymLocation.latitude && customGymLocation.longitude) {
     return {
       mode: 'non_integrated',
+      workoutEnvironment,
       activeGym: null,
       activeMembership: null,
       memberships,
@@ -80,6 +108,7 @@ export function deriveMemberGymContext(
   // 3. Default: Home / Independent
   return {
     mode: 'home',
+    workoutEnvironment,
     activeGym: null,
     activeMembership: null,
     memberships,
@@ -121,8 +150,13 @@ export const gymContextService = {
       const rawPreferred = platform.storage.getItem(`active_member_gym_id_${userId}`);
       const preferredGymId = typeof rawPreferred === 'string' ? rawPreferred : null;
 
-      // 4. Derive context
-      return deriveMemberGymContext(memberships, customLocation, preferredGymId);
+      // 4. Derive context with authoritative workoutEnvironment
+      return deriveMemberGymContext(
+        memberships,
+        customLocation,
+        preferredGymId,
+        fitnessProfile?.workoutEnvironment
+      );
     } catch (err) {
       logger.error('gymContextService: Error resolving member gym context', { err });
       return {

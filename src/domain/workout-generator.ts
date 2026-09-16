@@ -1,10 +1,13 @@
 /**
- * Algorithmic Workout Plan Generator
- * Generates structured, exercise-compatible training splits based on biometrics, frequency, and available equipment.
+ * Algorithmic Workout Plan Generator (Phase C8)
+ * Generates structured, exercise-compatible training splits based on biometrics,
+ * frequency, and authoritative workout environment & equipment constraints.
  */
 
 import { Exercise, WorkoutPlanDay, WorkoutPlanExercise } from '@/types/workout.types';
-import { ExperienceLevel, FitnessGoal } from '@/types/user.types';
+import { ExperienceLevel, FitnessGoal, WorkoutEnvironment } from '@/types/user.types';
+import { isExerciseCompatible, validateWorkoutPlan } from './exercise-compatibility';
+import { logger } from '@/lib/logger';
 
 export interface GenerationInputs {
   daysPerWeek: number;
@@ -13,6 +16,7 @@ export interface GenerationInputs {
   goal: FitnessGoal;
   availableExercises: Exercise[];
   limitations?: string[];
+  workoutEnvironment?: WorkoutEnvironment | null;
 }
 
 export interface GeneratedPlan {
@@ -20,6 +24,9 @@ export interface GeneratedPlan {
   splitType: string;
   description: string;
   days: WorkoutPlanDay[];
+  isValid?: boolean;
+  validationStatus?: 'passed' | 'failed';
+  validationErrors?: string[];
 }
 
 /**
@@ -67,27 +74,38 @@ const CONSERVATIVE_SUBSTITUTIONS: Record<string, Record<string, string>> = {
 };
 
 /**
- * Filters catalog exercises by user's equipment, muscle group, and conservative movement preferences
+ * Filters catalog exercises by user's workout environment, equipment, muscle group,
+ * and conservative movement preferences.
+ *
+ * CRITICAL RULE:
+ * NEVER falls back to an incompatible exercise or arbitrary index-0 exercise.
+ * If no compatible exercise matches, returns undefined so the caller can handle it safely.
  */
-function findExercise(
+export function findExercise(
   exercises: Exercise[],
   primaryMuscle: string,
-  allowedEquipment: string[],
+  workoutEnvironment?: WorkoutEnvironment | null,
+  allowedEquipment: string[] = [],
   limitations: string[] = []
 ): Exercise | undefined {
-  // Normalize equipment names
-  const equipSet = new Set(allowedEquipment.map(e => e.toLowerCase()));
-  equipSet.add('bodyweight'); // Bodyweight is always available
+  // 1. Strict compatibility filter: only keep exercises compatible with user's environment & gear
+  const compatible = exercises.filter(ex =>
+    isExerciseCompatible(ex, workoutEnvironment, allowedEquipment)
+  );
 
-  const matching = exercises.filter(ex => {
-    const muscleMatch = ex.primaryMuscle.toLowerCase() === primaryMuscle.toLowerCase();
-    const equipMatch = equipSet.has(ex.equipmentRequired.toLowerCase());
-    return muscleMatch && equipMatch;
-  });
+  if (compatible.length === 0) return undefined;
 
-  if (matching.length === 0) return undefined;
+  // 2. Muscle group match among compatible candidates
+  const matching = compatible.filter(
+    ex => ex.primaryMuscle.toLowerCase() === primaryMuscle.toLowerCase()
+  );
 
-  // Check if any limitation suggests a conservative alternative candidate
+  if (matching.length === 0) {
+    // Return undefined: do NOT inject an incompatible exercise!
+    return undefined;
+  }
+
+  // 3. Check if any limitation suggests a conservative alternative candidate
   const normalizedLimitations = limitations.map(l => l.toLowerCase()).filter(l => l !== 'none');
   for (const lim of normalizedLimitations) {
     const subMap = CONSERVATIVE_SUBSTITUTIONS[lim];
@@ -97,7 +115,7 @@ function findExercise(
         if (altName) {
           const alternativeCandidate =
             matching.find(c => c.name.toLowerCase() === altName.toLowerCase()) ||
-            exercises.find(c => c.name.toLowerCase() === altName.toLowerCase() && equipSet.has(c.equipmentRequired.toLowerCase()));
+            compatible.find(c => c.name.toLowerCase() === altName.toLowerCase());
           if (alternativeCandidate) {
             return alternativeCandidate;
           }
@@ -110,7 +128,15 @@ function findExercise(
 }
 
 export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
-  const { daysPerWeek, experienceLevel, equipment, goal, availableExercises, limitations = [] } = inputs;
+  const {
+    daysPerWeek,
+    experienceLevel,
+    equipment,
+    goal,
+    availableExercises,
+    limitations = [],
+    workoutEnvironment,
+  } = inputs;
 
   let splitType = 'Full Body';
   let planName = 'Foundational Full Body Routine';
@@ -149,124 +175,204 @@ export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
     isCore,
   });
 
+  const getCandidate = (primaryMuscle: string): Exercise | undefined => {
+    return findExercise(availableExercises, primaryMuscle, workoutEnvironment, equipment, limitations);
+  };
+
   if (splitType === 'Push / Pull / Legs') {
-    // Day 1: Push
-    const chestEx = findExercise(availableExercises, 'Chest', equipment, limitations) || availableExercises[0];
-    const shoulderEx = findExercise(availableExercises, 'Shoulders', equipment, limitations) || availableExercises[1];
-    const tricepEx = findExercise(availableExercises, 'Triceps', equipment, limitations) || availableExercises[2];
+    // Day 1: Push (Chest, Shoulders, Triceps)
+    const chestEx = getCandidate('Chest');
+    const shoulderEx = getCandidate('Shoulders');
+    const tricepEx = getCandidate('Triceps');
 
-    generatedDays.push({
-      id: 'day-1',
-      planId: '',
-      dayNumber: 1,
-      name: 'Push (Chest, Shoulders & Triceps)',
-      targetMuscleGroups: ['Chest', 'Shoulders', 'Triceps'],
-      scheduledDaysOfWeek: [1, 4], // Mon, Thu
-      exercises: [
-        createDayExercise(chestEx, 1, 4, 8, 10, 120, true),
-        createDayExercise(shoulderEx, 2, 3, 10, 12, 90, true),
-        createDayExercise(tricepEx, 3, 3, 10, 12, 60, false),
-      ],
-    });
+    const pushCandidates = [
+      chestEx ? { ex: chestEx, sets: 4, rMin: 8, rMax: 10, rest: 120, core: true } : null,
+      shoulderEx ? { ex: shoulderEx, sets: 3, rMin: 10, rMax: 12, rest: 90, core: true } : null,
+      tricepEx ? { ex: tricepEx, sets: 3, rMin: 10, rMax: 12, rest: 60, core: false } : null,
+    ].filter((item): item is NonNullable<typeof item> => item !== null);
 
-    // Day 2: Pull
-    const backEx = findExercise(availableExercises, 'Back', equipment, limitations) || availableExercises[1];
-    const bicepEx = findExercise(availableExercises, 'Biceps', equipment, limitations) || availableExercises[2];
-    const rearDeltEx = findExercise(availableExercises, 'Shoulders', equipment, limitations) || availableExercises[0];
+    if (pushCandidates.length > 0) {
+      generatedDays.push({
+        id: 'day-1',
+        planId: '',
+        dayNumber: 1,
+        name: 'Push (Chest, Shoulders & Triceps)',
+        targetMuscleGroups: ['Chest', 'Shoulders', 'Triceps'],
+        scheduledDaysOfWeek: [1, 4], // Mon, Thu
+        exercises: pushCandidates.map((item, idx) =>
+          createDayExercise(item.ex, idx + 1, item.sets, item.rMin, item.rMax, item.rest, item.core)
+        ),
+      });
+    }
 
-    generatedDays.push({
-      id: 'day-2',
-      planId: '',
-      dayNumber: 2,
-      name: 'Pull (Back, Biceps & Rear Delts)',
-      targetMuscleGroups: ['Back', 'Biceps'],
-      scheduledDaysOfWeek: [2, 5], // Tue, Fri
-      exercises: [
-        createDayExercise(backEx, 1, 4, 8, 10, 120, true),
-        createDayExercise(bicepEx, 2, 3, 10, 12, 60, false),
-        createDayExercise(rearDeltEx, 3, 3, 12, 15, 60, false),
-      ],
-    });
+    // Day 2: Pull (Back, Biceps)
+    const backEx = getCandidate('Back');
+    const bicepEx = getCandidate('Biceps');
+    const rearDeltEx = getCandidate('Shoulders');
 
-    // Day 3: Legs
-    const legEx = findExercise(availableExercises, 'Legs', equipment, limitations) || availableExercises[0];
-    const coreEx = findExercise(availableExercises, 'Core', equipment, limitations) || availableExercises[availableExercises.length - 1];
+    const pullCandidates = [
+      backEx ? { ex: backEx, sets: 4, rMin: 8, rMax: 10, rest: 120, core: true } : null,
+      bicepEx ? { ex: bicepEx, sets: 3, rMin: 10, rMax: 12, rest: 60, core: false } : null,
+      rearDeltEx && rearDeltEx.id !== shoulderEx?.id
+        ? { ex: rearDeltEx, sets: 3, rMin: 12, rMax: 15, rest: 60, core: false }
+        : null,
+    ].filter((item): item is NonNullable<typeof item> => item !== null);
 
-    generatedDays.push({
-      id: 'day-3',
-      planId: '',
-      dayNumber: 3,
-      name: 'Legs & Core (Quads, Hamstrings & Abs)',
-      targetMuscleGroups: ['Legs', 'Core'],
-      scheduledDaysOfWeek: [3, 6], // Wed, Sat
-      exercises: [
-        createDayExercise(legEx, 1, 4, 8, 12, 120, true),
-        createDayExercise(coreEx, 2, 3, 15, 20, 60, false),
-      ],
-    });
+    if (pullCandidates.length > 0) {
+      generatedDays.push({
+        id: 'day-2',
+        planId: '',
+        dayNumber: 2,
+        name: 'Pull (Back, Biceps & Rear Delts)',
+        targetMuscleGroups: ['Back', 'Biceps'],
+        scheduledDaysOfWeek: [2, 5], // Tue, Fri
+        exercises: pullCandidates.map((item, idx) =>
+          createDayExercise(item.ex, idx + 1, item.sets, item.rMin, item.rMax, item.rest, item.core)
+        ),
+      });
+    }
+
+    // Day 3: Legs & Core
+    const legEx = getCandidate('Legs');
+    const coreEx = getCandidate('Core');
+
+    const legCandidates = [
+      legEx ? { ex: legEx, sets: 4, rMin: 8, rMax: 12, rest: 120, core: true } : null,
+      coreEx ? { ex: coreEx, sets: 2, rMin: 15, rMax: 20, rest: 60, core: false } : null,
+    ].filter((item): item is NonNullable<typeof item> => item !== null);
+
+    if (legCandidates.length > 0) {
+      generatedDays.push({
+        id: 'day-3',
+        planId: '',
+        dayNumber: 3,
+        name: 'Legs & Core (Quads, Hamstrings & Abs)',
+        targetMuscleGroups: ['Legs', 'Core'],
+        scheduledDaysOfWeek: [3, 6], // Wed, Sat
+        exercises: legCandidates.map((item, idx) =>
+          createDayExercise(item.ex, idx + 1, item.sets, item.rMin, item.rMax, item.rest, item.core)
+        ),
+      });
+    }
   } else if (splitType === 'Upper / Lower') {
     // Upper Day
-    const chestEx = findExercise(availableExercises, 'Chest', equipment, limitations) || availableExercises[0];
-    const backEx = findExercise(availableExercises, 'Back', equipment, limitations) || availableExercises[1];
-    const shoulderEx = findExercise(availableExercises, 'Shoulders', equipment, limitations) || availableExercises[2];
+    const chestEx = getCandidate('Chest');
+    const backEx = getCandidate('Back');
+    const shoulderEx = getCandidate('Shoulders');
 
-    generatedDays.push({
-      id: 'day-1',
-      planId: '',
-      dayNumber: 1,
-      name: 'Upper Body Power',
-      targetMuscleGroups: ['Chest', 'Back', 'Shoulders'],
-      scheduledDaysOfWeek: [1, 4], // Mon, Thu
-      exercises: [
-        createDayExercise(chestEx, 1, 4, 8, 10, 120, true),
-        createDayExercise(backEx, 2, 4, 8, 10, 120, true),
-        createDayExercise(shoulderEx, 3, 3, 10, 12, 90, false),
-      ],
-    });
+    const upperCandidates = [
+      chestEx ? { ex: chestEx, sets: 4, rMin: 8, rMax: 10, rest: 120, core: true } : null,
+      backEx ? { ex: backEx, sets: 4, rMin: 8, rMax: 10, rest: 120, core: true } : null,
+      shoulderEx ? { ex: shoulderEx, sets: 3, rMin: 10, rMax: 12, rest: 90, core: false } : null,
+    ].filter((item): item is NonNullable<typeof item> => item !== null);
+
+    if (upperCandidates.length > 0) {
+      generatedDays.push({
+        id: 'day-1',
+        planId: '',
+        dayNumber: 1,
+        name: 'Upper Body Power',
+        targetMuscleGroups: ['Chest', 'Back', 'Shoulders'],
+        scheduledDaysOfWeek: [1, 4], // Mon, Thu
+        exercises: upperCandidates.map((item, idx) =>
+          createDayExercise(item.ex, idx + 1, item.sets, item.rMin, item.rMax, item.rest, item.core)
+        ),
+      });
+    }
 
     // Lower Day
-    const legEx = findExercise(availableExercises, 'Legs', equipment, limitations) || availableExercises[0];
-    const coreEx = findExercise(availableExercises, 'Core', equipment, limitations) || availableExercises[1];
+    const legEx = getCandidate('Legs');
+    const coreEx = getCandidate('Core');
 
-    generatedDays.push({
-      id: 'day-2',
-      planId: '',
-      dayNumber: 2,
-      name: 'Lower Body & Core',
-      targetMuscleGroups: ['Legs', 'Core'],
-      scheduledDaysOfWeek: [2, 5], // Tue, Fri
-      exercises: [
-        createDayExercise(legEx, 1, 4, 8, 12, 120, true),
-        createDayExercise(coreEx, 2, 3, 12, 15, 60, false),
-      ],
-    });
+    const lowerCandidates = [
+      legEx ? { ex: legEx, sets: 4, rMin: 8, rMax: 12, rest: 120, core: true } : null,
+      coreEx ? { ex: coreEx, sets: 2, rMin: 12, rMax: 15, rest: 60, core: false } : null,
+    ].filter((item): item is NonNullable<typeof item> => item !== null);
+
+    if (lowerCandidates.length > 0) {
+      generatedDays.push({
+        id: 'day-2',
+        planId: '',
+        dayNumber: 2,
+        name: 'Lower Body & Core',
+        targetMuscleGroups: ['Legs', 'Core'],
+        scheduledDaysOfWeek: [2, 5], // Tue, Fri
+        exercises: lowerCandidates.map((item, idx) =>
+          createDayExercise(item.ex, idx + 1, item.sets, item.rMin, item.rMax, item.rest, item.core)
+        ),
+      });
+    }
   } else {
     // Full Body Day
-    const chestEx = findExercise(availableExercises, 'Chest', equipment, limitations) || availableExercises[0];
-    const backEx = findExercise(availableExercises, 'Back', equipment, limitations) || availableExercises[1];
-    const legEx = findExercise(availableExercises, 'Legs', equipment, limitations) || availableExercises[2];
-    const coreEx = findExercise(availableExercises, 'Core', equipment, limitations) || availableExercises[0];
+    const chestEx = getCandidate('Chest');
+    const backEx = getCandidate('Back');
+    const legEx = getCandidate('Legs');
+    const coreEx = getCandidate('Core');
 
-    generatedDays.push({
-      id: 'day-1',
-      planId: '',
-      dayNumber: 1,
-      name: 'Full Body Foundational',
-      targetMuscleGroups: ['Chest', 'Back', 'Legs', 'Core'],
-      scheduledDaysOfWeek: [1, 3, 5], // Mon, Wed, Fri
-      exercises: [
-        createDayExercise(legEx, 1, 3, 8, 10, 120, true),
-        createDayExercise(chestEx, 2, 3, 8, 10, 90, true),
-        createDayExercise(backEx, 3, 3, 8, 10, 90, true),
-        createDayExercise(coreEx, 4, 2, 12, 15, 60, false),
-      ],
+    const fullBodyCandidates = [
+      legEx ? { ex: legEx, sets: 3, rMin: 8, rMax: 10, rest: 120, core: true } : null,
+      chestEx ? { ex: chestEx, sets: 3, rMin: 8, rMax: 10, rest: 90, core: true } : null,
+      backEx ? { ex: backEx, sets: 3, rMin: 8, rMax: 10, rest: 90, core: true } : null,
+      coreEx ? { ex: coreEx, sets: 2, rMin: 12, rMax: 15, rest: 60, core: false } : null,
+    ].filter((item): item is NonNullable<typeof item> => item !== null);
+
+    if (fullBodyCandidates.length > 0) {
+      generatedDays.push({
+        id: 'day-1',
+        planId: '',
+        dayNumber: 1,
+        name: 'Full Body Foundational',
+        targetMuscleGroups: ['Chest', 'Back', 'Legs', 'Core'],
+        scheduledDaysOfWeek: [1, 3, 5], // Mon, Wed, Fri
+        exercises: fullBodyCandidates.map((item, idx) =>
+          createDayExercise(item.ex, idx + 1, item.sets, item.rMin, item.rMax, item.rest, item.core)
+        ),
+      });
+    }
+  }
+
+  if (generatedDays.length === 0) {
+    logger.warn('WorkoutGenerator: Insufficient exercise coverage for requested environment', {
+      workoutEnvironment,
+      equipment,
     });
   }
 
-  return {
+  const preliminaryPlan: GeneratedPlan = {
     name: planName,
     splitType,
     description: `${description} Optimized for ${goal.replace('_', ' ')}.`,
     days: generatedDays,
+  };
+
+  // FINAL PLAN VALIDATION LAYER (Phase C8 Mandatory Correctness Gate)
+  const validation = validateWorkoutPlan(
+    preliminaryPlan,
+    workoutEnvironment,
+    equipment,
+    limitations,
+    availableExercises
+  );
+
+  if (!validation.isValid) {
+    logger.warn('WorkoutGenerator: Generated plan failed final validation', {
+      errors: validation.errors,
+      workoutEnvironment,
+      equipment,
+    });
+    return {
+      ...preliminaryPlan,
+      isValid: false,
+      validationStatus: 'failed',
+      validationErrors: validation.errors,
+      days: validation.validatedPlan?.days || [],
+    };
+  }
+
+  return {
+    ...validation.validatedPlan,
+    isValid: true,
+    validationStatus: 'passed',
+    validationErrors: [],
   };
 }
