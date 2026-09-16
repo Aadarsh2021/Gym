@@ -98,6 +98,19 @@ export class ProfileRepository {
 
       if (error || !data) return null;
 
+      let customLat: number | null = null;
+      let customLng: number | null = null;
+      let customRadius: number = 200;
+      const storedLoc = platform.storage.getItem(`user_custom_gym_location_${userId}`);
+      if (storedLoc && typeof storedLoc === 'string') {
+        try {
+          const parsedLoc = JSON.parse(storedLoc);
+          customLat = parsedLoc.latitude ?? null;
+          customLng = parsedLoc.longitude ?? null;
+          customRadius = parsedLoc.radiusMeters ?? 200;
+        } catch { /* ignore */ }
+      }
+
       return {
         id: data.id,
         userId: data.user_id,
@@ -112,9 +125,9 @@ export class ProfileRepository {
         equipment: data.equipment || [],
         dietaryPreference: data.dietary_preference,
         limitations: data.limitations || [],
-        gymLatitude: data.gym_latitude ? Number(data.gym_latitude) : null,
-        gymLongitude: data.gym_longitude ? Number(data.gym_longitude) : null,
-        gymRadiusMeters: data.gym_radius_meters ? Number(data.gym_radius_meters) : 200,
+        gymLatitude: customLat,
+        gymLongitude: customLng,
+        gymRadiusMeters: customRadius,
       };
     } catch (err) {
       logger.error('ProfileRepository: Error fetching fitness profile', { err });
@@ -145,9 +158,6 @@ export class ProfileRepository {
             equipment: profile.equipment,
             dietary_preference: profile.dietaryPreference,
             limitations: profile.limitations,
-            gym_latitude: profile.gymLatitude,
-            gym_longitude: profile.gymLongitude,
-            gym_radius_meters: profile.gymRadiusMeters ?? 200,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'user_id' }
@@ -156,6 +166,18 @@ export class ProfileRepository {
       if (error) {
         logger.error('ProfileRepository: Error saving fitness profile', { error });
         return { success: false, error: error.message };
+      }
+
+      // Save custom gym location to platform storage if provided
+      if (profile.gymLatitude && profile.gymLongitude) {
+        platform.storage.setItem(
+          `user_custom_gym_location_${profile.userId}`,
+          JSON.stringify({
+            latitude: profile.gymLatitude,
+            longitude: profile.gymLongitude,
+            radiusMeters: profile.gymRadiusMeters ?? 200,
+          })
+        );
       }
 
       return { success: true };

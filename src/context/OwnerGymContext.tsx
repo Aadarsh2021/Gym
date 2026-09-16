@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { Gym } from '@/types/gym.types';
 import { gymRepository } from '@/repositories/gym.repository';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,7 +36,7 @@ export interface OwnerGymContextValue {
   updateGym: (gymId: string, updates: Partial<Gym>) => Promise<{ success: boolean; gym?: Gym; error?: string }>;
 }
 
-const OwnerGymContext = createContext<OwnerGymContextValue | undefined>(undefined);
+export const OwnerGymContext = createContext<OwnerGymContextValue | undefined>(undefined);
 
 export const OwnerGymProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { session } = useAuth();
@@ -188,12 +188,4 @@ export const OwnerGymProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       {children}
     </OwnerGymContext.Provider>
   );
-};
-
-export const useOwnerGym = (): OwnerGymContextValue => {
-  const context = useContext(OwnerGymContext);
-  if (!context) {
-    throw new Error('useOwnerGym must be used within an OwnerGymProvider');
-  }
-  return context;
 };

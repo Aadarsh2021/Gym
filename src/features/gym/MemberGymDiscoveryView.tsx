@@ -22,7 +22,7 @@ import { Link } from 'react-router-dom';
 import { gymRepository } from '@/repositories/gym.repository';
 import { Gym, GymMembership, GymMembershipStatus } from '@/types/gym.types';
 import { useAuth } from '@/hooks/useAuth';
-import { useMemberGymContext } from '@/context/MemberGymContext';
+import { useMemberGymContext } from '@/hooks/useMemberGymContext';
 import { logger } from '@/lib/logger';
 
 export const MemberGymDiscoveryView: React.FC = () => {

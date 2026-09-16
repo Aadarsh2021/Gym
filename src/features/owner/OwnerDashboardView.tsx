@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useOwnerGym } from '@/context/OwnerGymContext';
+import { useOwnerGym } from '@/hooks/useOwnerGym';
 import { gymRepository } from '@/repositories/gym.repository';
 import { GymAttendanceSession } from '@/types/gym.types';
 import {

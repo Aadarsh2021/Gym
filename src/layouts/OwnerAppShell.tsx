@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
-import { useOwnerGym } from '@/context/OwnerGymContext';
+import { useOwnerGym } from '@/hooks/useOwnerGym';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
 export const OwnerAppShell: React.FC = () => {

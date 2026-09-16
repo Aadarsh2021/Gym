@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { FitnessProfile, UserProfile } from '@/types/user.types';
 import { profileRepository } from '@/repositories/profile.repository';
 import { logger } from '@/lib/logger';
+import { platform } from '@/platform';
 
 export async function ensureUserProfile(userId: string, roleSelected: boolean = false): Promise<boolean> {
   if (!isSupabaseConfigured) return true;
@@ -66,6 +67,19 @@ export const profileService = {
 
       if (error || !data) return null;
 
+      let customLat: number | null = null;
+      let customLng: number | null = null;
+      let customRadius: number = 200;
+      const storedLoc = platform.storage.getItem(`user_custom_gym_location_${userId}`);
+      if (storedLoc && typeof storedLoc === 'string') {
+        try {
+          const parsedLoc = JSON.parse(storedLoc);
+          customLat = parsedLoc.latitude ?? null;
+          customLng = parsedLoc.longitude ?? null;
+          customRadius = parsedLoc.radiusMeters ?? 200;
+        } catch { /* ignore */ }
+      }
+
       return {
         id: data.id,
         userId: data.user_id,
@@ -80,9 +94,9 @@ export const profileService = {
         equipment: data.equipment || [],
         dietaryPreference: data.dietary_preference,
         limitations: data.limitations || [],
-        gymLatitude: data.gym_latitude ? Number(data.gym_latitude) : null,
-        gymLongitude: data.gym_longitude ? Number(data.gym_longitude) : null,
-        gymRadiusMeters: data.gym_radius_meters ? Number(data.gym_radius_meters) : 200,
+        gymLatitude: customLat,
+        gymLongitude: customLng,
+        gymRadiusMeters: customRadius,
       };
     } catch (err) {
       logger.error('Error fetching fitness profile', { err });
@@ -93,7 +107,7 @@ export const profileService = {
   async saveFitnessProfile(profile: Omit<FitnessProfile, 'id'>): Promise<{ success: boolean; error?: string }> {
     if (!isSupabaseConfigured) {
       const fakeId = 'fp-' + Math.random().toString(36).substring(2, 9);
-      localStorage.setItem(`fitness_profile_${profile.userId}`, JSON.stringify({ ...profile, id: fakeId }));
+      platform.storage.setItem(`fitness_profile_${profile.userId}`, JSON.stringify({ ...profile, id: fakeId }));
       return { success: true };
     }
 
@@ -112,6 +126,7 @@ export const profileService = {
       }
 
       // 3. Upsert into fitness_profiles (Unique on user_id)
+      // Note: Only persist columns that exist on public.fitness_profiles in PostgreSQL
       const { error } = await supabase
         .from('fitness_profiles')
         .upsert({
@@ -127,15 +142,24 @@ export const profileService = {
           equipment: profile.equipment,
           dietary_preference: profile.dietaryPreference,
           limitations: profile.limitations,
-          gym_latitude: profile.gymLatitude ?? null,
-          gym_longitude: profile.gymLongitude ?? null,
-          gym_radius_meters: profile.gymRadiusMeters ?? 200,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
       if (error) {
         logger.error('Error upserting fitness profile', { error });
         return { success: false, error: error.message };
+      }
+
+      // Preserve custom personal gym location in platform storage if provided
+      if (profile.gymLatitude && profile.gymLongitude) {
+        platform.storage.setItem(
+          `user_custom_gym_location_${authenticatedUserId}`,
+          JSON.stringify({
+            latitude: profile.gymLatitude,
+            longitude: profile.gymLongitude,
+            radiusMeters: profile.gymRadiusMeters ?? 200,
+          })
+        );
       }
 
       return { success: true };
@@ -152,35 +176,19 @@ export const profileService = {
     longitude: number | null,
     radiusMeters: number = 200
   ): Promise<{ success: boolean; error?: string }> {
-    if (!isSupabaseConfigured) {
-      const stored = localStorage.getItem(`fitness_profile_${userId}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        localStorage.setItem(
-          `fitness_profile_${userId}`,
-          JSON.stringify({ ...parsed, gymLatitude: latitude, gymLongitude: longitude, gymRadiusMeters: radiusMeters })
-        );
-      }
-      return { success: true };
-    }
-
-    try {
-      const { error } = await supabase
-        .from('fitness_profiles')
-        .update({
-          gym_latitude: latitude,
-          gym_longitude: longitude,
-          gym_radius_meters: radiusMeters,
-          updated_at: new Date().toISOString(),
+    if (latitude && longitude) {
+      platform.storage.setItem(
+        `user_custom_gym_location_${userId}`,
+        JSON.stringify({
+          latitude,
+          longitude,
+          radiusMeters,
         })
-        .eq('user_id', userId);
-
-      if (error) throw error;
-      return { success: true };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to update gym location';
-      return { success: false, error: msg };
+      );
+    } else {
+      platform.storage.removeItem(`user_custom_gym_location_${userId}`);
     }
+    return { success: true };
   },
 
   async getProfile(userId: string): Promise<UserProfile | null> {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { Gym, GymMembership, MemberGymMode, MemberGymContextState } from '@/types/gym.types';
 import { gymContextService } from '@/services/gym-context.service';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,7 +16,7 @@ export interface MemberGymContextValue {
   switchActiveGym: (gymId: string) => void;
 }
 
-const MemberGymContext = createContext<MemberGymContextValue | undefined>(undefined);
+export const MemberGymContext = createContext<MemberGymContextValue | undefined>(undefined);
 
 export const MemberGymProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { session } = useAuth();
@@ -86,12 +86,4 @@ export const MemberGymProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   return <MemberGymContext.Provider value={value}>{children}</MemberGymContext.Provider>;
-};
-
-export const useMemberGymContext = (): MemberGymContextValue => {
-  const context = useContext(MemberGymContext);
-  if (!context) {
-    throw new Error('useMemberGymContext must be used within a MemberGymProvider');
-  }
-  return context;
 };

@@ -14,7 +14,7 @@ import {
   Dumbbell,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useMemberGymContext } from '@/context/MemberGymContext';
+import { useMemberGymContext } from '@/hooks/useMemberGymContext';
 import { gymCheckinService } from '@/services/gym-checkin.service';
 import { gymCheckoutService } from '@/services/gym-checkout.service';
 import { platform } from '@/platform';
@@ -377,20 +377,30 @@ export const MemberGymCheckInView: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-            <Link to="/app/workouts" className="btn btn-primary" style={{ flex: 1 }}>
-              View Workout Logs
-            </Link>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setCompletedSession(null);
-                setCompletedGym(null);
-              }}
+          <div style={{ display: 'flex', gap: 'var(--space-3)', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+              <Link to="/app/workouts" className="btn btn-primary" style={{ flex: 1 }}>
+                View Workout Logs
+              </Link>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setCompletedSession(null);
+                  setCompletedGym(null);
+                }}
+              >
+                Done
+              </button>
+            </div>
+            <Link
+              to="/app/gym/history"
+              className="btn btn-secondary"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              Done
-            </button>
+              <Clock size={16} />
+              View Attendance History
+            </Link>
           </div>
         </div>
       </div>
@@ -736,6 +746,23 @@ export const MemberGymCheckInView: React.FC = () => {
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
           Scan the FitBoost QR displayed at <strong>{activeGym.name}</strong> to start your visit.
         </p>
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <Link
+            to="/app/gym/history"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.85rem',
+              color: 'var(--accent-primary)',
+              textDecoration: 'none',
+              fontWeight: 500,
+            }}
+          >
+            <Clock size={14} />
+            <span>View Attendance History →</span>
+          </Link>
+        </div>
       </div>
 
       {/* Camera Permission / Access Error */}

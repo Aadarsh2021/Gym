@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
-import { useMemberGymContext } from '@/context/MemberGymContext';
+import { useMemberGymContext } from '@/hooks/useMemberGymContext';
 import { streakService } from '@/services/streak.service';
 import { reminderService } from '@/services/reminder.service';
 import { UserStreak } from '@/types/streak.types';

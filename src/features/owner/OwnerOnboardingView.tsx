@@ -13,7 +13,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useOwnerGym, CreateGymInput } from '@/context/OwnerGymContext';
+import { useOwnerGym } from '@/hooks/useOwnerGym';
+import { CreateGymInput } from '@/context/OwnerGymContext';
 import { platform } from '@/platform';
 import { WeeklySchedule } from '@/types/gym.types';
 

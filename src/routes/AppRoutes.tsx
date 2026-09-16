@@ -53,6 +53,7 @@ import { ProfileView } from '@/features/profile/ProfileView';
 import { StreaksRouteView } from '@/features/streaks/StreaksRouteView';
 import { MemberGymDiscoveryView } from '@/features/gym/MemberGymDiscoveryView';
 import { MemberGymCheckInView } from '@/features/gym/MemberGymCheckInView';
+import { MemberGymHistoryView } from '@/features/gym/MemberGymHistoryView';
 
 // Route Guard
 import { ProtectedRoute } from './ProtectedRoute';
@@ -182,6 +183,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="exercises" element={<ExerciseLibraryView />} />
         <Route path="gym" element={<MemberGymDiscoveryView />} />
         <Route path="gym/check-in" element={<MemberGymCheckInView />} />
+        <Route path="gym/history" element={<MemberGymHistoryView />} />
         <Route path="nutrition" element={<NutritionRouteView />} />
         <Route path="progress" element={<ProgressView />} />
         <Route path="streaks" element={<StreaksRouteView />} />

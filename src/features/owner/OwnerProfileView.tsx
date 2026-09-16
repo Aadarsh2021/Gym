@@ -16,7 +16,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useOwnerGym } from '@/context/OwnerGymContext';
+import { useOwnerGym } from '@/hooks/useOwnerGym';
 import { Link } from 'react-router-dom';
 import { WeeklySchedule } from '@/types/gym.types';
 

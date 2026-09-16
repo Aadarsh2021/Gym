@@ -786,6 +786,16 @@ export class GymRepository {
             durationSeconds,
           };
           platform.storage.removeItem(`active_attendance_${userId}`);
+
+          // Append to fallback history
+          const histRaw = platform.storage.getItem(`attendance_history_${userId}`);
+          let histList: any[] = [];
+          if (histRaw && typeof histRaw === 'string') {
+            try { histList = JSON.parse(histRaw); } catch { histList = []; }
+          }
+          histList.unshift(completed);
+          platform.storage.setItem(`attendance_history_${userId}`, JSON.stringify(histList));
+
           return { success: true, session: completed };
         } catch { /* ignore */ }
       }
@@ -906,6 +916,350 @@ export class GymRepository {
     } catch (err) {
       logger.error('GymRepository: Error fetching active gym attendance', { err });
       return [];
+    }
+  }
+
+  // ── 4. Completed Attendance History, Visit Details & Summary (Phase C6) ─────
+
+  /**
+   * Fetches paginated completed gym attendance history for the authenticated user, newest first.
+   * Joins gyms table to resolve authoritative facility name and location.
+   */
+  async getAttendanceHistory(
+    userId: string,
+    options: { limit?: number; offset?: number } = {}
+  ): Promise<{ sessions: (GymAttendanceSession & { gym?: Gym })[]; hasMore: boolean }> {
+    const limit = Math.max(1, Math.min(options.limit || 20, 100));
+    const offset = Math.max(0, options.offset || 0);
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const stored = platform.storage.getItem(`attendance_history_${userId}`);
+      let list: (GymAttendanceSession & { gym?: Gym })[] = [];
+      if (stored && typeof stored === 'string') {
+        try {
+          list = JSON.parse(stored);
+        } catch {
+          list = [];
+        }
+      }
+      const completedOnly = list.filter(s => s.status === 'completed');
+      completedOnly.sort(
+        (a, b) =>
+          new Date(b.checkOutAt || b.checkInAt).getTime() -
+          new Date(a.checkOutAt || a.checkInAt).getTime()
+      );
+      const sliced = completedOnly.slice(offset, offset + limit);
+      const hasMore = offset + limit < completedOnly.length;
+      return { sessions: sliced, hasMore };
+    }
+
+    try {
+      // Fetch limit + 1 to reliably determine hasMore without an extra count query
+      const { data, error } = await supabase
+        .from('gym_attendance_sessions')
+        .select(`
+          id,
+          gym_id,
+          user_id,
+          check_in_at,
+          check_out_at,
+          duration_seconds,
+          verification_method,
+          checkout_method,
+          status,
+          created_at,
+          gyms (
+            id,
+            name,
+            slug,
+            owner_id,
+            address,
+            city,
+            state,
+            pincode,
+            contact_number,
+            email,
+            latitude,
+            longitude,
+            radius_meters,
+            qr_code_hash
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .order('check_out_at', { ascending: false })
+        .range(offset, offset + limit);
+
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching attendance history', { error });
+        return { sessions: [], hasMore: false };
+      }
+
+      const hasMore = data.length > limit;
+      const rows = hasMore ? data.slice(0, limit) : data;
+
+      const mapped: (GymAttendanceSession & { gym?: Gym })[] = rows.map((row: any) => ({
+        id: row.id,
+        gymId: row.gym_id,
+        userId: row.user_id,
+        checkInAt: row.check_in_at,
+        checkOutAt: row.check_out_at,
+        durationSeconds: row.duration_seconds,
+        verificationMethod: row.verification_method,
+        checkoutMethod: row.checkout_method,
+        status: row.status,
+        createdAt: row.created_at,
+        gym: row.gyms
+          ? {
+              id: row.gyms.id,
+              name: row.gyms.name,
+              slug: row.gyms.slug,
+              ownerId: row.gyms.owner_id,
+              address: row.gyms.address,
+              city: row.gyms.city,
+              state: row.gyms.state || undefined,
+              pincode: row.gyms.pincode || undefined,
+              contactNumber: row.gyms.contact_number || undefined,
+              email: row.gyms.email || undefined,
+              latitude: Number(row.gyms.latitude),
+              longitude: Number(row.gyms.longitude),
+              radiusMeters: row.gyms.radius_meters || 200,
+              qrCodeHash: row.gyms.qr_code_hash,
+            }
+          : undefined,
+      }));
+
+      return { sessions: mapped, hasMore };
+    } catch (err) {
+      logger.error('GymRepository: Unexpected error in getAttendanceHistory', { err });
+      return { sessions: [], hasMore: false };
+    }
+  }
+
+  /**
+   * Fetches an authoritative single completed attendance session with full facility metadata.
+   * Strictly enforces that the session belongs to the requesting user.
+   */
+  async getAttendanceSessionById(
+    sessionId: string,
+    userId: string
+  ): Promise<(GymAttendanceSession & { gym?: Gym }) | null> {
+    if (!sessionId || !userId) return null;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId) || !UUID_REGEX.test(sessionId)) {
+      const stored = platform.storage.getItem(`attendance_history_${userId}`);
+      if (stored && typeof stored === 'string') {
+        try {
+          const list: (GymAttendanceSession & { gym?: Gym })[] = JSON.parse(stored);
+          const found = list.find(s => s.id === sessionId && s.userId === userId);
+          if (found) return found;
+        } catch { /* ignore */ }
+      }
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_attendance_sessions')
+        .select(`
+          id,
+          gym_id,
+          user_id,
+          check_in_at,
+          check_out_at,
+          duration_seconds,
+          verification_method,
+          checkout_method,
+          status,
+          created_at,
+          gyms (
+            id,
+            name,
+            slug,
+            owner_id,
+            address,
+            city,
+            state,
+            pincode,
+            contact_number,
+            email,
+            description,
+            opening_time,
+            closing_time,
+            latitude,
+            longitude,
+            radius_meters,
+            qr_code_hash
+          )
+        `)
+        .eq('id', sessionId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error || !data) {
+        return null;
+      }
+
+      const gymRaw = Array.isArray(data.gyms) ? (data.gyms as any[])[0] : (data.gyms as any);
+
+      return {
+        id: data.id,
+        gymId: data.gym_id,
+        userId: data.user_id,
+        checkInAt: data.check_in_at,
+        checkOutAt: data.check_out_at,
+        durationSeconds: data.duration_seconds,
+        verificationMethod: data.verification_method,
+        checkoutMethod: data.checkout_method,
+        status: data.status,
+        createdAt: data.created_at,
+        gym: gymRaw
+          ? {
+              id: gymRaw.id,
+              name: gymRaw.name,
+              slug: gymRaw.slug,
+              ownerId: gymRaw.owner_id,
+              address: gymRaw.address,
+              city: gymRaw.city,
+              state: gymRaw.state || undefined,
+              pincode: gymRaw.pincode || undefined,
+              contactNumber: gymRaw.contact_number || undefined,
+              email: gymRaw.email || undefined,
+              description: gymRaw.description || undefined,
+              openingTime: gymRaw.opening_time || undefined,
+              closingTime: gymRaw.closing_time || undefined,
+              latitude: Number(gymRaw.latitude),
+              longitude: Number(gymRaw.longitude),
+              radiusMeters: gymRaw.radius_meters || 200,
+              qrCodeHash: gymRaw.qr_code_hash,
+            }
+          : undefined,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Computes authoritative attendance summary statistics:
+   * total completed visits, total duration, average duration, and visits during the current month.
+   * Only returns the aggregated metrics to avoid transporting unbounded tables to the client.
+   */
+  async getAttendanceSummary(
+    userId: string,
+    monthRange: { startIso: string; endIso: string }
+  ): Promise<{
+    totalVisits: number;
+    totalDurationSeconds: number;
+    averageDurationSeconds: number;
+    currentMonthVisits: number;
+  }> {
+    const emptySummary = {
+      totalVisits: 0,
+      totalDurationSeconds: 0,
+      averageDurationSeconds: 0,
+      currentMonthVisits: 0,
+    };
+
+    if (!userId || userId === 'guest-user') return emptySummary;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const stored = platform.storage.getItem(`attendance_history_${userId}`);
+      if (!stored || typeof stored !== 'string') return emptySummary;
+      try {
+        const list: GymAttendanceSession[] = JSON.parse(stored);
+        const completed = list.filter(s => s.status === 'completed');
+        if (completed.length === 0) return emptySummary;
+
+        const totalVisits = completed.length;
+        const totalDurationSeconds = completed.reduce(
+          (acc, s) => acc + (s.durationSeconds || 0),
+          0
+        );
+        const averageDurationSeconds = Math.round(totalDurationSeconds / totalVisits);
+
+        const startMs = new Date(monthRange.startIso).getTime();
+        const endMs = new Date(monthRange.endIso).getTime();
+        const currentMonthVisits = completed.filter(s => {
+          const t = new Date(s.checkInAt).getTime();
+          return t >= startMs && t < endMs;
+        }).length;
+
+        return {
+          totalVisits,
+          totalDurationSeconds,
+          averageDurationSeconds,
+          currentMonthVisits,
+        };
+      } catch {
+        return emptySummary;
+      }
+    }
+
+    try {
+      // 1. Prefer database RPC for direct PostgreSQL aggregation
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_member_attendance_summary', {
+          p_user_id: userId,
+          p_month_start: monthRange.startIso,
+          p_month_end: monthRange.endIso,
+        });
+
+      if (!rpcError && rpcData) {
+        return {
+          totalVisits: Number(rpcData.totalVisits || 0),
+          totalDurationSeconds: Number(rpcData.totalDurationSeconds || 0),
+          averageDurationSeconds: Number(rpcData.avgDurationSeconds || 0),
+          currentMonthVisits: Number(rpcData.currentMonthVisits || 0),
+        };
+      }
+
+      // 2. Fallback: minimal database aggregation query without transporting session records
+      // Query selects only duration_seconds column of completed sessions
+      const { data: allData, error: allError } = await supabase
+        .from('gym_attendance_sessions')
+        .select('duration_seconds')
+        .eq('user_id', userId)
+        .eq('status', 'completed');
+
+      if (allError || !allData) {
+        logger.error('GymRepository: Error fetching lifetime attendance summary', { allError });
+        return emptySummary;
+      }
+
+      const totalVisits = allData.length;
+      if (totalVisits === 0) {
+        return emptySummary;
+      }
+
+      const totalDurationSeconds = allData.reduce(
+        (sum, row) => sum + (row.duration_seconds || 0),
+        0
+      );
+      const averageDurationSeconds = Math.round(totalDurationSeconds / totalVisits);
+
+      // 2. Fetch current month completed visits count using index boundary
+      const { count: monthCount, error: monthError } = await supabase
+        .from('gym_attendance_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .gte('check_in_at', monthRange.startIso)
+        .lt('check_in_at', monthRange.endIso);
+
+      if (monthError) {
+        logger.error('GymRepository: Error fetching month attendance count', { monthError });
+      }
+
+      return {
+        totalVisits,
+        totalDurationSeconds,
+        averageDurationSeconds,
+        currentMonthVisits: monthCount || 0,
+      };
+    } catch (err) {
+      logger.error('GymRepository: Unexpected error in getAttendanceSummary', { err });
+      return emptySummary;
     }
   }
 
