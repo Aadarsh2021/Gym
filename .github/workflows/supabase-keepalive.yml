@@ -1,0 +1,28 @@
+name: Supabase Keep-Alive
+
+# Runs every 5 days to prevent Supabase free-tier auto-pause (pauses after 7 days inactivity)
+on:
+  schedule:
+    - cron: '0 6 */5 * *'   # Every 5 days at 06:00 UTC
+  workflow_dispatch:          # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  keepalive:
+    name: Ping Supabase Database
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          echo "Pinging Supabase to prevent free-tier pause..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.VITE_SUPABASE_URL }}/rest/v1/exercises?select=id&limit=1&is_system=eq.true" \
+            -H "apikey: ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}")
+          echo "Supabase response status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "206" ]; then
+            echo "✅ Supabase is alive and responding."
+          else
+            echo "❌ Unexpected status code: $HTTP_STATUS"
+            exit 1
+          fi
