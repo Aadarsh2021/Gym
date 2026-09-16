@@ -16,7 +16,9 @@ import {
   AlertCircle,
   ShieldCheck,
   RefreshCw,
+  QrCode,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { gymRepository } from '@/repositories/gym.repository';
 import { Gym, GymMembership, GymMembershipStatus } from '@/types/gym.types';
 import { useAuth } from '@/hooks/useAuth';
@@ -222,9 +224,64 @@ export const MemberGymDiscoveryView: React.FC = () => {
         <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 'var(--space-2)' }}>
           Find Your Gym
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '640px' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '640px', marginBottom: 'var(--space-4)' }}>
           Connect your account to a FitBoost-integrated training center to unlock digital QR attendance, verified gym workouts, and facility access.
         </p>
+
+        {/* Integrated Gym Status & Quick Check-In CTA */}
+        {memberGymCtx?.mode === 'integrated' && memberGymCtx.activeGym && (
+          <div
+            className="card card-elevated"
+            style={{
+              padding: 'var(--space-4) var(--space-5)',
+              borderRadius: 'var(--radius-lg)',
+              background: 'rgba(34, 197, 94, 0.08)',
+              border: '1px solid rgba(34, 197, 94, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 'var(--space-3)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  color: 'var(--color-success)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Building2 size={20} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 800, fontSize: '1rem' }}>{memberGymCtx.activeGym.name}</span>
+                  <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.18)', color: 'var(--color-success)', fontSize: '0.72rem' }}>
+                    Active Integrated Gym
+                  </span>
+                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                  {memberGymCtx.activeGym.address}, {memberGymCtx.activeGym.city}
+                </div>
+              </div>
+            </div>
+
+            <Link
+              to="/app/gym/check-in"
+              className="btn btn-primary btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <QrCode size={15} />
+              <span>Scan QR to Check In</span>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Search & Filter Bar */}

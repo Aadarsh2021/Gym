@@ -90,6 +90,32 @@ export class GymRepository {
     });
   }
 
+  private mapGymRow(data: any): Gym {
+    return {
+      id: data.id,
+      name: data.name,
+      slug: data.slug,
+      ownerId: data.owner_id,
+      address: data.address,
+      city: data.city,
+      state: data.state || undefined,
+      pincode: data.pincode || undefined,
+      contactNumber: data.contact_number || undefined,
+      email: data.email || undefined,
+      description: data.description || undefined,
+      openingTime: data.opening_time || undefined,
+      closingTime: data.closing_time || undefined,
+      weeklySchedule: data.weekly_schedule || undefined,
+      latitude: Number(data.latitude),
+      longitude: Number(data.longitude),
+      radiusMeters: data.radius_meters || 200,
+      qrCodeHash: data.qr_code_hash,
+      logoUrl: data.logo_url || undefined,
+      coverImageUrl: data.cover_image_url || undefined,
+      createdAt: data.created_at,
+    };
+  }
+
   async fetchGymById(gymId: string): Promise<Gym | null> {
     if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
       const stored = platform.storage.getItem('cached_all_gyms');
@@ -110,29 +136,49 @@ export class GymRepository {
         .maybeSingle();
 
       if (error || !data) return null;
+      return this.mapGymRow(data);
+    } catch {
+      return null;
+    }
+  }
 
-      return {
-        id: data.id,
-        name: data.name,
-        slug: data.slug,
-        ownerId: data.owner_id,
-        address: data.address,
-        city: data.city,
-        state: data.state || undefined,
-        pincode: data.pincode || undefined,
-        contactNumber: data.contact_number || undefined,
-        email: data.email || undefined,
-        description: data.description || undefined,
-        openingTime: data.opening_time || undefined,
-        closingTime: data.closing_time || undefined,
-        latitude: Number(data.latitude),
-        longitude: Number(data.longitude),
-        radiusMeters: data.radius_meters || 200,
-        qrCodeHash: data.qr_code_hash,
-        logoUrl: data.logo_url || undefined,
-        coverImageUrl: data.cover_image_url || undefined,
-        createdAt: data.created_at,
-      };
+  async resolveGymByQr(qrCodeHash: string): Promise<Gym | null> {
+    if (!qrCodeHash || typeof qrCodeHash !== 'string') return null;
+    const cleanHash = qrCodeHash.trim();
+    if (!cleanHash) return null;
+
+    if (!isSupabaseConfigured) {
+      const stored = platform.storage.getItem('cached_all_gyms');
+      if (stored && typeof stored === 'string') {
+        try {
+          const list: Gym[] = JSON.parse(stored);
+          const match = list.find(g => g.qrCodeHash === cleanHash);
+          if (match) return match;
+        } catch { /* ignore */ }
+      }
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gyms')
+        .select('*')
+        .eq('qr_code_hash', cleanHash)
+        .maybeSingle();
+
+      if (error || !data) {
+        const stored = platform.storage.getItem('cached_all_gyms');
+        if (stored && typeof stored === 'string') {
+          try {
+            const list: Gym[] = JSON.parse(stored);
+            const match = list.find(g => g.qrCodeHash === cleanHash);
+            if (match) return match;
+          } catch { /* ignore */ }
+        }
+        return null;
+      }
+
+      return this.mapGymRow(data);
     } catch {
       return null;
     }
@@ -756,12 +802,46 @@ export class GymRepository {
         })
         .eq('id', sessionId)
         .eq('user_id', userId)
+        .eq('status', 'active')
         .select('*')
-        .single();
+        .maybeSingle();
 
-      if (error || !data) {
+      if (error) {
         logger.error('GymRepository: Error checking out attendance session', { error });
-        return { success: false, error: error?.message || 'Checkout failed' };
+        return { success: false, error: error.message || 'Checkout failed' };
+      }
+
+      if (!data) {
+        // Concurrency / Idempotency handling:
+        // If the session was already transitioned to completed by a concurrent or prior request,
+        // retrieve the session to return a deterministic completed result instead of failing.
+        const { data: existingSession } = await supabase
+          .from('gym_attendance_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (existingSession && existingSession.status === 'completed') {
+          platform.storage.removeItem(`active_attendance_${userId}`);
+          return {
+            success: true,
+            session: {
+              id: existingSession.id,
+              gymId: existingSession.gym_id,
+              userId: existingSession.user_id,
+              checkInAt: existingSession.check_in_at,
+              checkOutAt: existingSession.check_out_at,
+              durationSeconds: existingSession.duration_seconds,
+              verificationMethod: existingSession.verification_method,
+              checkoutMethod: existingSession.checkout_method,
+              status: existingSession.status,
+              createdAt: existingSession.created_at,
+            },
+          };
+        }
+
+        return { success: false, error: 'No active attendance session found to check out' };
       }
 
       platform.storage.removeItem(`active_attendance_${userId}`);
