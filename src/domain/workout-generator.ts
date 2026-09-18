@@ -6,7 +6,7 @@
 
 import { Exercise, WorkoutPlanDay, WorkoutPlanExercise } from '@/types/workout.types';
 import { ExperienceLevel, FitnessGoal, WorkoutEnvironment } from '@/types/user.types';
-import { isExerciseCompatible, validateWorkoutPlan } from './exercise-compatibility';
+import { isExerciseCompatible, isExerciseLimitationSafe, validateWorkoutPlan } from './exercise-compatibility';
 import { logger } from '@/lib/logger';
 
 export interface GenerationInputs {
@@ -116,7 +116,7 @@ export function findExercise(
           const alternativeCandidate =
             matching.find(c => c.name.toLowerCase() === altName.toLowerCase()) ||
             compatible.find(c => c.name.toLowerCase() === altName.toLowerCase());
-          if (alternativeCandidate) {
+          if (alternativeCandidate && isExerciseLimitationSafe(alternativeCandidate, limitations)) {
             return alternativeCandidate;
           }
         }
@@ -124,7 +124,14 @@ export function findExercise(
     }
   }
 
-  return matching[0];
+  // 4. Return the first matching candidate that is safe for user's limitations
+  const safeMatching = matching.filter(ex => isExerciseLimitationSafe(ex, limitations));
+  if (safeMatching.length > 0) {
+    return safeMatching[0];
+  }
+
+  // If no safe exercise exists for this primary muscle, return undefined so caller doesn't assign an unsafe exercise
+  return undefined;
 }
 
 export function generateWorkoutPlan(inputs: GenerationInputs): GeneratedPlan {
