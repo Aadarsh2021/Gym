@@ -2,23 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { workoutService } from '@/services/workout.service';
+import { profileService } from '@/services/profile.service';
 import { WorkoutSession, WorkoutPlanDay } from '@/types/workout.types';
-import { loadActiveSessionDraft, clearActiveSessionDraft } from '@/utils/storage';
+import {
+  loadActiveSessionDraft,
+  saveActiveSessionDraft,
+  clearActiveSessionDraft,
+  isSessionDraftStale,
+} from '@/utils/storage';
 import { getTodaysScheduledWorkout } from '@/domain/scheduled-workout';
+import { compressWorkoutForDuration, normalizeTimeMode } from '@/domain/quick-workout';
 import { WorkoutTrackerView } from './WorkoutTrackerView';
-import { Dumbbell, Zap } from 'lucide-react';
+import { Dumbbell, Zap, AlertTriangle } from 'lucide-react';
 
 export const ActiveWorkoutRouteView: React.FC = () => {
-  const { session } = useAuth();
-  const userId = session.user?.id || 'guest-user';
+  const { session: authSession } = useAuth();
+  const userId = authSession.user?.id || 'guest-user';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedDayId = searchParams.get('dayId');
+  const durationParam = searchParams.get('duration');
+  const isQuickMode = searchParams.get('mode') === 'quick' || Boolean(durationParam);
 
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [timeModeError, setTimeModeError] = useState<string | null>(null);
+  const [staleNotice, setStaleNotice] = useState<string | null>(null);
+
   const [showCountdown, setShowCountdown] = useState<boolean>(() => {
-    const draft = loadActiveSessionDraft();
+    const draft = loadActiveSessionDraft(userId);
     return !(draft && draft.status === 'in_progress');
   });
   const [countdownSeconds, setCountdownSeconds] = useState<number>(5);
@@ -37,22 +49,68 @@ export const ActiveWorkoutRouteView: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
-    const initializeSession = async () => {
-      // 1. Check for existing in-progress local session draft
-      const draft = loadActiveSessionDraft();
-      if (draft && draft.status === 'in_progress') {
-        if (isMounted) {
-          setActiveSession(draft);
-          setLoading(false);
-        }
-        return;
-      }
 
-      // 2. Otherwise initialize new session from active plan
+    const initializeSession = async () => {
       try {
-        const [plan, recentHistory] = await Promise.all([
+        // ---------------------------------------------------------------------
+        // 1. TWO-TIER SMART RESUME RESOLUTION
+        // ---------------------------------------------------------------------
+        // Tier 1: Local storage draft (user-scoped)
+        const localDraft = loadActiveSessionDraft(userId);
+
+        // Tier 2: Remote Supabase in-progress session
+        let remoteSession: WorkoutSession | null = null;
+        try {
+          remoteSession = await workoutService.getActiveSession(userId);
+        } catch {
+          // If remote fails, localDraft remains authoritative
+        }
+
+        // Check for staleness (> 12 hours)
+        let hasStaleDiscarded = false;
+        if (remoteSession && isSessionDraftStale(undefined, remoteSession.startedAt)) {
+          await workoutService.cancelActiveSession(remoteSession.id, userId);
+          remoteSession = null;
+          hasStaleDiscarded = true;
+        }
+
+        if (localDraft && isSessionDraftStale(undefined, localDraft.startedAt)) {
+          clearActiveSessionDraft(userId);
+          hasStaleDiscarded = true;
+        }
+
+        if (hasStaleDiscarded && isMounted) {
+          setStaleNotice('A previous session older than 12 hours was archived. Ready for a fresh workout!');
+        }
+
+        // Reconcile valid in-progress session
+        let resolvedSession: WorkoutSession | null = null;
+        if (localDraft && localDraft.status === 'in_progress' && remoteSession && remoteSession.status === 'in_progress') {
+          // If both exist, local draft has in-flight timer and set inputs
+          resolvedSession = localDraft;
+        } else if (localDraft && localDraft.status === 'in_progress') {
+          resolvedSession = localDraft;
+        } else if (remoteSession && remoteSession.status === 'in_progress') {
+          resolvedSession = remoteSession;
+          saveActiveSessionDraft(remoteSession, userId);
+        }
+
+        if (resolvedSession) {
+          if (isMounted) {
+            setActiveSession(resolvedSession);
+            setShowCountdown(false); // Do not block resumption with countdown
+            setLoading(false);
+          }
+          return;
+        }
+
+        // ---------------------------------------------------------------------
+        // 2. INITIALIZE NEW WORKOUT SESSION FROM ACTIVE PLAN
+        // ---------------------------------------------------------------------
+        const [plan, recentHistory, fitnessProfile] = await Promise.all([
           workoutService.getActivePlan(userId),
           workoutService.getWorkoutHistory(userId, 5),
+          profileService.getFitnessProfile(userId).catch(() => null),
         ]);
 
         if (!plan || !plan.days || plan.days.length === 0) {
@@ -75,39 +133,76 @@ export const ActiveWorkoutRouteView: React.FC = () => {
           targetDay = scheduleResult.scheduledDay || plan.days[0];
         }
 
+        // Apply Workout Time Mode compression
+        const targetDuration = durationParam
+          ? parseInt(durationParam, 10)
+          : searchParams.get('mode') === 'quick'
+          ? 20
+          : 60;
+
+        const timeModeResult = compressWorkoutForDuration(targetDay, targetDuration, {
+          workoutEnvironment: fitnessProfile?.workoutEnvironment,
+          availableEquipment: fitnessProfile?.equipment,
+          limitations: fitnessProfile?.limitations,
+        });
+
+        // CORRECTION 1: Zero valid exercises -> return safe error state without arbitrary fallback
+        if (!timeModeResult.success || timeModeResult.planDay.exercises.length === 0) {
+          if (isMounted) {
+            setTimeModeError(
+              timeModeResult.error ||
+                'No compatible exercises found matching your environment and physical safety profile. Please update your equipment in profile or select another routine.'
+            );
+            setLoading(false);
+          }
+          return;
+        }
+
+        const scheduledDay = timeModeResult.planDay;
         const isGymVerified = searchParams.get('gymVerified') === '1';
 
+        // Mint persistent UUIDs upfront
+        const newSessionId = crypto.randomUUID();
         const newSession: WorkoutSession = {
-          id: `session-${Date.now()}`,
+          id: newSessionId,
           userId,
           planId: plan.id,
-          name: targetDay.name,
+          name: scheduledDay.name,
           status: 'in_progress',
           gymVerified: isGymVerified,
           startedAt: new Date().toISOString(),
           durationSeconds: 0,
-          exercises: targetDay.exercises.map((wpe, idx) => ({
-            exerciseId: wpe.exerciseId,
-            exerciseName: wpe.exercise?.name || 'Movement',
-            primaryMuscle: wpe.exercise?.primaryMuscle || 'Target Muscle',
-            orderIndex: idx + 1,
-            targetRepsMin: wpe.targetRepsMin,
-            targetRepsMax: wpe.targetRepsMax,
-            restSeconds: wpe.restSeconds,
-            isCore: wpe.isCore,
-            sets: Array.from({ length: wpe.targetSets }, (_, sIdx) => ({
-              setIndex: sIdx + 1,
-              weightKg: 40,
-              reps: wpe.targetRepsMin,
-              completed: false,
-            })),
-          })),
+          exercises: scheduledDay.exercises.map((wpe, idx) => {
+            const sessionExerciseId = crypto.randomUUID();
+            return {
+              id: sessionExerciseId,
+              exerciseId: wpe.exerciseId,
+              exerciseName: wpe.exercise?.name || 'Movement',
+              primaryMuscle: wpe.exercise?.primaryMuscle || 'Target Muscle',
+              orderIndex: idx + 1,
+              targetRepsMin: wpe.targetRepsMin,
+              targetRepsMax: wpe.targetRepsMax,
+              restSeconds: wpe.restSeconds,
+              isCore: wpe.isCore,
+              sets: Array.from({ length: wpe.targetSets || 3 }, (_, sIdx) => ({
+                id: crypto.randomUUID(),
+                setIndex: sIdx + 1,
+                weightKg: 40,
+                reps: wpe.targetRepsMin || 10,
+                completed: false,
+              })),
+            };
+          }),
         };
+
+        // Proactively save to local storage and remote DB for resilience
+        saveActiveSessionDraft(newSession, userId);
+        workoutService.saveWorkoutSession(newSession).catch(() => {});
 
         if (isMounted) {
           setActiveSession(newSession);
         }
-      } catch {
+      } catch (err) {
         // Fallback
       } finally {
         if (isMounted) setLoading(false);
@@ -118,12 +213,35 @@ export const ActiveWorkoutRouteView: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [userId, requestedDayId]);
+  }, [userId, requestedDayId, durationParam]);
 
   if (loading) {
     return (
       <div className="container" style={{ padding: 'var(--space-12) var(--space-4)', textAlign: 'center' }}>
         <p style={{ color: 'var(--text-muted)' }}>Preparing workout tracker...</p>
+      </div>
+    );
+  }
+
+  // Safe failure state when 0 valid exercises exist (Correction 1)
+  if (timeModeError) {
+    return (
+      <div className="container animate-fade-in" style={{ padding: 'var(--space-12) var(--space-4)', maxWidth: '560px', textAlign: 'center' }}>
+        <div className="card" style={{ padding: 'var(--space-8)', borderColor: 'var(--color-error)' }}>
+          <AlertTriangle size={36} color="var(--color-error)" style={{ margin: '0 auto var(--space-3)' }} />
+          <h3>No Compatible Exercises</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-6)', fontSize: '0.94rem' }}>
+            {timeModeError}
+          </p>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
+            <Link to="/app/workouts" className="btn btn-outline">
+              Back to Routines
+            </Link>
+            <Link to="/app/profile" className="btn btn-primary">
+              Adjust Equipment Profile
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -166,9 +284,9 @@ export const ActiveWorkoutRouteView: React.FC = () => {
         }}
       >
         <div className="card" style={{ padding: 'var(--space-8)' }}>
-          {searchParams.get('mode') === 'quick' ? (
+          {isQuickMode ? (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', fontWeight: 600, marginBottom: 'var(--space-2)' }}>
-              <Zap size={14} /> Short on Time Mode (15m - Core Lifts)
+              <Zap size={14} /> Time Mode ({normalizeTimeMode(durationParam || 20)}m)
             </div>
           ) : (
             <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>
@@ -210,20 +328,38 @@ export const ActiveWorkoutRouteView: React.FC = () => {
 
   return (
     <div className="animate-fade-in">
+      {staleNotice && (
+        <div
+          style={{
+            padding: '10px 16px',
+            background: 'rgba(234, 179, 8, 0.15)',
+            borderBottom: '1px solid rgba(234, 179, 8, 0.3)',
+            color: '#eab308',
+            fontSize: '0.85rem',
+            textAlign: 'center',
+            fontWeight: 600,
+          }}
+        >
+          {staleNotice}
+        </div>
+      )}
       <WorkoutTrackerView
         session={activeSession}
-        isShortOnTime={searchParams.get('mode') === 'quick'}
+        isShortOnTime={isQuickMode}
         onFinish={() => {
-          clearActiveSessionDraft();
+          clearActiveSessionDraft(userId);
           navigate('/app');
         }}
         onViewProgress={() => {
-          clearActiveSessionDraft();
+          clearActiveSessionDraft(userId);
           navigate('/app/progress');
         }}
         onCancel={() => {
           if (confirm('Are you sure you want to cancel and exit this active workout session?')) {
-            clearActiveSessionDraft();
+            if (activeSession) {
+              workoutService.cancelActiveSession(activeSession.id, userId);
+            }
+            clearActiveSessionDraft(userId);
             navigate('/app/workouts');
           }
         }}

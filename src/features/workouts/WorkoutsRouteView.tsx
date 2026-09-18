@@ -8,11 +8,14 @@ export const WorkoutsRouteView: React.FC = () => {
 
   return (
     <WorkoutsHubView
-      onStartWorkoutWithDay={(day: WorkoutPlanDay) => {
-        navigate(`/app/workouts/active?dayId=${day.id}`);
+      onStartWorkoutWithDay={(day: WorkoutPlanDay, durationMinutes?: number) => {
+        const query = durationMinutes && durationMinutes < 60
+          ? `dayId=${day.id}&duration=${durationMinutes}`
+          : `dayId=${day.id}`;
+        navigate(`/app/workouts/active?${query}`);
       }}
       onStartQuickWorkoutWithDay={(day: WorkoutPlanDay) => {
-        navigate(`/app/workouts/active?dayId=${day.id}&mode=quick`);
+        navigate(`/app/workouts/active?dayId=${day.id}&duration=20`);
       }}
     />
   );

@@ -10,7 +10,7 @@ import { getDayScheduledDays, getTodaysScheduledWorkout } from '@/domain/schedul
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 interface WorkoutsHubViewProps {
-  onStartWorkoutWithDay: (day: WorkoutPlanDay) => void;
+  onStartWorkoutWithDay: (day: WorkoutPlanDay, durationMinutes?: number) => void;
   onStartQuickWorkoutWithDay?: (day: WorkoutPlanDay) => void;
 }
 
@@ -25,6 +25,7 @@ export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({
   const [history, setHistory] = useState<WorkoutSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [restDayLogged, setRestDayLogged] = useState(false);
+  const [selectedDurations, setSelectedDurations] = useState<Record<string, number>>({});
 
   const scheduleResult = useMemo(() => {
     if (!activePlan) return null;
@@ -200,10 +201,45 @@ export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({
                     </div>
                   </div>
 
+                  {/* Time Mode Target Duration Selector */}
+                  <div style={{ marginBottom: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                        Time Mode
+                      </span>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                        {(selectedDurations[day.id] || 60) < 60 ? `${selectedDurations[day.id]}m Express` : 'Full Routine (~60m)'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {[20, 30, 45, 60].map(mins => {
+                        const isSelected = (selectedDurations[day.id] || 60) === mins;
+                        return (
+                          <button
+                            key={mins}
+                            type="button"
+                            className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => setSelectedDurations(prev => ({ ...prev, [day.id]: mins }))}
+                            style={{
+                              flex: 1,
+                              padding: '2px 4px',
+                              fontSize: '0.74rem',
+                              height: '28px',
+                              minHeight: '28px',
+                              fontWeight: isSelected ? 700 : 500,
+                            }}
+                          >
+                            {mins === 60 ? 'Full' : `${mins}m`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
                     <button
                       className="btn btn-primary"
-                      onClick={() => onStartWorkoutWithDay(day)}
+                      onClick={() => onStartWorkoutWithDay(day, selectedDurations[day.id] || 60)}
                       style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                     >
                       <Play size={16} fill="var(--text-inverse)" /> Start {day.name}
@@ -211,11 +247,11 @@ export const WorkoutsHubView: React.FC<WorkoutsHubViewProps> = ({
                     {onStartQuickWorkoutWithDay && (
                       <button
                         className="btn btn-secondary"
-                        onClick={() => onStartQuickWorkoutWithDay(day)}
-                        title="Short on Time: 15 min core lift routine"
+                        onClick={() => onStartWorkoutWithDay(day, 20)}
+                        title="Short on Time: 20 min core lift routine"
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.82rem', padding: 'var(--space-2) var(--space-3)' }}
                       >
-                        <Zap size={14} color="#eab308" /> 15m
+                        <Zap size={14} color="#eab308" /> 20m
                       </button>
                     )}
                   </div>

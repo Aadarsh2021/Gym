@@ -138,12 +138,26 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Sync draft to local storage on every state change for reload/crash resilience
+  // Tier 1: Sync draft to local storage immediately on every state change
   useEffect(() => {
-    saveActiveSessionDraft({
-      ...session,
-      durationSeconds: elapsedSeconds,
-    });
+    saveActiveSessionDraft(
+      {
+        ...session,
+        durationSeconds: elapsedSeconds,
+      },
+      session.userId
+    );
+  }, [session, elapsedSeconds]);
+
+  // Tier 2: Debounced autosave to remote database (every 5 seconds when changes occur)
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      workoutService.saveWorkoutSession({
+        ...session,
+        durationSeconds: elapsedSeconds,
+      }).catch(() => {});
+    }, 5000);
+    return () => clearTimeout(handler);
   }, [session, elapsedSeconds]);
 
   // When rest timer reaches 0 naturally: auto-advance to next set
@@ -834,7 +848,7 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
                     justifyContent: 'space-between',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>#{exIndex + 1}</span>
                     <h2 style={{ fontSize: '1.15rem', margin: 0 }}>{exercise.exerciseName}</h2>
                     <span className="badge">{exercise.primaryMuscle}</span>
@@ -842,6 +856,23 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
                       <span className="badge badge-accent" style={{ fontSize: '0.68rem' }}>Core Lift</span>
                     ) : (
                       <span className="badge" style={{ fontSize: '0.68rem', opacity: 0.75 }}>Optional</span>
+                    )}
+                    {performanceMap[exercise.exerciseId] ? (
+                      <span
+                        className="badge badge-outline"
+                        style={{
+                          fontSize: '0.72rem',
+                          fontFamily: 'var(--font-mono)',
+                          borderColor: 'var(--accent-primary)',
+                          color: 'var(--accent-primary)',
+                        }}
+                      >
+                        Prev: {performanceMap[exercise.exerciseId].weightKg}kg × {performanceMap[exercise.exerciseId].reps}
+                      </span>
+                    ) : (
+                      <span className="badge" style={{ fontSize: '0.68rem', opacity: 0.65 }}>
+                        First time
+                      </span>
                     )}
                   </div>
 

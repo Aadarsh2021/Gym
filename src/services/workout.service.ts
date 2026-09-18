@@ -554,8 +554,30 @@ export const workoutService = {
   },
 
   /**
+   * Persists an active or completed workout session and sets.
+   */
+  async saveWorkoutSession(session: WorkoutSession): Promise<{ success: boolean; error?: string }> {
+    return workoutRepository.saveWorkoutSession(session);
+  },
+
+  /**
+   * Fetches the active in-progress session for the user from Supabase, if one exists.
+   */
+  async getActiveSession(userId: string): Promise<WorkoutSession | null> {
+    return workoutRepository.fetchActiveSession(userId);
+  },
+
+  /**
+   * Cancels a stale or abandoned in-progress session.
+   */
+  async cancelActiveSession(sessionId: string, userId: string): Promise<void> {
+    return workoutRepository.cancelActiveSession(sessionId, userId);
+  },
+
+  /**
    * Fetches the previous completed performance (last working set weight/reps/rpe)
-   * for an exercise to enable progressive overload cues in the tracker.
+   * for an exercise from genuine completed sessions.
+   * Returns null if no prior performance exists. Never fabricates values.
    */
   async getPreviousPerformance(
     userId: string,
@@ -566,96 +588,38 @@ export const workoutService = {
   },
 
   /**
-   * Fetches a map of all previous exercise performances for the user.
+   * Fetches a map of genuine previous exercise performances for the user.
+   * Evaluates completed sessions ordered by completed_at DESC.
+   * Does NOT fabricate values; unlogged movements simply have no entry.
    */
   async getPreviousPerformanceMap(
     userId: string
   ): Promise<Record<string, { weightKg: number; reps: number; rpe?: number }>> {
-    // Curated realistic defaults for demonstration / initial sessions
-    const fallbackMap: Record<string, { weightKg: number; reps: number; rpe?: number }> = {
-      'ex-bench-press': { weightKg: 80, reps: 8, rpe: 8 },
-      'ex-1': { weightKg: 80, reps: 8, rpe: 8 },
-      'ex-db-bench-press': { weightKg: 30, reps: 10, rpe: 8 },
-      'ex-incline-db-press': { weightKg: 28, reps: 10, rpe: 8.5 },
-      'ex-2': { weightKg: 28, reps: 10, rpe: 8.5 },
-      'ex-deadlift': { weightKg: 135, reps: 5, rpe: 9 },
-      'ex-4': { weightKg: 135, reps: 5, rpe: 9 },
-      'ex-squat': { weightKg: 100, reps: 6, rpe: 8.5 },
-      'ex-7': { weightKg: 100, reps: 6, rpe: 8.5 },
-      'ex-overhead-press': { weightKg: 50, reps: 8, rpe: 8 },
-      'ex-9': { weightKg: 50, reps: 8, rpe: 8 },
-      'ex-barbell-row': { weightKg: 70, reps: 8, rpe: 8 },
-      'ex-5': { weightKg: 70, reps: 8, rpe: 8 },
-      'ex-lat-pulldown': { weightKg: 65, reps: 10, rpe: 7.5 },
-      'ex-6': { weightKg: 65, reps: 10, rpe: 7.5 },
-      'ex-seated-cable-row': { weightKg: 60, reps: 10, rpe: 8 },
-      'ex-lateral-raise': { weightKg: 10, reps: 12, rpe: 8.5 },
-      'ex-10': { weightKg: 10, reps: 12, rpe: 8.5 },
-      'ex-goblet-squat': { weightKg: 28, reps: 10, rpe: 7.5 },
-      'ex-8': { weightKg: 28, reps: 10, rpe: 7.5 },
-      'ex-barbell-curl': { weightKg: 30, reps: 10, rpe: 8 },
-      'ex-11': { weightKg: 30, reps: 10, rpe: 8 },
-      'ex-tricep-pushdown': { weightKg: 25, reps: 12, rpe: 8 },
-      'ex-12': { weightKg: 25, reps: 12, rpe: 8 },
-    };
+    const map: Record<string, { weightKg: number; reps: number; rpe?: number }> = {};
 
-    // Overlay user's actual completed workout history
     try {
-      const history = await this.getWorkoutHistory(userId, 10);
+      const history = await this.getWorkoutHistory(userId, 20);
       for (const sess of history) {
-        if (sess.exercises) {
-          for (const ex of sess.exercises) {
-            const workingSets = ex.sets?.filter(s => s.completed && s.weightKg > 0);
-            if (workingSets && workingSets.length > 0) {
-              const lastSet = workingSets[workingSets.length - 1];
-              fallbackMap[ex.exerciseId] = {
-                weightKg: lastSet.weightKg,
-                reps: lastSet.reps,
-                rpe: lastSet.rpe,
-              };
-            }
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
+        if (!sess.exercises || sess.status !== 'completed') continue;
+        for (const ex of sess.exercises) {
+          // If already captured from a more recent completed session, skip
+          if (map[ex.exerciseId]) continue;
 
-    if (!isSupabaseConfigured) {
-      return fallbackMap;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('workout_session_exercises')
-        .select(`
-          exercise_id,
-          workout_sets (weight_kg, reps, rpe, completed),
-          workout_sessions!inner (user_id, status, completed_at)
-        `)
-        .eq('workout_sessions.user_id', userId)
-        .eq('workout_sessions.status', 'completed')
-        .order('workout_sessions(completed_at)', { ascending: false });
-
-      if (error || !data) return fallbackMap;
-
-      const map = { ...fallbackMap };
-      for (const row of data as any[]) {
-        if (!map[row.exercise_id] && row.workout_sets && row.workout_sets.length > 0) {
-          const validSets = row.workout_sets.filter((s: any) => s.completed);
-          if (validSets.length > 0) {
-            const lastSet = validSets[validSets.length - 1];
-            map[row.exercise_id] = {
-              weightKg: Number(lastSet.weight_kg),
-              reps: lastSet.reps,
+          const completedSets = ex.sets?.filter(s => s.completed) || [];
+          if (completedSets.length > 0) {
+            const lastSet = completedSets[completedSets.length - 1];
+            map[ex.exerciseId] = {
+              weightKg: Number(lastSet.weightKg) || 0,
+              reps: Number(lastSet.reps) || 0,
               rpe: lastSet.rpe ? Number(lastSet.rpe) : undefined,
             };
           }
         }
       }
       return map;
-    } catch {
-      return fallbackMap;
+    } catch (err) {
+      logger.warn('Failed to load authentic previous performance map', { err });
+      return {};
     }
   },
 };

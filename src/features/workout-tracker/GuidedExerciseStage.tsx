@@ -479,12 +479,15 @@ export const GuidedExerciseStage: React.FC<GuidedExerciseStageProps> = ({
               SET {currentSet.setIndex} OF {totalSets}
             </span>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-3)', fontSize: '0.84rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              {previousPerformance && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-2)', fontSize: '0.84rem', color: 'var(--text-muted)', marginTop: '2px', flexWrap: 'wrap' }}>
+              {previousPerformance ? (
                 <span>
-                  Previous: <strong style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{previousPerformance.weightKg} kg × {previousPerformance.reps}</strong>
+                  Last: <strong style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{previousPerformance.weightKg} kg × {previousPerformance.reps}</strong>
                 </span>
+              ) : (
+                <span>First time logging this movement</span>
               )}
+              <span>•</span>
               <span>
                 Target: <strong style={{ color: 'var(--text-secondary)' }}>{exercise.targetRepsMin || 8}–{exercise.targetRepsMax || 12} reps</strong>
               </span>

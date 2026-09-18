@@ -79,53 +79,7 @@ export class WorkoutRepository {
         return [];
       }
 
-      return data.map((s: any) => {
-        const rawExercises = s.workout_session_exercises || [];
-        // Sort exercises by order_index
-        rawExercises.sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
-
-        const exercises = rawExercises.map((se: any) => {
-          const rawSets = se.workout_sets || [];
-          rawSets.sort((a: any, b: any) => (a.set_index ?? 0) - (b.set_index ?? 0));
-
-          return {
-            id: se.id,
-            exerciseId: se.exercise_id,
-            exerciseName: se.exercises?.name || 'Exercise',
-            targetSets: rawSets.length || 3,
-            targetRepsMin: 8,
-            targetRepsMax: 12,
-            restSeconds: 90,
-            isCore: true,
-            notes: se.notes || undefined,
-            sets: rawSets.map((set: any) => ({
-              id: set.id,
-              setIndex: set.set_index,
-              weightKg: Number(set.weight_kg) || 0,
-              reps: Number(set.reps) || 0,
-              rpe: set.rpe ? Number(set.rpe) : undefined,
-              completed: Boolean(set.completed),
-              completedAt: set.completed_at || undefined,
-            })),
-          };
-        });
-
-        return {
-          id: s.id,
-          userId: s.user_id,
-          planId: s.plan_id,
-          name: s.name,
-          status: s.status,
-          startedAt: s.started_at,
-          completedAt: s.completed_at,
-          durationSeconds: s.duration_seconds || 0,
-          sessionRating: s.session_rating as any,
-          notes: s.notes || undefined,
-          gymId: s.gym_id || undefined,
-          gymVerified: Boolean(s.gym_verified),
-          exercises,
-        };
-      });
+      return data.map((s: any) => this.mapDatabaseSessionToWorkoutSession(s));
     } catch (err) {
       logger.error('WorkoutRepository: Exception in fetchWorkoutHistory', { err });
       return [];
@@ -133,7 +87,144 @@ export class WorkoutRepository {
   }
 
   /**
+   * Maps a database session row with joined exercises and sets into domain WorkoutSession.
+   */
+  private mapDatabaseSessionToWorkoutSession(s: any): WorkoutSession {
+    const rawExercises = s.workout_session_exercises || [];
+    rawExercises.sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
+
+    const exercises = rawExercises.map((se: any) => {
+      const rawSets = se.workout_sets || [];
+      rawSets.sort((a: any, b: any) => (a.set_index ?? 0) - (b.set_index ?? 0));
+
+      return {
+        id: se.id,
+        exerciseId: se.exercise_id,
+        exerciseName: se.exercises?.name || 'Exercise',
+        targetSets: rawSets.length || 3,
+        targetRepsMin: 8,
+        targetRepsMax: 12,
+        restSeconds: 90,
+        isCore: true,
+        notes: se.notes || undefined,
+        sets: rawSets.map((set: any) => ({
+          id: set.id,
+          setIndex: set.set_index,
+          weightKg: Number(set.weight_kg) || 0,
+          reps: Number(set.reps) || 0,
+          rpe: set.rpe ? Number(set.rpe) : undefined,
+          completed: Boolean(set.completed),
+          completedAt: set.completed_at || undefined,
+        })),
+      };
+    });
+
+    return {
+      id: s.id,
+      userId: s.user_id,
+      planId: s.plan_id,
+      name: s.name,
+      status: s.status,
+      startedAt: s.started_at,
+      completedAt: s.completed_at,
+      durationSeconds: s.duration_seconds || 0,
+      sessionRating: s.session_rating as any,
+      notes: s.notes || undefined,
+      gymId: s.gym_id || undefined,
+      gymVerified: Boolean(s.gym_verified),
+      exercises,
+    };
+  }
+
+  /**
+   * Fetches the latest in-progress active workout session for the user, if any.
+   */
+  async fetchActiveSession(userId: string): Promise<WorkoutSession | null> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('workout_sessions')
+        .select(`
+          id,
+          user_id,
+          plan_id,
+          name,
+          status,
+          started_at,
+          completed_at,
+          duration_seconds,
+          session_rating,
+          notes,
+          gym_id,
+          gym_verified,
+          workout_session_exercises (
+            id,
+            exercise_id,
+            order_index,
+            notes,
+            exercises (id, name, primary_muscle),
+            workout_sets (
+              id,
+              set_index,
+              weight_kg,
+              reps,
+              rpe,
+              completed,
+              completed_at
+            )
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'in_progress')
+        .order('started_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        logger.error('WorkoutRepository: Error fetching active session', { error });
+        return null;
+      }
+
+      if (!data || data.length === 0) {
+        return null;
+      }
+
+      return this.mapDatabaseSessionToWorkoutSession(data[0]);
+    } catch (err) {
+      logger.error('WorkoutRepository: Exception in fetchActiveSession', { err });
+      return null;
+    }
+  }
+
+  /**
+   * Safely cancels an active/in_progress session (e.g. when stale or explicitly abandoned).
+   */
+  async cancelActiveSession(sessionId: string, userId: string): Promise<void> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId) || !UUID_REGEX.test(sessionId)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('workout_sessions')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('id', sessionId)
+        .eq('user_id', userId)
+        .eq('status', 'in_progress');
+
+      if (error) {
+        logger.error('WorkoutRepository: Error cancelling active session', { error, sessionId });
+      }
+    } catch (err) {
+      logger.error('WorkoutRepository: Exception in cancelActiveSession', { err, sessionId });
+    }
+  }
+
+  /**
    * Persists active or completed workout session and sets.
+   * Ensures deterministic persistent primary key UUIDs to prevent duplicate sets.
    */
   async saveWorkoutSession(session: WorkoutSession): Promise<{ success: boolean; error?: string }> {
     if (!isSupabaseConfigured || !UUID_REGEX.test(session.userId)) {
@@ -142,6 +233,7 @@ export class WorkoutRepository {
 
     try {
       const dbSessionId = UUID_REGEX.test(session.id) ? session.id : crypto.randomUUID();
+      session.id = dbSessionId; // Mutate for idempotency in subsequent autosaves
       const planId = session.planId && UUID_REGEX.test(session.planId) ? session.planId : null;
 
       // Upsert workout_session
@@ -169,6 +261,7 @@ export class WorkoutRepository {
       if (session.exercises && session.exercises.length > 0) {
         for (const [index, ex] of session.exercises.entries()) {
           const sessionExerciseId = ex.id && UUID_REGEX.test(ex.id) ? ex.id : crypto.randomUUID();
+          ex.id = sessionExerciseId; // Mutate for idempotency
           
           await supabase.from('workout_session_exercises').upsert({
             id: sessionExerciseId,
@@ -179,16 +272,20 @@ export class WorkoutRepository {
           });
 
           if (ex.sets && ex.sets.length > 0) {
-            const setsToInsert = ex.sets.map(s => ({
-              id: s.id && UUID_REGEX.test(s.id) ? s.id : crypto.randomUUID(),
-              session_exercise_id: sessionExerciseId,
-              set_index: s.setIndex,
-              weight_kg: Number(s.weightKg) || 0,
-              reps: Number(s.reps) || 0,
-              rpe: s.rpe ? Number(s.rpe) : null,
-              completed: Boolean(s.completed),
-              completed_at: s.completedAt || null,
-            }));
+            const setsToInsert = ex.sets.map(s => {
+              const setId = s.id && UUID_REGEX.test(s.id) ? s.id : crypto.randomUUID();
+              s.id = setId; // Mutate for idempotency
+              return {
+                id: setId,
+                session_exercise_id: sessionExerciseId,
+                set_index: s.setIndex,
+                weight_kg: Number(s.weightKg) || 0,
+                reps: Number(s.reps) || 0,
+                rpe: s.rpe ? Number(s.rpe) : null,
+                completed: Boolean(s.completed),
+                completed_at: s.completedAt || null,
+              };
+            });
             await supabase.from('workout_sets').upsert(setsToInsert);
           }
         }
