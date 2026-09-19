@@ -20,6 +20,12 @@ import {
   GymReportTargetType,
   GymReportReason,
   GymReportStatus,
+  GymBuddyPreference,
+  GymBuddyConnection,
+  GymBuddyCandidate,
+  GymBuddyBlock,
+  GymBuddyReport,
+  GymBuddyReportReason,
 } from '@/types/gym.types';
 import { logger } from '@/lib/logger';
 import { platform } from '@/platform';
@@ -3828,6 +3834,532 @@ export class GymRepository {
     } catch (err) {
       logger.error('GymRepository: Exception fetching community stats', { err });
       return { activePostsCount: 0, pinnedPostsCount: 0, pendingReportsCount: 0 };
+    }
+  }
+
+  // ==============================================================================
+  // PHASE G3: DYNAMIC GYM BUDDY MATCHING METHODS
+  // ==============================================================================
+
+  async fetchBuddyPreference(userId: string, gymId: string): Promise<GymBuddyPreference | null> {
+    if (!userId || !gymId) return null;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId) || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`buddy_pref_${gymId}_${userId}`);
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { /* ignore */ }
+      }
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_buddy_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('gym_id', gymId)
+        .maybeSingle();
+
+      if (error || !data) return null;
+
+      return {
+        userId: data.user_id,
+        gymId: data.gym_id,
+        isOptedIn: data.is_opted_in,
+        preferredTrainingTime: data.preferred_training_time,
+        preferredTrainingDays: data.preferred_training_days || [1, 2, 3, 4, 5],
+        preferredGenderFilter: data.preferred_gender_filter || 'any',
+        bioNote: data.bio_note,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching buddy preference', { err });
+      return null;
+    }
+  }
+
+  async saveBuddyPreference(pref: GymBuddyPreference): Promise<{ success: boolean; error?: string }> {
+    if (!pref.userId || !pref.gymId) return { success: false, error: 'Missing userId or gymId' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(pref.userId) || !UUID_REGEX.test(pref.gymId)) {
+      // In test/offline mode: persist directly to storage (RLS does not apply)
+      platform.storage.setItem(`buddy_pref_${pref.gymId}_${pref.userId}`, JSON.stringify(pref));
+      return { success: true };
+    }
+
+    try {
+      // HARDENING: All preference mutations route through set_gym_buddy_opt_in RPC.
+      // Direct table INSERT/UPDATE on gym_buddy_preferences is RLS-denied.
+      const { error } = await supabase.rpc('set_gym_buddy_opt_in', {
+        p_gym_id: pref.gymId,
+        p_opt_in: pref.isOptedIn,
+        p_preferred_training_time: pref.preferredTrainingTime || null,
+        p_preferred_training_days: pref.preferredTrainingDays || null,
+        p_preferred_gender_filter: pref.preferredGenderFilter || null,
+        p_bio_note: pref.bioNote || null,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error saving buddy preference via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception saving buddy preference';
+      return { success: false, error: msg };
+    }
+  }
+
+
+  async setBuddyOptIn(gymId: string, optIn: boolean): Promise<{ success: boolean; error?: string }> {
+    if (!gymId) return { success: false, error: 'Missing gymId' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      // In-memory fallback
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase.rpc('set_gym_buddy_opt_in', {
+        p_gym_id: gymId,
+        p_opt_in: optIn,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error toggling buddy opt-in via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception toggling opt-in';
+      return { success: false, error: msg };
+    }
+  }
+
+  async fetchBuddyCandidates(
+    gymId: string,
+    options: { limit?: number; cursorScore?: number; cursorUserId?: string } = {}
+  ): Promise<{ optedIn: boolean; candidates: GymBuddyCandidate[] }> {
+    if (!gymId) return { optedIn: false, candidates: [] };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      // Offline / Test Fallback
+      const raw = platform.storage.getItem(`buddy_mock_candidates_${gymId}`);
+      if (raw && typeof raw === 'string') {
+        try {
+          const list: GymBuddyCandidate[] = JSON.parse(raw);
+          return { optedIn: true, candidates: list };
+        } catch { /* ignore */ }
+      }
+      return { optedIn: true, candidates: [] };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_gym_buddy_candidates', {
+        p_gym_id: gymId,
+        p_limit: options.limit || 15,
+        p_cursor_score: options.cursorScore || null,
+        p_cursor_user_id: options.cursorUserId || null,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error fetching buddy candidates via RPC', { error });
+        return { optedIn: false, candidates: [] };
+      }
+
+      if (!data) return { optedIn: false, candidates: [] };
+
+      return {
+        optedIn: data.opted_in !== false,
+        candidates: data.candidates || [],
+      };
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching buddy candidates', { err });
+      return { optedIn: false, candidates: [] };
+    }
+  }
+
+  async sendBuddyRequest(
+    gymId: string,
+    targetUserId: string
+  ): Promise<{ success: boolean; connectionId?: string; error?: string }> {
+    if (!gymId || !targetUserId) return { success: false, error: 'Missing gymId or targetUserId' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId) || !UUID_REGEX.test(targetUserId)) {
+      const mockId = 'mock-conn-' + Math.random().toString(36).substring(2, 9);
+      return { success: true, connectionId: mockId };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('send_gym_buddy_request', {
+        p_gym_id: gymId,
+        p_target_user_id: targetUserId,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error sending buddy request via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, connectionId: data };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception sending buddy request';
+      return { success: false, error: msg };
+    }
+  }
+
+  async respondBuddyRequest(
+    connectionId: string,
+    action: 'accept' | 'decline'
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!connectionId) return { success: false, error: 'Missing connectionId' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(connectionId)) {
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase.rpc('respond_gym_buddy_request', {
+        p_connection_id: connectionId,
+        p_action: action,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error responding to buddy request via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception responding to request';
+      return { success: false, error: msg };
+    }
+  }
+
+  async cancelBuddyRequest(connectionId: string): Promise<{ success: boolean; error?: string }> {
+    if (!connectionId) return { success: false, error: 'Missing connectionId' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(connectionId)) {
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase.rpc('cancel_gym_buddy_request', {
+        p_connection_id: connectionId,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error cancelling buddy request via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception cancelling request';
+      return { success: false, error: msg };
+    }
+  }
+
+  async unmatchBuddy(connectionId: string): Promise<{ success: boolean; error?: string }> {
+    if (!connectionId) return { success: false, error: 'Missing connectionId' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(connectionId)) {
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase.rpc('unmatch_gym_buddy', {
+        p_connection_id: connectionId,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error unmatching buddy via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception unmatching buddy';
+      return { success: false, error: msg };
+    }
+  }
+
+  async blockBuddy(targetUserId: string): Promise<{ success: boolean; error?: string }> {
+    if (!targetUserId) return { success: false, error: 'Missing targetUserId' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(targetUserId)) {
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase.rpc('block_gym_buddy', {
+        p_target_user_id: targetUserId,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error blocking buddy via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception blocking buddy';
+      return { success: false, error: msg };
+    }
+  }
+
+  async unblockBuddy(targetUserId: string): Promise<{ success: boolean; error?: string }> {
+    if (!targetUserId) return { success: false, error: 'Missing targetUserId' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(targetUserId)) {
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase.rpc('unblock_gym_buddy', {
+        p_target_user_id: targetUserId,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error unblocking buddy via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception unblocking buddy';
+      return { success: false, error: msg };
+    }
+  }
+
+  async dismissBuddy(gymId: string, dismissedUserId: string): Promise<{ success: boolean; error?: string }> {
+    if (!gymId || !dismissedUserId) return { success: false, error: 'Missing gymId or dismissedUserId' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId) || !UUID_REGEX.test(dismissedUserId)) {
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase.rpc('dismiss_gym_buddy', {
+        p_gym_id: gymId,
+        p_dismissed_user_id: dismissedUserId,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error dismissing buddy via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception dismissing buddy';
+      return { success: false, error: msg };
+    }
+  }
+
+  async reportBuddy(
+    gymId: string,
+    reportedUserId: string,
+    reason: GymBuddyReportReason,
+    details?: string
+  ): Promise<{ success: boolean; reportId?: string; error?: string }> {
+    if (!gymId || !reportedUserId) return { success: false, error: 'Missing gymId or reportedUserId' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId) || !UUID_REGEX.test(reportedUserId)) {
+      const mockReportId = 'mock-rep-' + Math.random().toString(36).substring(2, 9);
+      return { success: true, reportId: mockReportId };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('report_gym_buddy', {
+        p_gym_id: gymId,
+        p_reported_user_id: reportedUserId,
+        p_reason: reason,
+        p_details: details || null,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error reporting buddy via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, reportId: data };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception reporting buddy';
+      return { success: false, error: msg };
+    }
+  }
+
+  async fetchMyBuddyConnections(gymId: string, userId: string): Promise<GymBuddyConnection[]> {
+    if (!gymId || !userId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId) || !UUID_REGEX.test(userId)) {
+      const raw = platform.storage.getItem(`buddy_conns_${gymId}_${userId}`);
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { /* ignore */ }
+      }
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_buddy_connections')
+        .select(`
+          id,
+          gym_id,
+          user_a_id,
+          user_b_id,
+          requester_id,
+          status,
+          compatibility_score,
+          match_reasons,
+          requested_at,
+          accepted_at,
+          ended_at,
+          created_at,
+          updated_at
+        `)
+        .eq('gym_id', gymId)
+        .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
+        .in('status', ['pending', 'accepted'])
+        .order('created_at', { ascending: false });
+
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching buddy connections', { error });
+        return [];
+      }
+
+      // Fetch partner profile details for each connection
+      const partnerIds = data.map((c: any) => (c.user_a_id === userId ? c.user_b_id : c.user_a_id));
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', partnerIds);
+
+      const { data: fitnessData } = await supabase
+        .from('fitness_profiles')
+        .select('user_id, goal, experience_level')
+        .in('user_id', partnerIds);
+
+      const profileMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
+      const fitnessMap = new Map((fitnessData || []).map((f: any) => [f.user_id, f]));
+
+      return data.map((c: any) => {
+        const partnerId = c.user_a_id === userId ? c.user_b_id : c.user_a_id;
+        const prof = profileMap.get(partnerId);
+        const fit = fitnessMap.get(partnerId);
+
+        return {
+          id: c.id,
+          gymId: c.gym_id,
+          userAId: c.user_a_id,
+          userBId: c.user_b_id,
+          requesterId: c.requester_id,
+          status: c.status,
+          compatibilityScore: c.compatibility_score,
+          matchReasons: c.match_reasons || [],
+          requestedAt: c.requested_at,
+          acceptedAt: c.accepted_at,
+          endedAt: c.ended_at,
+          createdAt: c.created_at,
+          updatedAt: c.updated_at,
+          partnerProfile: prof
+            ? {
+                displayName: prof.display_name,
+                avatarUrl: prof.avatar_url,
+                goal: fit?.goal,
+                experienceLevel: fit?.experience_level,
+              }
+            : undefined,
+        };
+      });
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching my buddy connections', { err });
+      return [];
+    }
+  }
+
+  async fetchBlockedBuddies(userId: string): Promise<GymBuddyBlock[]> {
+    if (!userId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const raw = platform.storage.getItem(`buddy_blocks_${userId}`);
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { /* ignore */ }
+      }
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_buddy_blocks')
+        .select('*')
+        .eq('blocker_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return [];
+
+      return data.map((b: any) => ({
+        id: b.id,
+        blockerId: b.blocker_id,
+        blockedId: b.blocked_id,
+        createdAt: b.created_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching blocked buddies', { err });
+      return [];
+    }
+  }
+
+  async fetchFacilityBuddyReports(gymId: string): Promise<GymBuddyReport[]> {
+    if (!gymId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_buddy_reports')
+        .select(`
+          id,
+          gym_id,
+          reporter_id,
+          reported_id,
+          reason,
+          details,
+          status,
+          reviewed_by,
+          reviewed_at,
+          resolution_notes,
+          created_at,
+          updated_at
+        `)
+        .eq('gym_id', gymId)
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return [];
+
+      return data.map((r: any) => ({
+        id: r.id,
+        gymId: r.gym_id,
+        reporterId: r.reporter_id,
+        reportedId: r.reported_id,
+        reason: r.reason,
+        details: r.details,
+        status: r.status,
+        reviewedBy: r.reviewed_by,
+        reviewedAt: r.reviewed_at,
+        resolutionNotes: r.resolution_notes,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching facility buddy reports', { err });
+      return [];
     }
   }
 }

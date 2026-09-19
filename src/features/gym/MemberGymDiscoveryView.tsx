@@ -20,6 +20,7 @@ import {
   Megaphone,
   Pin,
   MessageSquare,
+  Users,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { gymRepository } from '@/repositories/gym.repository';
@@ -305,6 +306,14 @@ export const MemberGymDiscoveryView: React.FC = () => {
               >
                 <MessageSquare size={15} />
                 <span>Community</span>
+              </Link>
+              <Link
+                to="/app/gym/buddies"
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Users size={15} />
+                <span>Gym Buddies</span>
               </Link>
               <Link
                 to="/app/gym/check-in"

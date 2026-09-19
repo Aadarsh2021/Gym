@@ -265,3 +265,110 @@ export interface GymCommunityStats {
   pendingReportsCount: number;
 }
 
+// ==============================================================================
+// PHASE G3: DYNAMIC GYM BUDDY MATCHING TYPES
+// ==============================================================================
+
+export type GymTrainingTimeWindow = 'early_morning' | 'morning' | 'afternoon' | 'evening' | 'night';
+export type GymGenderFilter = 'any' | 'same_gender';
+
+export interface GymBuddyPreference {
+  userId: string;
+  gymId: string;
+  isOptedIn: boolean;
+  preferredTrainingTime: GymTrainingTimeWindow;
+  preferredTrainingDays: number[]; // 0=Sunday, 1=Monday, ..., 6=Saturday
+  preferredGenderFilter: GymGenderFilter;
+  bioNote?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type GymBuddyConnectionStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'ended';
+
+export interface GymBuddyMatchReason {
+  type: 'schedule' | 'goal' | 'experience' | 'duration' | 'frequency' | 'time' | 'days';
+  label: string;
+  icon?: string;
+}
+
+export interface GymBuddyConnection {
+  id: string;
+  gymId: string;
+  userAId: string;
+  userBId: string;
+  requesterId: string;
+  status: GymBuddyConnectionStatus;
+  compatibilityScore?: number;
+  matchReasons?: GymBuddyMatchReason[];
+  requestedAt: string;
+  acceptedAt?: string | null;
+  endedAt?: string | null;
+  blockedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  partnerProfile?: {
+    displayName?: string;
+    avatarUrl?: string | null;
+    goal?: string;
+    experienceLevel?: string;
+    bioNote?: string | null;
+  };
+}
+
+export interface GymBuddyCandidate {
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  preferredTrainingTime: GymTrainingTimeWindow;
+  preferredTrainingDays: number[];
+  bioNote?: string | null;
+  goal: string;
+  experienceLevel: string;
+  workoutDurationMinutes: number;
+  daysPerWeek: number;
+  compatibilityScore: number;
+  matchReasons: GymBuddyMatchReason[];
+}
+
+export interface GymBuddyBlock {
+  id: string;
+  blockerId: string;
+  blockedId: string;
+  createdAt: string;
+}
+
+export type GymBuddyReportReason =
+  | 'harassment'
+  | 'inappropriate_behavior'
+  | 'unsolicited_contact'
+  | 'impersonation'
+  | 'spam'
+  | 'safety_concern'
+  | 'other';
+
+export type GymBuddyReportStatus = 'pending' | 'reviewed' | 'action_taken' | 'dismissed';
+
+export interface GymBuddyReport {
+  id: string;
+  gymId: string;
+  reporterId: string;
+  reportedId: string;
+  reason: GymBuddyReportReason;
+  details?: string | null;
+  status: GymBuddyReportStatus;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  resolutionNotes?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  reporter?: {
+    displayName?: string;
+    avatarUrl?: string | null;
+  };
+  reported?: {
+    displayName?: string;
+    avatarUrl?: string | null;
+  };
+}
+
