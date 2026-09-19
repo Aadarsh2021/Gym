@@ -101,18 +101,19 @@ export const OwnerAppShell: React.FC = () => {
             background: 'var(--bg-surface-elevated)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-md)',
-            padding: 'var(--space-3)',
-            marginBottom: 'var(--space-3)',
+            padding: '6px 10px',
+            marginBottom: '6px',
+            flexShrink: 0,
           }}
         >
           {loadingGyms ? (
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Loading facility...</div>
           ) : activeGym ? (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                 <span
                   style={{
-                    fontSize: '0.9rem',
+                    fontSize: '0.88rem',
                     fontWeight: 700,
                     color: 'var(--text-primary)',
                     whiteSpace: 'nowrap',
@@ -132,7 +133,7 @@ export const OwnerAppShell: React.FC = () => {
                   title="Gym Operational"
                 />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                 <MapPin size={12} />
                 <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {activeGym.city || activeGym.address || 'Integrated Facility'}
@@ -143,7 +144,7 @@ export const OwnerAppShell: React.FC = () => {
                   value={activeGym.id}
                   onChange={e => switchActiveGym(e.target.value)}
                   className="input"
-                  style={{ width: '100%', fontSize: '0.75rem', marginTop: '6px', padding: '3px 6px', height: '28px' }}
+                  style={{ width: '100%', fontSize: '0.72rem', marginTop: '4px', padding: '2px 4px', height: '26px' }}
                   aria-label="Switch active gym"
                 >
                   {gyms.map(g => (
@@ -155,16 +156,16 @@ export const OwnerAppShell: React.FC = () => {
               )}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: 'var(--space-1) 0' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>
+            <div style={{ textAlign: 'center', padding: '2px 0' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
                 No Facility Registered
               </div>
               <Link
                 to="/owner/onboarding"
                 className="btn btn-primary btn-sm"
                 style={{
-                  fontSize: '0.75rem',
-                  padding: '4px 10px',
+                  fontSize: '0.72rem',
+                  padding: '3px 8px',
                   width: '100%',
                   display: 'flex',
                   alignItems: 'center',
@@ -172,7 +173,7 @@ export const OwnerAppShell: React.FC = () => {
                   gap: '4px',
                 }}
               >
-                <PlusCircle size={14} />
+                <PlusCircle size={12} />
                 <span>Register Gym</span>
               </Link>
             </div>
@@ -184,12 +185,15 @@ export const OwnerAppShell: React.FC = () => {
           to="/owner/settings"
           className="sidebar-user-card"
           title="Owner Settings & Identity"
-          style={{ textDecoration: 'none', marginBottom: 'var(--space-3)' }}
+          style={{ textDecoration: 'none', marginBottom: '6px', padding: '6px 10px', flexShrink: 0 }}
         >
-          <div className="sidebar-user-top">
+          <div className="sidebar-user-top" style={{ gap: '8px' }}>
             <div
               className="sidebar-avatar"
               style={{
+                width: '32px',
+                height: '32px',
+                fontSize: '0.9rem',
                 background: 'linear-gradient(135deg, #D6A84F 0%, #B8860B 100%)',
                 color: '#000000',
               }}
@@ -197,14 +201,14 @@ export const OwnerAppShell: React.FC = () => {
               {avatarUrl ? <img src={avatarUrl} alt={displayName} /> : <span>{initial}</span>}
             </div>
             <div className="sidebar-user-info">
-              <span className="sidebar-user-name">{displayName}</span>
-              <span className="sidebar-user-email">{userEmail}</span>
+              <span className="sidebar-user-name" style={{ fontSize: '0.85rem' }}>{displayName}</span>
+              <span className="sidebar-user-email" style={{ fontSize: '0.7rem' }}>{userEmail}</span>
             </div>
           </div>
         </Link>
 
         {/* Owner Navigation Links */}
-        <nav className="sidebar-nav-group" style={{ overflowY: 'auto' }}>
+        <nav className="sidebar-nav-group">
           <span className="sidebar-section-title">Facility Management</span>
           {ownerNavItems.map(item => {
             const Icon = item.icon;

@@ -11,6 +11,15 @@ import {
   GymAnnouncement,
   GymReward,
   GymRewardRedemption,
+  GymPost,
+  GymComment,
+  GymPostReport,
+  GymCommunityStats,
+  GymPostStatus,
+  GymCommentStatus,
+  GymReportTargetType,
+  GymReportReason,
+  GymReportStatus,
 } from '@/types/gym.types';
 import { logger } from '@/lib/logger';
 import { platform } from '@/platform';
@@ -2682,6 +2691,1143 @@ export class GymRepository {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Exception redeeming reward';
       return { success: false, error: msg };
+    }
+  }
+
+  // ── Phase G2: Gym Community Feed, Comments & Moderation ─────────────────
+
+  async fetchGymPosts(
+    gymId: string,
+    options?: { limit?: number; cursor?: string; includeAllStatuses?: boolean }
+  ): Promise<{ posts: GymPost[]; nextCursor?: string }> {
+    if (!gymId) return { posts: [] };
+    const limit = options?.limit || 20;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`gym_posts_${gymId}`);
+      let list: GymPost[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      if (!options?.includeAllStatuses) {
+        list = list.filter(p => p.status === 'published');
+      }
+      // Sort: pinned first (descending), then created_at descending
+      list.sort((a, b) => {
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+
+      let startIndex = 0;
+      if (options?.cursor) {
+        const foundIdx = list.findIndex(p => p.id === options.cursor);
+        if (foundIdx >= 0) startIndex = foundIdx + 1;
+      }
+      const page = list.slice(startIndex, startIndex + limit);
+      const nextCursor = page.length === limit && startIndex + limit < list.length ? page[page.length - 1].id : undefined;
+      return { posts: page, nextCursor };
+    }
+
+    try {
+      let query = supabase
+        .from('gym_posts')
+        .select(`
+          *,
+          author:author_id(display_name, avatar_url)
+        `)
+        .eq('gym_id', gymId);
+
+      if (!options?.includeAllStatuses) {
+        query = query.eq('status', 'published');
+      }
+
+      query = query
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(limit + 1);
+
+      const { data, error } = await query;
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching gym posts', { error });
+        return { posts: [] };
+      }
+
+      const hasMore = data.length > limit;
+      const sliced = hasMore ? data.slice(0, limit) : data;
+
+      const posts: GymPost[] = sliced.map(p => ({
+        id: p.id,
+        gymId: p.gym_id,
+        authorId: p.author_id,
+        content: p.content,
+        status: p.status,
+        isPinned: p.is_pinned,
+        pinnedBy: p.pinned_by,
+        pinnedAt: p.pinned_at,
+        moderatedBy: p.moderated_by,
+        moderatedAt: p.moderated_at,
+        moderationReason: p.moderation_reason,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at,
+        author: p.author ? {
+          displayName: p.author.display_name,
+          avatarUrl: p.author.avatar_url,
+        } : undefined,
+      }));
+
+      const nextCursor = hasMore ? posts[posts.length - 1].id : undefined;
+      return { posts, nextCursor };
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching gym posts', { err });
+      return { posts: [] };
+    }
+  }
+
+  async createGymPost(params: {
+    gymId: string;
+    authorId: string;
+    content: string;
+    authorName?: string;
+  }): Promise<{ success: boolean; post?: GymPost; error?: string }> {
+    const trimmed = params.content?.trim();
+    if (!trimmed) {
+      return { success: false, error: 'Post content cannot be empty' };
+    }
+    if (trimmed.length > 2000) {
+      return { success: false, error: 'Post content exceeds 2000 characters limit' };
+    }
+    if (!params.gymId || !params.authorId) {
+      return { success: false, error: 'Missing required gymId or authorId' };
+    }
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(params.gymId)) {
+      const now = new Date().toISOString();
+      const newPost: GymPost = {
+        id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        gymId: params.gymId,
+        authorId: params.authorId,
+        content: trimmed,
+        status: 'published',
+        isPinned: false,
+        createdAt: now,
+        updatedAt: now,
+        author: {
+          displayName: params.authorName || 'Gym Member',
+        },
+      };
+
+      const raw = platform.storage.getItem(`gym_posts_${params.gymId}`);
+      let list: GymPost[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      list.unshift(newPost);
+      platform.storage.setItem(`gym_posts_${params.gymId}`, JSON.stringify(list));
+      platform.storage.setItem(`gym_post_lookup_${newPost.id}`, JSON.stringify(newPost));
+
+      return { success: true, post: newPost };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_posts')
+        .insert({
+          gym_id: params.gymId,
+          author_id: params.authorId,
+          content: trimmed,
+          status: 'published',
+        })
+        .select(`
+          *,
+          author:author_id(display_name, avatar_url)
+        `)
+        .single();
+
+      if (error) {
+        logger.error('GymRepository: Error creating gym post', { error });
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        post: {
+          id: data.id,
+          gymId: data.gym_id,
+          authorId: data.author_id,
+          content: data.content,
+          status: data.status,
+          isPinned: data.is_pinned,
+          pinnedBy: data.pinned_by,
+          pinnedAt: data.pinned_at,
+          moderatedBy: data.moderated_by,
+          moderatedAt: data.moderated_at,
+          moderationReason: data.moderation_reason,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+          author: data.author ? {
+            displayName: data.author.display_name,
+            avatarUrl: data.author.avatar_url,
+          } : undefined,
+        },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create post';
+      return { success: false, error: msg };
+    }
+  }
+
+  async updateGymPost(params: {
+    id: string;
+    authorId: string;
+    content: string;
+    gymId?: string;
+  }): Promise<{ success: boolean; post?: GymPost; error?: string }> {
+    const trimmed = params.content?.trim();
+    if (!trimmed) return { success: false, error: 'Content cannot be empty' };
+    if (trimmed.length > 2000) return { success: false, error: 'Content exceeds 2000 characters limit' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(params.id)) {
+      const lookupRaw = platform.storage.getItem(`gym_post_lookup_${params.id}`);
+      let post: GymPost | null = null;
+      if (lookupRaw && typeof lookupRaw === 'string') {
+        try { post = JSON.parse(lookupRaw); } catch { /* ignore */ }
+      }
+      if (!post && params.gymId) {
+        const raw = platform.storage.getItem(`gym_posts_${params.gymId}`);
+        if (raw && typeof raw === 'string') {
+          try {
+            const list: GymPost[] = JSON.parse(raw);
+            post = list.find(p => p.id === params.id) || null;
+          } catch { /* ignore */ }
+        }
+      }
+
+      if (!post) return { success: false, error: 'Post not found' };
+      if (post.authorId !== params.authorId) {
+        return { success: false, error: 'Unauthorized: cannot edit another member\'s post' };
+      }
+
+      post.content = trimmed;
+      post.updatedAt = new Date().toISOString();
+      platform.storage.setItem(`gym_post_lookup_${post.id}`, JSON.stringify(post));
+
+      const gymKey = `gym_posts_${post.gymId}`;
+      const gymRaw = platform.storage.getItem(gymKey);
+      if (gymRaw && typeof gymRaw === 'string') {
+        try {
+          const list: GymPost[] = JSON.parse(gymRaw);
+          const idx = list.findIndex(p => p.id === post!.id);
+          if (idx >= 0) {
+            list[idx] = post;
+            platform.storage.setItem(gymKey, JSON.stringify(list));
+          }
+        } catch { /* ignore */ }
+      }
+
+      return { success: true, post };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_posts')
+        .update({
+          content: trimmed,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.id)
+        .eq('author_id', params.authorId)
+        .select(`
+          *,
+          author:author_id(display_name, avatar_url)
+        `)
+        .single();
+
+      if (error) {
+        logger.error('GymRepository: Error updating post', { error });
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        post: {
+          id: data.id,
+          gymId: data.gym_id,
+          authorId: data.author_id,
+          content: data.content,
+          status: data.status,
+          isPinned: data.is_pinned,
+          pinnedBy: data.pinned_by,
+          pinnedAt: data.pinned_at,
+          moderatedBy: data.moderated_by,
+          moderatedAt: data.moderated_at,
+          moderationReason: data.moderation_reason,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+          author: data.author ? {
+            displayName: data.author.display_name,
+            avatarUrl: data.author.avatar_url,
+          } : undefined,
+        },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update post';
+      return { success: false, error: msg };
+    }
+  }
+
+  async deleteGymPost(params: {
+    id: string;
+    authorId: string;
+    gymId?: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    if (!params.id) return { success: false, error: 'Post ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(params.id)) {
+      const lookupRaw = platform.storage.getItem(`gym_post_lookup_${params.id}`);
+      let post: GymPost | null = null;
+      if (lookupRaw && typeof lookupRaw === 'string') {
+        try { post = JSON.parse(lookupRaw); } catch { /* ignore */ }
+      }
+      if (!post && params.gymId) {
+        const raw = platform.storage.getItem(`gym_posts_${params.gymId}`);
+        if (raw && typeof raw === 'string') {
+          try {
+            const list: GymPost[] = JSON.parse(raw);
+            post = list.find(p => p.id === params.id) || null;
+          } catch { /* ignore */ }
+        }
+      }
+
+      if (!post) return { success: false, error: 'Post not found' };
+      if (post.authorId !== params.authorId) {
+        return { success: false, error: 'Unauthorized: cannot delete another member\'s post' };
+      }
+
+      post.status = 'hidden';
+      post.updatedAt = new Date().toISOString();
+      platform.storage.setItem(`gym_post_lookup_${post.id}`, JSON.stringify(post));
+
+      const gymKey = `gym_posts_${post.gymId}`;
+      const gymRaw = platform.storage.getItem(gymKey);
+      if (gymRaw && typeof gymRaw === 'string') {
+        try {
+          const list: GymPost[] = JSON.parse(gymRaw);
+          const idx = list.findIndex(p => p.id === post!.id);
+          if (idx >= 0) {
+            list[idx] = post;
+            platform.storage.setItem(gymKey, JSON.stringify(list));
+          }
+        } catch { /* ignore */ }
+      }
+
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('gym_posts')
+        .update({
+          status: 'hidden',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.id)
+        .eq('author_id', params.authorId);
+
+      if (error) {
+        logger.error('GymRepository: Error deleting post', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete post';
+      return { success: false, error: msg };
+    }
+  }
+
+  // ── Comments ──
+  async fetchGymComments(postId: string, options?: { includeAllStatuses?: boolean }): Promise<GymComment[]> {
+    if (!postId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(postId)) {
+      const raw = platform.storage.getItem(`gym_comments_${postId}`);
+      let list: GymComment[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      if (!options?.includeAllStatuses) {
+        list = list.filter(c => c.status === 'published');
+      }
+      return list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+
+    try {
+      let query = supabase
+        .from('gym_comments')
+        .select(`
+          *,
+          author:author_id(display_name, avatar_url)
+        `)
+        .eq('post_id', postId);
+
+      if (!options?.includeAllStatuses) {
+        query = query.eq('status', 'published');
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: true });
+
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching comments', { error });
+        return [];
+      }
+
+      return data.map(c => ({
+        id: c.id,
+        postId: c.post_id,
+        gymId: c.gym_id,
+        authorId: c.author_id,
+        content: c.content,
+        status: c.status,
+        moderatedBy: c.moderated_by,
+        moderatedAt: c.moderated_at,
+        moderationReason: c.moderation_reason,
+        createdAt: c.created_at,
+        updatedAt: c.updated_at,
+        author: c.author ? {
+          displayName: c.author.display_name,
+          avatarUrl: c.author.avatar_url,
+        } : undefined,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching comments', { err });
+      return [];
+    }
+  }
+
+  async createGymComment(params: {
+    postId: string;
+    gymId: string;
+    authorId: string;
+    content: string;
+    authorName?: string;
+  }): Promise<{ success: boolean; comment?: GymComment; error?: string }> {
+    const trimmed = params.content?.trim();
+    if (!trimmed) return { success: false, error: 'Comment content cannot be empty' };
+    if (trimmed.length > 1000) return { success: false, error: 'Comment content exceeds 1000 characters limit' };
+    if (!params.postId || !params.gymId || !params.authorId) {
+      return { success: false, error: 'Missing required comment fields' };
+    }
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(params.postId)) {
+      const now = new Date().toISOString();
+      const newComment: GymComment = {
+        id: `comment-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        postId: params.postId,
+        gymId: params.gymId,
+        authorId: params.authorId,
+        content: trimmed,
+        status: 'published',
+        createdAt: now,
+        updatedAt: now,
+        author: {
+          displayName: params.authorName || 'Gym Member',
+        },
+      };
+
+      const raw = platform.storage.getItem(`gym_comments_${params.postId}`);
+      let list: GymComment[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      list.push(newComment);
+      platform.storage.setItem(`gym_comments_${params.postId}`, JSON.stringify(list));
+      platform.storage.setItem(`gym_comment_lookup_${newComment.id}`, JSON.stringify(newComment));
+
+      return { success: true, comment: newComment };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_comments')
+        .insert({
+          post_id: params.postId,
+          gym_id: params.gymId,
+          author_id: params.authorId,
+          content: trimmed,
+          status: 'published',
+        })
+        .select(`
+          *,
+          author:author_id(display_name, avatar_url)
+        `)
+        .single();
+
+      if (error) {
+        logger.error('GymRepository: Error creating comment', { error });
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        comment: {
+          id: data.id,
+          postId: data.post_id,
+          gymId: data.gym_id,
+          authorId: data.author_id,
+          content: data.content,
+          status: data.status,
+          moderatedBy: data.moderated_by,
+          moderatedAt: data.moderated_at,
+          moderationReason: data.moderation_reason,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+          author: data.author ? {
+            displayName: data.author.display_name,
+            avatarUrl: data.author.avatar_url,
+          } : undefined,
+        },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create comment';
+      return { success: false, error: msg };
+    }
+  }
+
+  async updateGymComment(params: {
+    id: string;
+    authorId: string;
+    content: string;
+    postId?: string;
+  }): Promise<{ success: boolean; comment?: GymComment; error?: string }> {
+    const trimmed = params.content?.trim();
+    if (!trimmed) return { success: false, error: 'Content cannot be empty' };
+    if (trimmed.length > 1000) return { success: false, error: 'Content exceeds 1000 characters limit' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(params.id)) {
+      const lookupRaw = platform.storage.getItem(`gym_comment_lookup_${params.id}`);
+      let comment: GymComment | null = null;
+      if (lookupRaw && typeof lookupRaw === 'string') {
+        try { comment = JSON.parse(lookupRaw); } catch { /* ignore */ }
+      }
+      if (!comment && params.postId) {
+        const raw = platform.storage.getItem(`gym_comments_${params.postId}`);
+        if (raw && typeof raw === 'string') {
+          try {
+            const list: GymComment[] = JSON.parse(raw);
+            comment = list.find(c => c.id === params.id) || null;
+          } catch { /* ignore */ }
+        }
+      }
+
+      if (!comment) return { success: false, error: 'Comment not found' };
+      if (comment.authorId !== params.authorId) {
+        return { success: false, error: 'Unauthorized: cannot edit another member\'s comment' };
+      }
+
+      comment.content = trimmed;
+      comment.updatedAt = new Date().toISOString();
+      platform.storage.setItem(`gym_comment_lookup_${comment.id}`, JSON.stringify(comment));
+
+      const postKey = `gym_comments_${comment.postId}`;
+      const postRaw = platform.storage.getItem(postKey);
+      if (postRaw && typeof postRaw === 'string') {
+        try {
+          const list: GymComment[] = JSON.parse(postRaw);
+          const idx = list.findIndex(c => c.id === comment!.id);
+          if (idx >= 0) {
+            list[idx] = comment;
+            platform.storage.setItem(postKey, JSON.stringify(list));
+          }
+        } catch { /* ignore */ }
+      }
+
+      return { success: true, comment };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_comments')
+        .update({
+          content: trimmed,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.id)
+        .eq('author_id', params.authorId)
+        .select(`
+          *,
+          author:author_id(display_name, avatar_url)
+        `)
+        .single();
+
+      if (error) {
+        logger.error('GymRepository: Error updating comment', { error });
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        comment: {
+          id: data.id,
+          postId: data.post_id,
+          gymId: data.gym_id,
+          authorId: data.author_id,
+          content: data.content,
+          status: data.status,
+          moderatedBy: data.moderated_by,
+          moderatedAt: data.moderated_at,
+          moderationReason: data.moderation_reason,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+          author: data.author ? {
+            displayName: data.author.display_name,
+            avatarUrl: data.author.avatar_url,
+          } : undefined,
+        },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update comment';
+      return { success: false, error: msg };
+    }
+  }
+
+  async deleteGymComment(params: {
+    id: string;
+    authorId: string;
+    postId?: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    if (!params.id) return { success: false, error: 'Comment ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(params.id)) {
+      const lookupRaw = platform.storage.getItem(`gym_comment_lookup_${params.id}`);
+      let comment: GymComment | null = null;
+      if (lookupRaw && typeof lookupRaw === 'string') {
+        try { comment = JSON.parse(lookupRaw); } catch { /* ignore */ }
+      }
+      if (!comment && params.postId) {
+        const raw = platform.storage.getItem(`gym_comments_${params.postId}`);
+        if (raw && typeof raw === 'string') {
+          try {
+            const list: GymComment[] = JSON.parse(raw);
+            comment = list.find(c => c.id === params.id) || null;
+          } catch { /* ignore */ }
+        }
+      }
+
+      if (!comment) return { success: false, error: 'Comment not found' };
+      if (comment.authorId !== params.authorId) {
+        return { success: false, error: 'Unauthorized: cannot delete another member\'s comment' };
+      }
+
+      comment.status = 'hidden';
+      comment.updatedAt = new Date().toISOString();
+      platform.storage.setItem(`gym_comment_lookup_${comment.id}`, JSON.stringify(comment));
+
+      const postKey = `gym_comments_${comment.postId}`;
+      const postRaw = platform.storage.getItem(postKey);
+      if (postRaw && typeof postRaw === 'string') {
+        try {
+          const list: GymComment[] = JSON.parse(postRaw);
+          const idx = list.findIndex(c => c.id === comment!.id);
+          if (idx >= 0) {
+            list[idx] = comment;
+            platform.storage.setItem(postKey, JSON.stringify(list));
+          }
+        } catch { /* ignore */ }
+      }
+
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('gym_comments')
+        .update({
+          status: 'hidden',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.id)
+        .eq('author_id', params.authorId);
+
+      if (error) {
+        logger.error('GymRepository: Error deleting comment', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete comment';
+      return { success: false, error: msg };
+    }
+  }
+
+  // ── Reporting ──
+  async reportGymContent(params: {
+    gymId: string;
+    targetType: GymReportTargetType;
+    postId?: string;
+    commentId?: string;
+    reporterId: string;
+    reason: GymReportReason;
+    details?: string;
+  }): Promise<{ success: boolean; report?: GymPostReport; error?: string }> {
+    if (!params.gymId || !params.reporterId || !params.reason) {
+      return { success: false, error: 'Missing required report fields' };
+    }
+    if (params.targetType === 'post' && !params.postId) {
+      return { success: false, error: 'Target post ID is required' };
+    }
+    if (params.targetType === 'comment' && !params.commentId) {
+      return { success: false, error: 'Target comment ID is required' };
+    }
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(params.gymId)) {
+      const repKey = `gym_reports_${params.gymId}`;
+      const raw = platform.storage.getItem(repKey);
+      let list: GymPostReport[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+
+      // Check unique constraint
+      if (params.targetType === 'post') {
+        if (list.some(r => r.reporterId === params.reporterId && r.postId === params.postId)) {
+          return { success: false, error: 'You have already reported this post' };
+        }
+      } else {
+        if (list.some(r => r.reporterId === params.reporterId && r.commentId === params.commentId)) {
+          return { success: false, error: 'You have already reported this comment' };
+        }
+      }
+
+      const newReport: GymPostReport = {
+        id: `rep-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        gymId: params.gymId,
+        targetType: params.targetType,
+        postId: params.targetType === 'post' ? params.postId : null,
+        commentId: params.targetType === 'comment' ? params.commentId : null,
+        reporterId: params.reporterId,
+        reason: params.reason,
+        details: params.details || null,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+
+      list.push(newReport);
+      platform.storage.setItem(repKey, JSON.stringify(list));
+      platform.storage.setItem(`gym_report_lookup_${newReport.id}`, JSON.stringify(newReport));
+
+      return { success: true, report: newReport };
+    }
+
+    try {
+      const payload: Record<string, any> = {
+        gym_id: params.gymId,
+        target_type: params.targetType,
+        post_id: params.targetType === 'post' ? params.postId : null,
+        comment_id: params.targetType === 'comment' ? params.commentId : null,
+        reporter_id: params.reporterId,
+        reason: params.reason,
+        details: params.details || null,
+        status: 'pending',
+      };
+
+      const { data, error } = await supabase
+        .from('gym_post_reports')
+        .insert(payload)
+        .select('*')
+        .single();
+
+      if (error) {
+        if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique')) {
+          return { success: false, error: 'You have already reported this content' };
+        }
+        logger.error('GymRepository: Error reporting content', { error });
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        report: {
+          id: data.id,
+          gymId: data.gym_id,
+          targetType: data.target_type,
+          postId: data.post_id,
+          commentId: data.comment_id,
+          reporterId: data.reporter_id,
+          reason: data.reason,
+          details: data.details,
+          status: data.status,
+          reviewedBy: data.reviewed_by,
+          reviewedAt: data.reviewed_at,
+          resolutionNotes: data.resolution_notes,
+          createdAt: data.created_at,
+        },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to submit report';
+      return { success: false, error: msg };
+    }
+  }
+
+  async fetchGymReports(gymId: string, status?: GymReportStatus): Promise<GymPostReport[]> {
+    if (!gymId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`gym_reports_${gymId}`);
+      let list: GymPostReport[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      if (status) {
+        list = list.filter(r => r.status === status);
+      }
+      return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    try {
+      let query = supabase
+        .from('gym_post_reports')
+        .select(`
+          *,
+          reporter:reporter_id(display_name, avatar_url),
+          target_post:post_id(*),
+          target_comment:comment_id(*)
+        `)
+        .eq('gym_id', gymId);
+
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching reports', { error });
+        return [];
+      }
+
+      return data.map(r => ({
+        id: r.id,
+        gymId: r.gym_id,
+        targetType: r.target_type,
+        postId: r.post_id,
+        commentId: r.comment_id,
+        reporterId: r.reporter_id,
+        reason: r.reason,
+        details: r.details,
+        status: r.status,
+        reviewedBy: r.reviewed_by,
+        reviewedAt: r.reviewed_at,
+        resolutionNotes: r.resolution_notes,
+        createdAt: r.created_at,
+        reporter: r.reporter ? {
+          displayName: r.reporter.display_name,
+          avatarUrl: r.reporter.avatar_url,
+        } : undefined,
+        targetPost: r.target_post ? {
+          id: r.target_post.id,
+          gymId: r.target_post.gym_id,
+          authorId: r.target_post.author_id,
+          content: r.target_post.content,
+          status: r.target_post.status,
+          isPinned: r.target_post.is_pinned,
+          createdAt: r.target_post.created_at,
+          updatedAt: r.target_post.updated_at,
+        } : null,
+        targetComment: r.target_comment ? {
+          id: r.target_comment.id,
+          postId: r.target_comment.post_id,
+          gymId: r.target_comment.gym_id,
+          authorId: r.target_comment.author_id,
+          content: r.target_comment.content,
+          status: r.target_comment.status,
+          createdAt: r.target_comment.created_at,
+          updatedAt: r.target_comment.updated_at,
+        } : null,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching reports', { err });
+      return [];
+    }
+  }
+
+  // ── Owner Moderation RPCs ──
+  async pinGymPost(postId: string, isPinned: boolean, gymId?: string): Promise<{ success: boolean; error?: string }> {
+    if (!postId) return { success: false, error: 'Post ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(postId)) {
+      let post: GymPost | null = null;
+      const lookupRaw = platform.storage.getItem(`gym_post_lookup_${postId}`);
+      if (lookupRaw && typeof lookupRaw === 'string') {
+        try { post = JSON.parse(lookupRaw); } catch { /* ignore */ }
+      }
+      const targetGymId = gymId || post?.gymId;
+      if (!targetGymId) return { success: false, error: 'Gym ID required for pin operation' };
+
+      const gymKey = `gym_posts_${targetGymId}`;
+      const gymRaw = platform.storage.getItem(gymKey);
+      let list: GymPost[] = [];
+      if (gymRaw && typeof gymRaw === 'string') {
+        try { list = JSON.parse(gymRaw); } catch { list = []; }
+      }
+
+      if (isPinned) {
+        const pinnedCount = list.filter(p => p.isPinned && p.status === 'published' && p.id !== postId).length;
+        if (pinnedCount >= 3) {
+          return { success: false, error: 'Maximum of 3 pinned posts allowed per gym.' };
+        }
+      }
+
+      const idx = list.findIndex(p => p.id === postId);
+      if (idx >= 0) {
+        list[idx].isPinned = isPinned;
+        list[idx].pinnedAt = isPinned ? new Date().toISOString() : null;
+        platform.storage.setItem(gymKey, JSON.stringify(list));
+        platform.storage.setItem(`gym_post_lookup_${postId}`, JSON.stringify(list[idx]));
+      }
+      return { success: true };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('set_gym_post_pinned', {
+        p_post_id: postId,
+        p_is_pinned: isPinned,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error setting pin status via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      if (!data?.success) {
+        return { success: false, error: data?.error || 'Failed to update pin status' };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception setting pin status';
+      return { success: false, error: msg };
+    }
+  }
+
+  async moderateGymPost(
+    postId: string,
+    status: GymPostStatus,
+    reason?: string,
+    gymId?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!postId) return { success: false, error: 'Post ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(postId)) {
+      let post: GymPost | null = null;
+      const lookupRaw = platform.storage.getItem(`gym_post_lookup_${postId}`);
+      if (lookupRaw && typeof lookupRaw === 'string') {
+        try { post = JSON.parse(lookupRaw); } catch { /* ignore */ }
+      }
+      const targetGymId = gymId || post?.gymId;
+      if (targetGymId) {
+        const gymKey = `gym_posts_${targetGymId}`;
+        const gymRaw = platform.storage.getItem(gymKey);
+        if (gymRaw && typeof gymRaw === 'string') {
+          try {
+            const list: GymPost[] = JSON.parse(gymRaw);
+            const idx = list.findIndex(p => p.id === postId);
+            if (idx >= 0) {
+              list[idx].status = status;
+              list[idx].moderationReason = reason || null;
+              list[idx].moderatedAt = new Date().toISOString();
+              if (status !== 'published') {
+                list[idx].isPinned = false;
+              }
+              platform.storage.setItem(gymKey, JSON.stringify(list));
+              platform.storage.setItem(`gym_post_lookup_${postId}`, JSON.stringify(list[idx]));
+            }
+          } catch { /* ignore */ }
+        }
+      }
+      return { success: true };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('moderate_gym_post', {
+        p_post_id: postId,
+        p_status: status,
+        p_reason: reason || null,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error moderating post via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      if (!data?.success) {
+        return { success: false, error: data?.error || 'Failed to moderate post' };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception moderating post';
+      return { success: false, error: msg };
+    }
+  }
+
+  async moderateGymComment(
+    commentId: string,
+    status: GymCommentStatus,
+    reason?: string,
+    postId?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!commentId) return { success: false, error: 'Comment ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(commentId)) {
+      let comment: GymComment | null = null;
+      const lookupRaw = platform.storage.getItem(`gym_comment_lookup_${commentId}`);
+      if (lookupRaw && typeof lookupRaw === 'string') {
+        try { comment = JSON.parse(lookupRaw); } catch { /* ignore */ }
+      }
+      const targetPostId = postId || comment?.postId;
+      if (targetPostId) {
+        const postKey = `gym_comments_${targetPostId}`;
+        const postRaw = platform.storage.getItem(postKey);
+        if (postRaw && typeof postRaw === 'string') {
+          try {
+            const list: GymComment[] = JSON.parse(postRaw);
+            const idx = list.findIndex(c => c.id === commentId);
+            if (idx >= 0) {
+              list[idx].status = status;
+              list[idx].moderationReason = reason || null;
+              list[idx].moderatedAt = new Date().toISOString();
+              platform.storage.setItem(postKey, JSON.stringify(list));
+              platform.storage.setItem(`gym_comment_lookup_${commentId}`, JSON.stringify(list[idx]));
+            }
+          } catch { /* ignore */ }
+        }
+      }
+      return { success: true };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('moderate_gym_comment', {
+        p_comment_id: commentId,
+        p_status: status,
+        p_reason: reason || null,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error moderating comment via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      if (!data?.success) {
+        return { success: false, error: data?.error || 'Failed to moderate comment' };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception moderating comment';
+      return { success: false, error: msg };
+    }
+  }
+
+  async resolveGymReport(
+    reportId: string,
+    status: 'reviewed' | 'dismissed' | 'action_taken',
+    resolutionNotes?: string,
+    gymId?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!reportId) return { success: false, error: 'Report ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(reportId)) {
+      const lookupRaw = platform.storage.getItem(`gym_report_lookup_${reportId}`);
+      let rep: GymPostReport | null = null;
+      if (lookupRaw && typeof lookupRaw === 'string') {
+        try { rep = JSON.parse(lookupRaw); } catch { /* ignore */ }
+      }
+      const targetGymId = gymId || rep?.gymId;
+      if (targetGymId) {
+        const repKey = `gym_reports_${targetGymId}`;
+        const raw = platform.storage.getItem(repKey);
+        if (raw && typeof raw === 'string') {
+          try {
+            const list: GymPostReport[] = JSON.parse(raw);
+            const idx = list.findIndex(r => r.id === reportId);
+            if (idx >= 0) {
+              list[idx].status = status;
+              list[idx].resolutionNotes = resolutionNotes || null;
+              list[idx].reviewedAt = new Date().toISOString();
+              platform.storage.setItem(repKey, JSON.stringify(list));
+              platform.storage.setItem(`gym_report_lookup_${reportId}`, JSON.stringify(list[idx]));
+            }
+          } catch { /* ignore */ }
+        }
+      }
+      return { success: true };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('resolve_gym_post_report', {
+        p_report_id: reportId,
+        p_status: status,
+        p_resolution_notes: resolutionNotes || null,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error resolving report via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      if (!data?.success) {
+        return { success: false, error: data?.error || 'Failed to resolve report' };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception resolving report';
+      return { success: false, error: msg };
+    }
+  }
+
+  async fetchGymCommunityStats(gymId: string): Promise<GymCommunityStats> {
+    if (!gymId) return { activePostsCount: 0, pinnedPostsCount: 0, pendingReportsCount: 0 };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const rawPosts = platform.storage.getItem(`gym_posts_${gymId}`);
+      let posts: GymPost[] = [];
+      if (rawPosts && typeof rawPosts === 'string') {
+        try { posts = JSON.parse(rawPosts); } catch { posts = []; }
+      }
+      const activePosts = posts.filter(p => p.status === 'published');
+      const pinnedPosts = activePosts.filter(p => p.isPinned);
+
+      const rawReports = platform.storage.getItem(`gym_reports_${gymId}`);
+      let reports: GymPostReport[] = [];
+      if (rawReports && typeof rawReports === 'string') {
+        try { reports = JSON.parse(rawReports); } catch { reports = []; }
+      }
+      const pendingReports = reports.filter(r => r.status === 'pending');
+
+      return {
+        activePostsCount: activePosts.length,
+        pinnedPostsCount: pinnedPosts.length,
+        pendingReportsCount: pendingReports.length,
+      };
+    }
+
+    try {
+      const [postsRes, pinnedRes, reportsRes] = await Promise.all([
+        supabase.from('gym_posts').select('*', { count: 'exact', head: true }).eq('gym_id', gymId).eq('status', 'published'),
+        supabase.from('gym_posts').select('*', { count: 'exact', head: true }).eq('gym_id', gymId).eq('status', 'published').eq('is_pinned', true),
+        supabase.from('gym_post_reports').select('*', { count: 'exact', head: true }).eq('gym_id', gymId).eq('status', 'pending'),
+      ]);
+
+      return {
+        activePostsCount: postsRes.count || 0,
+        pinnedPostsCount: pinnedRes.count || 0,
+        pendingReportsCount: reportsRes.count || 0,
+      };
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching community stats', { err });
+      return { activePostsCount: 0, pinnedPostsCount: 0, pendingReportsCount: 0 };
     }
   }
 }

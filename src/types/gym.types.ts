@@ -186,3 +186,82 @@ export interface GymRewardRedemption {
   redeemedAt?: string | null;
   reward?: GymReward;
 }
+
+// ==============================================================================
+// PHASE G2: GYM COMMUNITY & MODERATION TYPES
+// ==============================================================================
+
+export type GymPostStatus = 'published' | 'hidden' | 'removed';
+export type GymCommentStatus = 'published' | 'hidden' | 'removed';
+
+export interface GymPost {
+  id: string;
+  gymId: string;
+  authorId: string;
+  content: string;
+  status: GymPostStatus;
+  isPinned: boolean;
+  pinnedBy?: string | null;
+  pinnedAt?: string | null;
+  moderatedBy?: string | null;
+  moderatedAt?: string | null;
+  moderationReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  author?: {
+    displayName?: string;
+    avatarUrl?: string | null;
+  };
+  commentCount?: number;
+}
+
+export interface GymComment {
+  id: string;
+  postId: string;
+  gymId: string;
+  authorId: string;
+  content: string;
+  status: GymCommentStatus;
+  moderatedBy?: string | null;
+  moderatedAt?: string | null;
+  moderationReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  author?: {
+    displayName?: string;
+    avatarUrl?: string | null;
+  };
+}
+
+export type GymReportTargetType = 'post' | 'comment';
+export type GymReportReason = 'spam' | 'harassment' | 'inappropriate' | 'hate_speech' | 'other';
+export type GymReportStatus = 'pending' | 'reviewed' | 'dismissed' | 'action_taken';
+
+export interface GymPostReport {
+  id: string;
+  gymId: string;
+  targetType: GymReportTargetType;
+  postId?: string | null;
+  commentId?: string | null;
+  reporterId: string;
+  reason: GymReportReason;
+  details?: string | null;
+  status: GymReportStatus;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  resolutionNotes?: string | null;
+  createdAt: string;
+  reporter?: {
+    displayName?: string;
+    avatarUrl?: string | null;
+  };
+  targetPost?: GymPost | null;
+  targetComment?: GymComment | null;
+}
+
+export interface GymCommunityStats {
+  activePostsCount: number;
+  pinnedPostsCount: number;
+  pendingReportsCount: number;
+}
+

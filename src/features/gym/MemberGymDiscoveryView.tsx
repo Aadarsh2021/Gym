@@ -19,6 +19,7 @@ import {
   QrCode,
   Megaphone,
   Pin,
+  MessageSquare,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { gymRepository } from '@/repositories/gym.repository';
@@ -296,14 +297,24 @@ export const MemberGymDiscoveryView: React.FC = () => {
               </div>
             </div>
 
-            <Link
-              to="/app/gym/check-in"
-              className="btn btn-primary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <QrCode size={15} />
-              <span>Scan QR to Check In</span>
-            </Link>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <Link
+                to="/app/gym/community"
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <MessageSquare size={15} />
+                <span>Community</span>
+              </Link>
+              <Link
+                to="/app/gym/check-in"
+                className="btn btn-primary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <QrCode size={15} />
+                <span>Scan QR to Check In</span>
+              </Link>
+            </div>
           </div>
         )}
 
