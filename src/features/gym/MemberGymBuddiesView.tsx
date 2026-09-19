@@ -327,14 +327,13 @@ export const MemberGymBuddiesView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-          <label className="relative inline-flex items-center cursor-pointer">
+          <label className="switch-toggle" title="Toggle Buddy Matching" aria-label="Toggle Buddy Matching">
             <input
               type="checkbox"
               checked={isOptedIn}
               onChange={e => handleToggleOptIn(e.target.checked)}
-              className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-bg-tertiary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-primary"></div>
+            <span className="slider" />
           </label>
         </div>
       </div>
@@ -683,13 +682,13 @@ export const MemberGymBuddiesView: React.FC = () => {
 
       {/* PREFERENCES / SETTINGS MODAL */}
       {showSettingsModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-bg-surface border border-border-subtle rounded-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowSettingsModal(false); }}>
+          <div className="modal-content" style={{ maxWidth: '520px' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
                 <Settings size={18} className="text-accent-primary" /> Buddy Matching Preferences
               </h3>
-              <button onClick={() => setShowSettingsModal(false)} className="text-text-muted hover:text-text-primary">
+              <button onClick={() => setShowSettingsModal(false)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }}>
                 <X size={18} />
               </button>
             </div>
@@ -775,7 +774,8 @@ export const MemberGymBuddiesView: React.FC = () => {
                 onChange={e => setBioNote(e.target.value.slice(0, 160))}
                 rows={3}
                 placeholder="e.g., Training for hypertrophy, looking for a bench spotter on push days."
-                className="w-full p-2.5 text-xs rounded-lg bg-bg-tertiary border border-border-subtle text-text-primary focus:outline-none focus:border-accent-primary resize-none"
+                className="input textarea"
+                style={{ width: '100%', minHeight: '80px', fontSize: '0.85rem' }}
               />
               <div className="text-[10px] text-text-muted text-right mt-1">{bioNote.length}/160</div>
             </div>
@@ -785,14 +785,14 @@ export const MemberGymBuddiesView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowSettingsModal(false)}
-                className="px-4 py-2 rounded-lg bg-bg-tertiary text-text-muted hover:text-text-primary text-xs font-semibold"
+                className="btn btn-secondary btn-sm"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveSettings}
-                className="px-5 py-2 rounded-lg bg-accent-primary text-white text-xs font-bold hover:opacity-90 transition-opacity"
+                className="btn btn-primary btn-sm"
               >
                 Save Preferences
               </button>
@@ -803,8 +803,8 @@ export const MemberGymBuddiesView: React.FC = () => {
 
       {/* BLOCK CONFIRMATION MODAL */}
       {blockingTarget && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-bg-surface border border-red-500/30 rounded-2xl max-w-sm w-full p-6 text-center">
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setBlockingTarget(null); }}>
+          <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', borderColor: 'rgba(239, 68, 68, 0.4)' }}>
             <UserX size={36} className="mx-auto text-red-400 mb-3" />
             <h3 className="text-base font-bold text-text-primary mb-2">Block {blockingTarget.name}?</h3>
             <p className="text-xs text-text-muted mb-6">
@@ -813,13 +813,13 @@ export const MemberGymBuddiesView: React.FC = () => {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => setBlockingTarget(null)}
-                className="px-4 py-2 rounded-lg bg-bg-tertiary text-text-muted hover:text-text-primary text-xs font-semibold"
+                className="btn btn-secondary btn-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmBlock}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-bold hover:opacity-90"
+                className="btn btn-danger btn-sm"
               >
                 Confirm Block
               </button>
@@ -830,13 +830,13 @@ export const MemberGymBuddiesView: React.FC = () => {
 
       {/* REPORT MODAL */}
       {reportingTarget && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-bg-surface border border-border-subtle rounded-2xl max-w-md w-full p-6">
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setReportingTarget(null); }}>
+          <div className="modal-content" style={{ maxWidth: '480px' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
                 <ShieldAlert size={18} className="text-red-400" /> Report Member
               </h3>
-              <button onClick={() => setReportingTarget(null)} className="text-text-muted hover:text-text-primary">
+              <button onClick={() => setReportingTarget(null)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }}>
                 <X size={18} />
               </button>
             </div>
@@ -850,7 +850,8 @@ export const MemberGymBuddiesView: React.FC = () => {
               <select
                 value={reportReason}
                 onChange={e => setReportReason(e.target.value as GymBuddyReportReason)}
-                className="w-full p-2.5 text-xs rounded-lg bg-bg-tertiary border border-border-subtle text-text-primary focus:outline-none focus:border-accent-primary"
+                className="select"
+                style={{ fontSize: '0.85rem' }}
               >
                 <option value="inappropriate_behavior">Inappropriate Behavior</option>
                 <option value="harassment">Harassment / Bullying</option>
@@ -869,20 +870,21 @@ export const MemberGymBuddiesView: React.FC = () => {
                 onChange={e => setReportDetails(e.target.value)}
                 rows={3}
                 placeholder="Describe what occurred (optional)..."
-                className="w-full p-2.5 text-xs rounded-lg bg-bg-tertiary border border-border-subtle text-text-primary focus:outline-none focus:border-accent-primary resize-none"
+                className="input textarea"
+                style={{ width: '100%', minHeight: '80px', fontSize: '0.85rem' }}
               />
             </div>
 
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setReportingTarget(null)}
-                className="px-4 py-2 rounded-lg bg-bg-tertiary text-text-muted hover:text-text-primary text-xs font-semibold"
+                className="btn btn-secondary btn-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmReport}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-bold hover:opacity-90"
+                className="btn btn-danger btn-sm"
               >
                 Submit Report
               </button>

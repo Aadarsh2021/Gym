@@ -653,3 +653,80 @@
     transform: translateY(0);
   }
 }
+
+/* ==========================================================================
+   Athletic Utility Classes & Compatibility Bridges
+   Ensures robust rendering across all screens without missing styles
+   ========================================================================== */
+
+.text-white { color: #FFFFFF !important; }
+.text-text-primary, .text-slate-100, .text-slate-200 { color: var(--text-primary) !important; }
+.text-text-secondary, .text-slate-300 { color: var(--text-secondary) !important; }
+.text-text-muted, .text-slate-400, .text-slate-500 { color: var(--text-muted) !important; }
+.text-accent-primary, .text-blue-400, .text-blue-500 { color: var(--accent-primary) !important; }
+.text-emerald-400, .text-emerald-300 { color: var(--color-success) !important; }
+.text-amber-400, .text-amber-300 { color: var(--color-warning) !important; }
+.text-red-400, .text-red-300 { color: var(--color-error) !important; }
+
+.bg-bg-surface, .bg-slate-900, .bg-slate-900\/60, .bg-slate-900\/40 { background-color: var(--bg-surface) !important; }
+.bg-bg-tertiary, .bg-slate-800, .bg-slate-800\/80, .bg-slate-800\/60 { background-color: var(--bg-secondary) !important; }
+.bg-accent-primary, .bg-blue-600 { background-color: var(--accent-primary) !important; }
+.bg-accent-primary\/10 { background-color: var(--accent-primary-muted) !important; }
+.bg-accent-primary\/20 { background-color: rgba(59, 130, 246, 0.20) !important; }
+
+.border-border-subtle, .border-slate-800, .border-slate-700 { border-color: var(--border-subtle) !important; }
+.border-border-medium, .border-slate-600 { border-color: var(--border-medium) !important; }
+.border-accent-primary, .border-blue-500 { border-color: var(--accent-primary) !important; }
+.border-accent-primary\/30 { border-color: rgba(59, 130, 246, 0.35) !important; }
+
+.space-y-2 > * + * { margin-top: var(--space-2); }
+.space-y-3 > * + * { margin-top: var(--space-3); }
+.space-y-4 > * + * { margin-top: var(--space-4); }
+.space-y-6 > * + * { margin-top: var(--space-6); }
+
+/* Switch Toggle (Athletic iOS-style) */
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-toggle .slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--border-medium);
+  transition: all var(--transition-fast);
+  border-radius: var(--radius-full);
+}
+
+.switch-toggle .slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #FFFFFF;
+  transition: all var(--transition-fast);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.switch-toggle input:checked + .slider {
+  background-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow-blue);
+}
+
+.switch-toggle input:checked + .slider:before {
+  transform: translateX(20px);
+}
+

@@ -421,20 +421,19 @@ export const RewardsShopView: React.FC = () => {
 
       {/* Redemption Confirmation Modal */}
       {confirmModalItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm" style={{ background: 'rgba(0, 0, 0, 0.7)' }}>
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setConfirmModalItem(null); }}>
           <div
-            className="w-full max-w-sm rounded-2xl p-6 shadow-xl animate-fade-in"
+            className="modal-content"
             style={{
-              background: 'var(--bg-surface-elevated, var(--bg-surface))',
-              border: '1px solid var(--border-medium)',
+              maxWidth: '420px',
             }}
           >
             <div className="flex items-center justify-between pb-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Confirm Redemption</h3>
+              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)', margin: 0 }}>Confirm Redemption</h3>
               <button
                 onClick={() => setConfirmModalItem(null)}
-                className="rounded-lg p-1 transition"
-                style={{ color: 'var(--text-secondary)' }}
+                className="btn btn-ghost btn-sm"
+                style={{ padding: '4px' }}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -448,7 +447,7 @@ export const RewardsShopView: React.FC = () => {
               <div
                 className="rounded-lg p-3 text-xs space-y-1.5"
                 style={{
-                  background: 'var(--bg-primary)',
+                  background: 'var(--bg-secondary)',
                   border: '1px solid var(--border-subtle)',
                 }}
               >
@@ -456,13 +455,13 @@ export const RewardsShopView: React.FC = () => {
                   <span>Current Balance:</span>
                   <span className="font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{balance} coins</span>
                 </div>
-                <div className="flex justify-between font-semibold" style={{ color: 'var(--color-warning, #f59e0b)' }}>
+                <div className="flex justify-between font-semibold" style={{ color: 'var(--color-warning)' }}>
                   <span>Cost:</span>
                   <span className="font-mono">-{confirmModalItem.coinCost} coins</span>
                 </div>
                 <div className="flex justify-between pt-1.5 font-bold" style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
                   <span>Remaining Balance:</span>
-                  <span className="font-mono" style={{ color: 'var(--color-success, #10b981)' }}>
+                  <span className="font-mono" style={{ color: 'var(--color-success)' }}>
                     {balance - confirmModalItem.coinCost} coins
                   </span>
                 </div>
@@ -473,26 +472,15 @@ export const RewardsShopView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setConfirmModalItem(null)}
-                className="rounded-lg px-3.5 py-1.5 text-xs font-semibold transition"
-                style={{
-                  border: '1px solid var(--border-medium)',
-                  background: 'var(--bg-surface)',
-                  color: 'var(--text-secondary)',
-                }}
+                className="btn btn-secondary btn-sm"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                disabled={redeeming}
                 onClick={handleRedeem}
-                className="inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold transition"
-                style={{
-                  background: 'var(--accent-primary)',
-                  color: '#FFFFFF',
-                  opacity: redeeming ? 0.6 : 1,
-                  boxShadow: 'var(--shadow-sm)',
-                }}
+                disabled={redeeming}
+                className="btn btn-primary btn-sm"
               >
                 {redeeming ? 'Redeeming...' : 'Confirm & Redeem'}
               </button>

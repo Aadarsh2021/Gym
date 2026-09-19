@@ -25,21 +25,21 @@ import {
 import { logger } from '@/lib/logger';
 
 const CATEGORIES: { value: GymSafetyCategory; label: string; desc: string }[] = [
-  { value: 'equipment_hazard', label: 'Equipment Hazard', desc: 'Broken cable, loose bolts, failing bench' },
-  { value: 'facility_damage', label: 'Facility Damage', desc: 'Water leak, broken mirror, exposed wiring' },
-  { value: 'hygiene_sanitation', label: 'Hygiene & Sanitation', desc: 'Biohazard, unsanitary equipment, shower issue' },
-  { value: 'member_harassment', label: 'Member Harassment / Conduct', desc: 'Intimidation, unwanted contact, aggressive behavior' },
-  { value: 'theft_security', label: 'Theft & Security', desc: 'Locker break-in, missing property, unauthorized entry' },
-  { value: 'medical_emergency', label: 'Medical Emergency', desc: 'Fainting, acute injury, cardiac event' },
-  { value: 'staff_conduct', label: 'Staff Conduct', desc: 'Unprofessional behavior, protocol violation' },
-  { value: 'other', label: 'Other Hazard / Feedback', desc: 'Any other safety concern' },
+  { value: 'equipment_hazard', label: 'Equipment & Cable Fault', desc: 'Frayed cable, loose pin, failing bench, jammed weights' },
+  { value: 'facility_damage', label: 'Facility Maintenance', desc: 'Water leak, broken mirror, damaged flooring, AC fault' },
+  { value: 'hygiene_sanitation', label: 'Hygiene & Cleanliness', desc: 'Chalk dust spill, wipe dispenser empty, shower upkeep' },
+  { value: 'member_harassment', label: 'Member Etiquette & Conduct', desc: 'Intimidation, equipment hogging, filming without consent' },
+  { value: 'theft_security', label: 'Locker & Belongings Security', desc: 'Locker issue, misplaced gear, unauthorized visitor' },
+  { value: 'medical_emergency', label: 'Floor Assistance / Injury', desc: 'Severe cramp, joint twist, spotter assistance needed' },
+  { value: 'staff_conduct', label: 'Staff & Trainer Support', desc: 'Trainer assistance or front desk service request' },
+  { value: 'other', label: 'Facility Feedback / Other', desc: 'General equipment suggestions or feedback' },
 ];
 
 const SEVERITIES: { value: GymSafetySeverity; label: string; color: string; badgeClass: string }[] = [
-  { value: 'low', label: 'Low', color: '#10b981', badgeClass: 'badge-success' },
-  { value: 'medium', label: 'Medium', color: '#f59e0b', badgeClass: 'badge-warning' },
-  { value: 'high', label: 'High', color: '#f97316', badgeClass: 'badge-accent' },
-  { value: 'critical', label: 'Critical / Urgent', color: '#ef4444', badgeClass: 'badge-danger' },
+  { value: 'low', label: 'Low / Routine', color: '#10b981', badgeClass: 'badge-success' },
+  { value: 'medium', label: 'Medium / Attention Needed', color: '#f59e0b', badgeClass: 'badge-warning' },
+  { value: 'high', label: 'High / Out of Order', color: '#f97316', badgeClass: 'badge-accent' },
+  { value: 'critical', label: 'Urgent / Immediate Attention', color: '#ef4444', badgeClass: 'badge-danger' },
 ];
 
 export const MemberGymSafetyView: React.FC = () => {
@@ -255,38 +255,34 @@ export const MemberGymSafetyView: React.FC = () => {
             >
               <ShieldAlert size={22} />
             </div>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>Gym Safety & SPS</h1>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>Facility Care &amp; Safety</h1>
             <span className="badge badge-accent" style={{ fontSize: '0.72rem', letterSpacing: '0.04em' }}>
-              PROTECTION SYSTEM
+              FACILITY SUPPORT
             </span>
           </div>
           <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.88rem', maxWidth: '560px' }}>
-            Physical hazard reporting, anonymous member safety, next-of-kin emergency contact, and instant floor SOS.
+            Report machine faults, request equipment maintenance, alert floor staff, or manage your emergency contact.
           </p>
         </div>
 
         {/* SOS Quick Trigger Button */}
         <button
           type="button"
-          className="btn"
+          className="btn btn-danger"
           onClick={() => setSosModalOpen(true)}
           style={{
-            background: '#ef4444',
-            color: '#ffffff',
             fontWeight: 800,
-            padding: '12px 24px',
-            fontSize: '0.95rem',
+            padding: '12px 20px',
+            fontSize: '0.9rem',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
-            border: 'none',
-            borderRadius: 'var(--radius-lg)',
-            cursor: 'pointer',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 4px 14px rgba(239, 68, 68, 0.3)',
           }}
         >
           <AlertTriangle size={18} />
-          <span>TRIGGER SOS</span>
+          <span>FLOOR ASSISTANCE / SOS</span>
         </button>
       </div>
 
@@ -807,10 +803,10 @@ export const MemberGymSafetyView: React.FC = () => {
         <div className="card card-elevated" style={{ padding: 'var(--space-6)', background: 'var(--bg-surface)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--space-2)' }}>
             <PhoneCall size={20} color="var(--accent-primary)" />
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0 }}>Next-of-Kin Emergency Contact</h2>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0 }}>Athlete Emergency Contact</h2>
           </div>
           <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-            Designate a trusted contact for gym staff or emergency responders in the event of an acute medical incident.
+            Designate a trusted emergency contact for gym coaches and staff in the event of an urgent situation during training.
           </p>
 
           <div
@@ -907,13 +903,13 @@ export const MemberGymSafetyView: React.FC = () => {
 
             <div>
               <label htmlFor="contact-med" style={{ display: 'block', fontWeight: 700, fontSize: '0.86rem', marginBottom: '6px' }}>
-                Critical Medical Notes / Allergies (Optional, max 500 chars)
+                Health &amp; First-Aid Notes (Optional, max 500 chars)
               </label>
               <textarea
                 id="contact-med"
                 className="input"
                 rows={3}
-                placeholder="e.g., Type 1 diabetic (carries glucose), severe penicillin allergy, asthmatic"
+                placeholder="e.g., Asthmatic (inhaler in gym bag), joint injury precautions, allergies"
                 value={medicalNotes}
                 onChange={e => setMedicalNotes(e.target.value)}
                 maxLength={500}

@@ -416,28 +416,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             )}
             <span
-              className="badge"
+              className="badge badge-accent"
               style={{
                 fontSize: '0.74rem',
-                background: 'rgba(127, 166, 107, 0.14)',
-                color: 'var(--color-success)',
-                border: '1px solid rgba(127, 166, 107, 0.32)',
+                fontWeight: 700,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
+                letterSpacing: '0.04em',
               }}
             >
-              <span
-                style={{
-                  width: '7px',
-                  height: '7px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--color-success)',
-                  boxShadow: '0 0 8px rgba(127, 166, 107, 0.6)',
-                  display: 'inline-block',
-                }}
-              />
-              Supabase Live
+              <Zap size={12} fill="var(--accent-primary)" />
+              PRO ATHLETE
             </span>
           </div>
           <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
@@ -462,12 +452,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </h1>
         <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.98rem', maxWidth: '720px', lineHeight: 1.6 }}>
           {scheduleResult.status === 'completed_today'
-            ? 'Shaabash! Today’s session is logged. Prioritize hydration, post-workout protein, and restorative sleep.'
+            ? 'Workout crushed today! Lock in your nutrition recovery, track your macros, and prepare for tomorrow’s session.'
             : scheduleResult.status === 'rest_day'
-            ? 'Active recovery window today. Your muscles rebuild and grow during rest—stay hydrated and meet your nutrition target.'
+            ? 'Scheduled recovery day. Rest, refuel your muscles, and recharge your central nervous system for your next session.'
             : scheduleResult.status === 'no_plan'
-            ? 'Welcome to your athlete command center. Set up your personalized training plan to unlock your scheduled daily routine.'
-            : `Today’s objective is ${scheduledDay?.name || 'Workout Session'}. Execute every set with strict form and disciplined intensity.`}
+            ? 'Welcome to your training dashboard. Generate or assign your workout routine to start crushing your goals.'
+            : `Today’s objective is ${scheduledDay?.name || 'Workout Session'}. Hit your target sets, log your weights, and stay consistent.`}
         </p>
         {fitnessProfile?.goal && goalContext?.subtitle && goalContext.subtitle !== 'undefined' && (
           <div
