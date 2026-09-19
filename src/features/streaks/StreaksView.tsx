@@ -301,7 +301,7 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
                     {formatDate(t.createdAt)} {t.referenceId ? `| Ref: ${t.referenceId}` : ''}
                   </div>
                 </div>
-                <div style={{ fontWeight: 700, color: 'var(--accent-gold)', fontSize: '1.05rem', fontFamily: 'var(--font-mono)' }}>
+                <div style={{ fontWeight: 700, color: 'var(--accent-primary)', fontSize: '1.05rem', fontFamily: 'var(--font-mono)' }}>
                   +{t.amount}
                 </div>
               </div>

@@ -214,8 +214,8 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
             marginBottom: 'var(--space-5)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
-              <Trophy size={16} color="var(--accent-gold)" />
-              <strong style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--accent-gold)' }}>
+              <Trophy size={16} color="var(--accent-primary)" />
+              <strong style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--accent-primary)' }}>
                 Personal Records Broken ({summary.newPersonalRecords.length})
               </strong>
             </div>
@@ -236,7 +236,7 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
                 >
                   <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{pr.exerciseName}</strong>
                   <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                    <span className="badge badge-gold" style={{ fontFamily: 'var(--font-mono)' }}>
+                    <span className="badge badge-accent" style={{ fontFamily: 'var(--font-mono)' }}>
                       {pr.weightKg} kg × {pr.reps} reps
                     </span>
                     <small style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>1RM: {pr.estimated1RM} kg</small>

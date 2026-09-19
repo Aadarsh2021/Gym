@@ -423,7 +423,7 @@ export const MemberGymCommunityView: React.FC = () => {
     return (
       <div className="container animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4)', maxWidth: '800px', textAlign: 'center' }}>
         <div className="card card-elevated" style={{ padding: 'var(--space-8)', borderRadius: 'var(--radius-lg)' }}>
-          <MessageSquare size={44} style={{ color: 'var(--accent-gold)', margin: '0 auto var(--space-4)' }} />
+          <MessageSquare size={44} style={{ color: 'var(--accent-primary)', margin: '0 auto var(--space-4)' }} />
           <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 'var(--space-2)' }}>
             Connected Gym Community
           </h2>
@@ -456,11 +456,11 @@ export const MemberGymCommunityView: React.FC = () => {
   }
 
   return (
-    <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)', maxWidth: '840px' }}>
+    <div className="container-app animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4) calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-8))' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--accent-gold)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--accent-primary)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <MessageSquare size={16} />
             <span>{activeGym.name} • Community</span>
           </div>
@@ -553,8 +553,8 @@ export const MemberGymCommunityView: React.FC = () => {
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: 'var(--accent-gold)',
-                  color: '#000',
+                  background: 'var(--accent-primary)',
+                  color: '#FFFFFF',
                   fontWeight: 700,
                   fontSize: '0.85rem',
                   display: 'flex',
@@ -578,8 +578,8 @@ export const MemberGymCommunityView: React.FC = () => {
                 width: '100%',
                 padding: 'var(--space-3)',
                 borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-color)',
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border-medium)',
                 color: 'var(--text-primary)',
                 fontSize: '0.9rem',
                 resize: 'vertical',
@@ -636,13 +636,13 @@ export const MemberGymCommunityView: React.FC = () => {
                 style={{
                   padding: 'var(--space-4)',
                   borderRadius: 'var(--radius-lg)',
-                  border: post.isPinned ? '1px solid var(--accent-gold)' : '1px solid var(--border-color)',
-                  background: post.isPinned ? 'linear-gradient(180deg, rgba(212, 175, 55, 0.05) 0%, var(--bg-glass-card) 100%)' : 'var(--bg-glass-card)',
+                  border: post.isPinned ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                  background: post.isPinned ? 'var(--accent-primary-muted)' : 'var(--bg-surface)',
                 }}
               >
                 {/* Pinned Notice Header */}
                 {post.isPinned && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)', color: 'var(--accent-gold)', fontSize: '0.75rem', fontWeight: 700, marginBottom: 'var(--space-2)', textTransform: 'uppercase' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)', color: 'var(--accent-primary)', fontSize: '0.75rem', fontWeight: 700, marginBottom: 'var(--space-2)', textTransform: 'uppercase' }}>
                     <Pin size={12} />
                     <span>PINNED BY GYM OWNER</span>
                   </div>
@@ -656,14 +656,14 @@ export const MemberGymCommunityView: React.FC = () => {
                         width: '36px',
                         height: '36px',
                         borderRadius: '50%',
-                        background: post.isPinned ? 'var(--accent-gold)' : 'var(--bg-glass)',
-                        color: post.isPinned ? '#000' : 'var(--text-primary)',
+                        background: post.isPinned ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                        color: post.isPinned ? '#FFFFFF' : 'var(--text-primary)',
                         fontWeight: 700,
                         fontSize: '0.85rem',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        border: '1px solid var(--border-color)',
+                        border: '1px solid var(--border-medium)',
                       }}
                     >
                       {post.author?.displayName?.charAt(0).toUpperCase() || 'M'}
@@ -671,7 +671,7 @@ export const MemberGymCommunityView: React.FC = () => {
                     <div>
                       <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>
                         {post.author?.displayName || 'Gym Member'}
-                        {isAuthor && <span style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', marginLeft: 'var(--space-2)' }}>(You)</span>}
+                        {isAuthor && <span style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginLeft: 'var(--space-2)' }}>(You)</span>}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {formatDate(post.createdAt)}
@@ -729,8 +729,8 @@ export const MemberGymCommunityView: React.FC = () => {
                         width: '100%',
                         padding: 'var(--space-3)',
                         borderRadius: 'var(--radius-md)',
-                        background: 'var(--bg-card)',
-                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-input)',
+                        border: '1px solid var(--border-medium)',
                         color: 'var(--text-primary)',
                         fontSize: '0.9rem',
                         outline: 'none',
@@ -771,7 +771,7 @@ export const MemberGymCommunityView: React.FC = () => {
                 )}
 
                 {/* Comments Toggle */}
-                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <button
                     onClick={() => handleToggleComments(post.id)}
                     className="btn btn-secondary"
@@ -795,7 +795,7 @@ export const MemberGymCommunityView: React.FC = () => {
 
                 {/* Collapsible Comments Section */}
                 {isExpanded && (
-                  <div style={{ marginTop: 'var(--space-3)', paddingTop: 'var(--space-2)', borderTop: '1px dashed var(--border-color)' }}>
+                  <div style={{ marginTop: 'var(--space-3)', paddingTop: 'var(--space-2)', borderTop: '1px dashed var(--border-subtle)' }}>
                     {isLoadingPostComments ? (
                       <div style={{ padding: 'var(--space-3)', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         Loading comments...
@@ -823,7 +823,7 @@ export const MemberGymCommunityView: React.FC = () => {
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-1)' }}>
                                 <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>
                                   {c.author?.displayName || 'Member'}
-                                  {isCommentAuthor && <span style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', marginLeft: '4px' }}>(You)</span>}
+                                  {isCommentAuthor && <span style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginLeft: '4px' }}>(You)</span>}
                                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '8px' }}>
                                     {formatDate(c.createdAt)}
                                   </span>
@@ -873,8 +873,8 @@ export const MemberGymCommunityView: React.FC = () => {
                                       width: '100%',
                                       padding: 'var(--space-1) var(--space-2)',
                                       borderRadius: 'var(--radius-sm)',
-                                      background: 'var(--bg-card)',
-                                      border: '1px solid var(--border-color)',
+                                      background: 'var(--bg-input)',
+                                      border: '1px solid var(--border-medium)',
                                       color: 'var(--text-primary)',
                                       fontSize: '0.85rem',
                                       outline: 'none',
@@ -929,8 +929,8 @@ export const MemberGymCommunityView: React.FC = () => {
                             flex: 1,
                             padding: 'var(--space-2) var(--space-3)',
                             borderRadius: 'var(--radius-md)',
-                            background: 'var(--bg-card)',
-                            border: '1px solid var(--border-color)',
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--border-medium)',
                             color: 'var(--text-primary)',
                             fontSize: '0.85rem',
                             outline: 'none',
@@ -965,20 +965,8 @@ export const MemberGymCommunityView: React.FC = () => {
 
       {/* Report Content Modal */}
       {reportTarget && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: 'var(--space-4)',
-          }}
-        >
-          <div className="card card-elevated animate-scale-up" style={{ width: '100%', maxWidth: '440px', padding: 'var(--space-6)', borderRadius: 'var(--radius-lg)' }}>
+        <div className="modal-backdrop" onClick={() => setReportTarget(null)}>
+          <div className="modal-content animate-fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--color-danger)' }}>
                 <Flag size={18} />
@@ -1020,8 +1008,8 @@ export const MemberGymCommunityView: React.FC = () => {
                     width: '100%',
                     padding: 'var(--space-2)',
                     borderRadius: 'var(--radius-md)',
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-medium)',
                     color: 'var(--text-primary)',
                     fontSize: '0.85rem',
                   }}
@@ -1048,8 +1036,8 @@ export const MemberGymCommunityView: React.FC = () => {
                     width: '100%',
                     padding: 'var(--space-2)',
                     borderRadius: 'var(--radius-md)',
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-medium)',
                     color: 'var(--text-primary)',
                     fontSize: '0.85rem',
                     resize: 'vertical',
@@ -1071,7 +1059,7 @@ export const MemberGymCommunityView: React.FC = () => {
                   type="submit"
                   disabled={submittingReport}
                   className="btn btn-primary"
-                  style={{ background: 'var(--color-danger)', borderColor: 'var(--color-danger)', fontSize: '0.85rem' }}
+                  style={{ background: 'var(--color-danger)', borderColor: 'var(--border-medium)', fontSize: '0.85rem' }}
                 >
                   {submittingReport ? 'Submitting...' : 'Submit Report'}
                 </button>

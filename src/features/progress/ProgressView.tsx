@@ -95,7 +95,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
-          <span className="badge badge-gold">Performance Analytics</span>
+          <span className="badge badge-accent">Performance Analytics</span>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Historical Trajectory</span>
         </div>
         <h1>Progress & Personal Records</h1>
@@ -165,7 +165,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
       {/* Personal Records Cards */}
       <div style={{ marginBottom: 'var(--space-8)' }}>
         <h3 style={{ marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <Trophy size={20} color="var(--accent-gold)" /> All-Time Personal Records
+          <Trophy size={20} color="var(--accent-primary)" /> All-Time Personal Records
         </h3>
 
         {prs.length === 0 ? (
@@ -179,11 +179,11 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-2)' }}>
                     <h4 style={{ fontSize: '1.1rem' }}>{pr.exerciseName}</h4>
-                    <span className="badge badge-gold">PR</span>
+                    <span className="badge badge-accent">PR</span>
                   </div>
 
                   <div style={{ margin: 'var(--space-3) 0' }}>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)' }}>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)' }}>
                       {pr.weightKg} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>kg</span>
                     </div>
                     <small style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -281,8 +281,8 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
                     width: '10px',
                     height: '10px',
                     borderRadius: '50%',
-                    background: 'var(--accent-gold)',
-                    boxShadow: '0 0 8px var(--accent-gold)',
+                    background: 'var(--accent-primary)',
+                    boxShadow: '0 0 8px var(--accent-primary)',
                   }}
                 />
 
@@ -295,7 +295,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
                       {item.exerciseName || 'Exercise'}
                     </h4>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                      <span style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)' }}>
+                      <span style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)' }}>
                         {item.weightKg} kg
                       </span>
                       <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
@@ -306,9 +306,9 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
                         style={{
                           fontSize: '0.72rem',
                           fontFamily: 'var(--font-mono)',
-                          background: 'rgba(234, 179, 8, 0.12)',
-                          color: 'var(--accent-gold)',
-                          border: '1px solid rgba(234, 179, 8, 0.3)',
+                          background: 'var(--accent-primary-muted)',
+                          color: 'var(--accent-primary)',
+                          border: '1px solid rgba(79, 140, 255, 0.3)',
                           padding: '2px 6px',
                         }}
                       >
@@ -386,18 +386,18 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
             <div
               style={{
                 background: 'var(--bg-surface-elevated)',
-                border: '2px solid var(--accent-gold)',
+                border: '2px solid var(--accent-primary)',
                 borderRadius: 'var(--radius-lg)',
                 padding: 'var(--space-8) var(--space-6)',
                 marginBottom: 'var(--space-4)',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
               }}
             >
-              <div className="badge badge-gold" style={{ marginBottom: 'var(--space-4)' }}>
+              <div className="badge badge-accent" style={{ marginBottom: 'var(--space-4)' }}>
                 NEW PERSONAL RECORD
               </div>
               <h2 style={{ fontSize: '1.8rem', marginBottom: 'var(--space-2)', fontFamily: 'var(--font-heading)' }}>{activeSharePR.exerciseName}</h2>
-              <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)', lineHeight: 1.1 }}>
+              <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)', lineHeight: 1.1 }}>
                 {activeSharePR.weightKg} <span style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-muted)' }}>KG</span>
               </div>
               <div style={{ color: 'var(--text-secondary)', marginTop: 'var(--space-2)', fontSize: '1.1rem' }}>

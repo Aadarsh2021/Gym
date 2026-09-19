@@ -246,11 +246,11 @@ export const MemberGymSafetyView: React.FC = () => {
                 width: '38px',
                 height: '38px',
                 borderRadius: '50%',
-                background: 'rgba(239, 68, 68, 0.2)',
+                background: 'rgba(212, 91, 91, 0.18)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#ef4444',
+                color: 'var(--color-error)',
               }}
             >
               <ShieldAlert size={22} />
@@ -780,7 +780,7 @@ export const MemberGymSafetyView: React.FC = () => {
                           borderLeft: '3px solid #10b981',
                         }}
                       >
-                        <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#10b981', marginBottom: '2px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--color-success)', marginBottom: '2px' }}>
                           STAFF RESOLUTION NOTES
                         </div>
                         <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)' }}>
@@ -957,7 +957,7 @@ export const MemberGymSafetyView: React.FC = () => {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline btn-sm"
+                className="btn btn-primary btn-sm"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
                 <span>Share via WhatsApp</span>
@@ -983,8 +983,8 @@ export const MemberGymSafetyView: React.FC = () => {
       {activeTab === 'sos' && (
         <div className="card card-elevated" style={{ padding: 'var(--space-6)', background: 'var(--bg-surface)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--space-3)' }}>
-            <AlertTriangle size={24} color="#ef4444" />
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#ef4444' }}>
+            <AlertTriangle size={24} style={{ color: 'var(--color-error)' }} />
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--color-error)' }}>
               Gym Emergency SOS Protocol
             </h2>
           </div>
@@ -1021,20 +1021,11 @@ export const MemberGymSafetyView: React.FC = () => {
             <div style={{ marginTop: 'var(--space-4)' }}>
               <button
                 type="button"
-                className="btn"
+                className="btn btn-danger"
                 onClick={() => setSosModalOpen(true)}
-                style={{
-                  background: '#ef4444',
-                  color: '#ffffff',
-                  fontWeight: 800,
-                  padding: '12px 28px',
-                  border: 'none',
-                  borderRadius: 'var(--radius-lg)',
-                  cursor: 'pointer',
-                  fontSize: '0.95rem',
-                }}
+                style={{ fontWeight: 800, padding: '12px 28px', fontSize: '0.95rem', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
               >
-                OPEN SOS TRIGGER MODAL
+                <AlertTriangle size={18} /> OPEN SOS TRIGGER MODAL
               </button>
             </div>
           </div>
@@ -1046,50 +1037,30 @@ export const MemberGymSafetyView: React.FC = () => {
           ==================================================================== */}
       {sosModalOpen && (
         <div
+          className="modal-backdrop"
           role="dialog"
           aria-modal="true"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 'var(--space-4)',
-            zIndex: 9999,
-          }}
+          onClick={e => { if (e.target === e.currentTarget && !sosTriggering) setSosModalOpen(false); }}
         >
-          <div
-            className="card card-elevated"
-            style={{
-              maxWidth: '480px',
-              width: '100%',
-              padding: 'var(--space-6)',
-              background: 'var(--bg-surface)',
-              borderRadius: 'var(--radius-xl)',
-              border: '2px solid #ef4444',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
-            }}
-          >
+          <div className="modal-content" style={{ maxWidth: '480px', borderColor: 'var(--color-error)', borderWidth: '2px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 'var(--space-4)' }}>
               <div
                 style={{
                   width: '44px',
                   height: '44px',
                   borderRadius: '50%',
-                  background: 'rgba(239, 68, 68, 0.2)',
+                  background: 'rgba(212, 91, 91, 0.18)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#ef4444',
+                  color: 'var(--color-error)',
                   flexShrink: 0,
                 }}
               >
                 <AlertTriangle size={26} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#ef4444' }}>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-error)' }}>
                   Trigger Emergency SOS
                 </h3>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -1118,7 +1089,7 @@ export const MemberGymSafetyView: React.FC = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
               <button
                 type="button"
                 className="btn btn-ghost"
@@ -1129,25 +1100,14 @@ export const MemberGymSafetyView: React.FC = () => {
               </button>
               <button
                 type="button"
-                className="btn"
+                className="btn btn-danger"
                 onClick={handleConfirmSos}
                 disabled={sosTriggering}
-                style={{
-                  background: '#ef4444',
-                  color: '#ffffff',
-                  fontWeight: 800,
-                  border: 'none',
-                  padding: '10px 20px',
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
+                style={{ fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '8px' }}
               >
                 {sosTriggering ? (
                   <>
-                    <RefreshCw size={16} className="spin" />
+                    <RefreshCw size={16} className="animate-spin" />
                     <span>Broadcasting...</span>
                   </>
                 ) : (

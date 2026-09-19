@@ -141,7 +141,7 @@ export const MemberGymChallengesView: React.FC = () => {
       case 'workout_count':
         return { label: 'Workout Target', icon: Dumbbell, color: 'var(--color-success)' };
       case 'workout_volume':
-        return { label: 'Volume Champion', icon: TrendingUp, color: 'var(--accent-gold)' };
+        return { label: 'Volume Champion', icon: TrendingUp, color: 'var(--accent-primary)' };
       case 'attendance_streak':
         return { label: 'Streak Builder', icon: Flame, color: '#F97316' };
       default:
@@ -150,10 +150,10 @@ export const MemberGymChallengesView: React.FC = () => {
   };
 
   return (
-    <div className="container animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4)', maxWidth: '1100px' }}>
+    <div className="container-app animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4) calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-8))' }}>
       {/* 1. Header Banner */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--accent-gold)', fontSize: '0.85rem', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--accent-primary)', fontSize: '0.85rem', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
           <Trophy size={16} />
           <span>{activeGym?.name ? activeGym.name.toUpperCase() : 'INTRA-GYM COMPETITIONS'}</span>
         </div>
@@ -244,7 +244,7 @@ export const MemberGymChallengesView: React.FC = () => {
           Loading gym challenges...
         </div>
       ) : displayedChallenges.length === 0 ? (
-        <div className="card card-elevated" style={{ padding: 'var(--space-10)', textAlign: 'center', borderRadius: 'var(--radius-lg)', background: 'var(--bg-glass-card)' }}>
+        <div className="card card-elevated" style={{ padding: 'var(--space-10)', textAlign: 'center', borderRadius: 'var(--radius-lg)' }}>
           <Trophy size={48} style={{ color: 'var(--text-muted)', margin: '0 auto var(--space-4)', opacity: 0.5 }} />
           <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 'var(--space-2)' }}>No Challenges Found</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: '440px', margin: '0 auto' }}>
@@ -272,11 +272,10 @@ export const MemberGymChallengesView: React.FC = () => {
                 style={{
                   padding: 'var(--space-5)',
                   borderRadius: 'var(--radius-lg)',
-                  background: 'var(--bg-glass-card)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  border: isCompleted ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border-subtle)',
+                  borderColor: isCompleted ? 'rgba(16, 185, 129, 0.4)' : 'var(--border-subtle)',
                 }}
               >
                 <div>
@@ -336,7 +335,7 @@ export const MemberGymChallengesView: React.FC = () => {
 
                     <div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Reward</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Award size={16} />
                         <span>{ch.rewardCoins ? `${ch.rewardCoins} Coins` : ch.rewardBadgeName || 'Badge'}</span>
                       </div>
@@ -423,27 +422,13 @@ export const MemberGymChallengesView: React.FC = () => {
 
       {/* 4. Leaderboard Modal */}
       {selectedChallengeForLeaderboard && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100,
-            padding: 'var(--space-4)',
-          }}
-        >
+        <div className="modal-backdrop" onClick={() => setSelectedChallengeForLeaderboard(null)}>
           <div
-            className="card animate-fade-in"
+            className="modal-content animate-fade-in"
+            onClick={e => e.stopPropagation()}
             style={{
               maxWidth: '640px',
-              width: '100%',
-              maxHeight: '85vh',
-              background: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-xl)',
-              boxShadow: 'var(--shadow-xl)',
+              padding: 0,
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -460,7 +445,7 @@ export const MemberGymChallengesView: React.FC = () => {
               }}
             >
               <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-gold)', fontSize: '0.8rem', fontWeight: 700 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)', fontSize: '0.8rem', fontWeight: 700 }}>
                   <Trophy size={14} />
                   <span>FACILITY LEADERBOARD</span>
                 </div>
@@ -497,9 +482,9 @@ export const MemberGymChallengesView: React.FC = () => {
                     const rank = entry.rank;
 
                     let badgeColor = 'var(--text-muted)';
-                    if (rank === 1) badgeColor = 'var(--accent-gold)';
-                    else if (rank === 2) badgeColor = '#94A3B8'; // Silver
-                    else if (rank === 3) badgeColor = '#CD7F32'; // Bronze
+                    if (rank === 1) badgeColor = 'var(--accent-primary)';
+                    else if (rank === 2) badgeColor = 'var(--text-secondary)';
+                    else if (rank === 3) badgeColor = 'var(--text-muted)';
 
                     return (
                       <div
@@ -589,7 +574,7 @@ export const MemberGymChallengesView: React.FC = () => {
 
             {/* Modal Footer */}
             <div style={{ padding: 'var(--space-3) var(--space-5)', borderTop: '1px solid var(--border-subtle)', textAlign: 'right' }}>
-              <button onClick={() => setSelectedChallengeForLeaderboard(null)} className="btn btn-primary btn-sm">
+              <button onClick={() => setSelectedChallengeForLeaderboard(null)} className="btn btn-secondary btn-sm">
                 Close
               </button>
             </div>

@@ -394,7 +394,7 @@ export const MixedMealAnalyzerView: React.FC<MixedMealAnalyzerViewProps> = ({
               </div>
               <div style={{ background: 'var(--color-surface-subtle)', padding: 'var(--space-2)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-subtle)' }}>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Fats</span>
-                <strong style={{ fontSize: '1.1rem', fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)' }}>
+                <strong style={{ fontSize: '1.1rem', fontFamily: 'var(--font-mono)', color: 'var(--color-warning)' }}>
                   {analysis.totalFatG}g
                 </strong>
               </div>

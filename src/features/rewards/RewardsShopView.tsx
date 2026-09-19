@@ -63,9 +63,9 @@ export const RewardsShopView: React.FC = () => {
       }
 
       const [bal, items, history, gRewards] = await Promise.all(promises);
-      setBalance(bal.balance);
-      setCatalog(items);
-      setRedemptions(history);
+      setBalance(bal?.balance ?? 0);
+      setCatalog(items ?? []);
+      setRedemptions(history ?? []);
       if (gRewards) {
         setGymRewards(gRewards);
       }
@@ -103,29 +103,122 @@ export const RewardsShopView: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto max-w-5xl p-4 sm:p-6 animate-fade-in" data-testid="rewards-shop-view">
+    <div
+      className="container animate-fade-in"
+      style={{
+        padding: 'var(--space-4) var(--space-4) var(--space-12)',
+        maxWidth: '1080px',
+        margin: '0 auto',
+      }}
+      data-testid="rewards-shop-view"
+    >
       {/* Header & Balance Banner */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="mb-1 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400">
-            <Coins className="h-4 w-4" />
-            <span>Fitness Coin Rewards</span>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 'var(--space-4)',
+          marginBottom: 'var(--space-6)',
+        }}
+      >
+        <div style={{ flex: '1 1 300px' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: 'var(--accent-primary)',
+              marginBottom: '4px',
+            }}
+          >
+            <Coins size={15} />
+            <span>FitCoins Reward Center</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Rewards Shop</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1
+            style={{
+              fontSize: '1.75rem',
+              fontWeight: 800,
+              color: 'var(--text-primary)',
+              margin: '0 0 var(--space-1)',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Rewards Shop
+          </h1>
+          <p
+            style={{
+              fontSize: '0.88rem',
+              color: 'var(--text-secondary)',
+              margin: 0,
+              maxWidth: '540px',
+              lineHeight: 1.45,
+            }}
+          >
             Redeem coins earned through consistent workout logging, streak milestones, and personal records.
           </p>
         </div>
 
-        {/* Balance Card */}
-        <div className="flex items-center gap-3 self-start rounded-xl border border-amber-500/30 bg-amber-950/20 px-4 py-3 sm:self-auto">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400">
-            <Coins className="h-6 w-6" />
+        {/* Balance Card — Standard FitSphere Blue/Graphite Card */}
+        <div
+          className="card card-elevated"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+            padding: 'var(--space-3) var(--space-5)',
+            border: '1px solid var(--border-medium)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--accent-primary-muted)',
+              color: 'var(--accent-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Coins size={22} />
           </div>
           <div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-300">Your Coin Balance</span>
-            <div className="text-xl font-black font-mono text-amber-400" data-testid="user-coin-balance">
-              {balance.toLocaleString()} <span className="text-xs font-normal text-amber-300">COINS</span>
+            <span
+              style={{
+                display: 'block',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              Your Coin Balance
+            </span>
+            <div
+              data-testid="user-coin-balance"
+              style={{
+                fontSize: '1.45rem',
+                fontWeight: 800,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--text-primary)',
+                lineHeight: 1.1,
+              }}
+            >
+              {balance.toLocaleString()}{' '}
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-primary)' }}>
+                FITCOINS
+              </span>
             </div>
           </div>
         </div>
@@ -133,79 +226,105 @@ export const RewardsShopView: React.FC = () => {
 
       {/* Notifications */}
       {errorMessage && (
-        <div className="mb-6 flex items-center justify-between rounded-lg border border-red-500/20 bg-red-950/20 p-4 text-sm text-red-300">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
-            <span>{errorMessage}</span>
+        <div
+          className="card"
+          role="alert"
+          style={{
+            padding: 'var(--space-3) var(--space-4)',
+            background: 'var(--color-error-muted)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            color: 'var(--color-error)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 'var(--space-4)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertCircle size={16} />
+            <span style={{ fontSize: '0.88rem' }}>{errorMessage}</span>
           </div>
-          <button onClick={() => setErrorMessage(null)} className="text-red-400 hover:text-red-200">
-            <X className="h-4 w-4" />
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="btn btn-ghost btn-sm"
+            aria-label="Dismiss error notification"
+            style={{ padding: '4px', minHeight: '32px' }}
+          >
+            <X size={16} />
           </button>
         </div>
       )}
 
       {successMessage && (
-        <div className="mb-6 flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-950/20 p-4 text-sm text-emerald-300">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
-            <span>{successMessage}</span>
+        <div
+          className="card"
+          role="status"
+          style={{
+            padding: 'var(--space-3) var(--space-4)',
+            background: 'var(--color-success-muted)',
+            border: '1px solid rgba(16, 185, 129, 0.35)',
+            color: 'var(--color-success)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 'var(--space-4)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={16} />
+            <span style={{ fontSize: '0.88rem' }}>{successMessage}</span>
           </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-emerald-400 hover:text-emerald-200">
-            <X className="h-4 w-4" />
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="btn btn-ghost btn-sm"
+            aria-label="Dismiss success notification"
+            style={{ padding: '4px', minHeight: '32px' }}
+          >
+            <X size={16} />
           </button>
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="mb-6 flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border-subtle)' }}>
-        <div className="flex gap-2 flex-wrap">
+      {/* Tabs & Refresh */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 'var(--space-3)',
+          borderBottom: '1px solid var(--border-subtle)',
+          paddingBottom: 'var(--space-3)',
+          marginBottom: 'var(--space-6)',
+        }}
+      >
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveTab('catalog')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition ${
-              activeTab === 'catalog'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'hover:bg-slate-800/40'
-            }`}
-            style={{
-              color: activeTab === 'catalog' ? '#FFFFFF' : 'var(--text-secondary)',
-              background: activeTab === 'catalog' ? 'var(--accent-primary)' : 'transparent',
-            }}
+            className={`btn btn-sm ${activeTab === 'catalog' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ minHeight: '38px', gap: '6px' }}
           >
-            <Gift className="h-4 w-4" />
+            <Gift size={15} />
             <span>Personal Rewards ({catalog.length})</span>
           </button>
 
           {isIntegrated && activeGym && (
             <button
               onClick={() => setActiveTab('gym_perks')}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition ${
-                activeTab === 'gym_perks'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'hover:bg-slate-800/40'
-              }`}
-              style={{
-                color: activeTab === 'gym_perks' ? '#FFFFFF' : 'var(--text-secondary)',
-                background: activeTab === 'gym_perks' ? 'var(--accent-primary)' : 'transparent',
-              }}
+              className={`btn btn-sm ${activeTab === 'gym_perks' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ minHeight: '38px', gap: '6px' }}
             >
-              <Building2 className="h-4 w-4" />
+              <Building2 size={15} />
               <span>Club Perks ({gymRewards.length})</span>
             </button>
           )}
 
           <button
             onClick={() => setActiveTab('history')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition ${
-              activeTab === 'history'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'hover:bg-slate-800/40'
-            }`}
-            style={{
-              color: activeTab === 'history' ? '#FFFFFF' : 'var(--text-secondary)',
-              background: activeTab === 'history' ? 'var(--accent-primary)' : 'transparent',
-            }}
+            className={`btn btn-sm ${activeTab === 'history' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ minHeight: '38px', gap: '6px' }}
           >
-            <History className="h-4 w-4" />
+            <History size={15} />
             <span>Redemption History ({redemptions.length})</span>
           </button>
         </div>
@@ -216,76 +335,142 @@ export const RewardsShopView: React.FC = () => {
             loadData();
           }}
           disabled={refreshing || loading}
-          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition"
-          style={{
-            border: '1px solid var(--border-medium)',
-            background: 'var(--bg-surface)',
-            color: 'var(--text-secondary)',
-          }}
+          className="btn btn-secondary btn-sm"
+          style={{ minHeight: '38px', gap: '6px' }}
+          aria-label="Refresh rewards"
         >
-          <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
           <span className="hidden sm:inline">Refresh</span>
         </button>
       </div>
 
-      {/* Content */}
+      {/* Main Content Area */}
       {loading ? (
-        <div className="flex h-48 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: 'var(--accent-primary)', borderTopColor: 'transparent' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '220px' }}>
+          <div className="spinner" style={{ width: '30px', height: '30px' }} />
         </div>
       ) : activeTab === 'catalog' ? (
         catalog.length === 0 ? (
-          <div className="rounded-2xl border border-dashed p-12 text-center" style={{ borderColor: 'var(--border-subtle)', background: 'var(--bg-surface)' }}>
-            <Gift className="mx-auto mb-4 h-12 w-12" style={{ color: 'var(--text-muted)' }} />
-            <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>No Rewards Available Right Now</h3>
-            <p className="mx-auto mt-1 max-w-sm text-sm" style={{ color: 'var(--text-secondary)' }}>
-              The reward catalog is currently empty. Check back soon for new digital perks and partner discounts!
+          <div
+            className="card card-elevated text-center"
+            style={{
+              padding: 'var(--space-12) var(--space-6)',
+              borderStyle: 'dashed',
+            }}
+          >
+            <Gift size={46} style={{ margin: '0 auto var(--space-3)', color: 'var(--text-muted)', opacity: 0.6 }} />
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
+              No Rewards Available Right Now
+            </h3>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto' }}>
+              The reward catalog is currently empty. Check back soon for new digital perks, pro training passes, and partner discounts!
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gap: 'var(--space-4)',
+            }}
+          >
             {catalog.map((item) => {
               const canAfford = balance >= item.coinCost;
 
               return (
                 <div
                   key={item.id}
-                  className="flex flex-col justify-between rounded-xl p-5 transition"
+                  className="card card-elevated card-interactive"
                   style={{
-                    border: '1px solid var(--border-subtle)',
-                    background: 'var(--bg-surface)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    padding: 'var(--space-5)',
                   }}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="rounded px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: 'var(--space-3)',
+                      }}
+                    >
+                      <span
+                        className="badge"
+                        style={{
+                          fontSize: '0.72rem',
+                          background: 'var(--bg-secondary)',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border-subtle)',
+                        }}
+                      >
                         {item.category.replace('_', ' ')}
                       </span>
-                      <div className="flex items-center gap-1 text-sm font-bold font-mono" style={{ color: 'var(--color-warning, #f59e0b)' }}>
-                        <Coins className="h-4 w-4" />
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '0.88rem',
+                          fontWeight: 700,
+                          fontFamily: 'var(--font-mono)',
+                          color: 'var(--accent-primary)',
+                        }}
+                      >
+                        <Coins size={15} />
                         <span>{item.coinCost}</span>
                       </div>
                     </div>
 
-                    <h3 className="text-base font-bold mb-1.5" style={{ color: 'var(--text-primary)' }}>{item.title}</h3>
-                    <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>{item.description}</p>
+                    <h3
+                      style={{
+                        fontSize: '1.05rem',
+                        fontWeight: 700,
+                        color: 'var(--text-primary)',
+                        margin: '0 0 var(--space-2)',
+                      }}
+                    >
+                      {item.title}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: '0.82rem',
+                        lineHeight: 1.5,
+                        color: 'var(--text-secondary)',
+                        margin: '0 0 var(--space-4)',
+                      }}
+                    >
+                      {item.description}
+                    </p>
                   </div>
 
-                  <div className="pt-3 flex items-center justify-between" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Available</span>
+                  <div
+                    style={{
+                      paddingTop: 'var(--space-3)',
+                      borderTop: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Personal Core
+                    </span>
 
                     <button
                       onClick={() => setConfirmModalItem(item)}
                       disabled={!canAfford}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition"
+                      className={`btn btn-sm ${canAfford ? 'btn-primary' : 'btn-secondary'}`}
                       style={{
-                        background: canAfford ? 'var(--accent-primary)' : 'var(--bg-secondary)',
-                        color: canAfford ? '#FFFFFF' : 'var(--text-muted)',
-                        cursor: canAfford ? 'pointer' : 'not-allowed',
+                        minHeight: '36px',
+                        fontSize: '0.82rem',
+                        gap: '6px',
                       }}
                     >
                       <span>{canAfford ? 'Redeem Perk' : 'Need More Coins'}</span>
-                      {canAfford && <ArrowRight className="h-3 w-3" />}
+                      {canAfford && <ArrowRight size={14} />}
                     </button>
                   </div>
                 </div>
@@ -295,58 +480,131 @@ export const RewardsShopView: React.FC = () => {
         )
       ) : activeTab === 'gym_perks' ? (
         <div>
+          {/* Gym Perks Explanatory Banner */}
           <div
-            className="mb-4 p-4 rounded-xl flex items-start gap-3"
+            className="card"
             style={{
+              padding: 'var(--space-4)',
               background: 'var(--accent-primary-muted)',
               border: '1px solid var(--accent-primary)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 'var(--space-3)',
+              marginBottom: 'var(--space-5)',
             }}
           >
-            <Building2 className="h-5 w-5 shrink-0 mt-0.5" style={{ color: 'var(--accent-primary)' }} />
+            <Building2 size={20} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: '2px' }} />
             <div>
-              <div className="font-bold text-sm" style={{ color: 'var(--accent-primary)' }}>
-                Exclusive Perks for {activeGym?.name} Members
+              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Exclusive Perks for {activeGym?.name || 'Your Gym'} Members
               </div>
-              <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                These perks are sponsored directly by your integrated club and are unlocked via verified physical check-ins. They are distinct from and do NOT consume your Personal FitCoins balance.
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '4px 0 0', lineHeight: 1.45 }}>
+                These perks are sponsored directly by your integrated club and unlocked via verified physical check-ins. They are distinct from and do NOT consume your Personal FitCoins balance.
               </p>
             </div>
           </div>
 
           {gymRewards.length === 0 ? (
-            <div className="rounded-2xl border border-dashed p-12 text-center" style={{ borderColor: 'var(--border-subtle)', background: 'var(--bg-surface)' }}>
-              <Building2 className="mx-auto mb-4 h-12 w-12" style={{ color: 'var(--text-muted)' }} />
-              <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>No Club Perks Active</h3>
-              <p className="mx-auto mt-1 max-w-sm text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <div
+              className="card card-elevated text-center"
+              style={{
+                padding: 'var(--space-12) var(--space-6)',
+                borderStyle: 'dashed',
+              }}
+            >
+              <Building2 size={46} style={{ margin: '0 auto var(--space-3)', color: 'var(--text-muted)', opacity: 0.6 }} />
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
+                No Club Perks Active
+              </h3>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto' }}>
                 Your facility management has not published attendance rewards yet. Check back soon or visit the front desk!
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+                gap: 'var(--space-4)',
+              }}
+            >
               {gymRewards.map((reward) => (
                 <div
                   key={reward.id}
-                  className="flex flex-col justify-between rounded-xl p-5 transition"
+                  className="card card-elevated card-interactive"
                   style={{
-                    border: '1px solid var(--border-subtle)',
-                    background: 'var(--bg-surface)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    padding: 'var(--space-5)',
                   }}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="badge badge-success" style={{ fontSize: '0.72rem' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: 'var(--space-3)',
+                      }}
+                    >
+                      <span
+                        className="badge"
+                        style={{
+                          fontSize: '0.72rem',
+                          background: 'var(--color-success-muted)',
+                          color: 'var(--color-success)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                        }}
+                      >
                         {reward.requiredVisits} Verified Visits
                       </span>
-                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                         Attendance Perk
                       </span>
                     </div>
-                    <h3 className="text-base font-bold mb-1.5" style={{ color: 'var(--text-primary)' }}>{reward.title}</h3>
-                    <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>{reward.description}</p>
+                    <h3
+                      style={{
+                        fontSize: '1.05rem',
+                        fontWeight: 700,
+                        color: 'var(--text-primary)',
+                        margin: '0 0 var(--space-2)',
+                      }}
+                    >
+                      {reward.title}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: '0.82rem',
+                        lineHeight: 1.5,
+                        color: 'var(--text-secondary)',
+                        margin: '0 0 var(--space-4)',
+                      }}
+                    >
+                      {reward.description}
+                    </p>
                   </div>
-                  <div className="pt-3 flex items-center justify-between" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Facility Verified</span>
-                    <span className="text-xs font-semibold" style={{ color: 'var(--color-success, #10b981)' }}>
+
+                  <div
+                    style={{
+                      paddingTop: 'var(--space-3)',
+                      borderTop: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Facility Verified
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        color: 'var(--color-success)',
+                      }}
+                    >
                       Claim at Front Desk
                     </span>
                   </div>
@@ -356,62 +614,96 @@ export const RewardsShopView: React.FC = () => {
           )}
         </div>
       ) : redemptions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-12 text-center" style={{ borderColor: 'var(--border-subtle)', background: 'var(--bg-surface)' }}>
-          <History className="mx-auto mb-4 h-12 w-12" style={{ color: 'var(--text-muted)' }} />
-          <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>No Redemptions Yet</h3>
-          <p className="mx-auto mt-1 max-w-sm text-sm" style={{ color: 'var(--text-secondary)' }}>
-            When you redeem digital perks with your fitness coins, your redemption codes and history will appear here.
+        <div
+          className="card card-elevated text-center"
+          style={{
+            padding: 'var(--space-12) var(--space-6)',
+            borderStyle: 'dashed',
+          }}
+        >
+          <History size={46} style={{ margin: '0 auto var(--space-3)', color: 'var(--text-muted)', opacity: 0.6 }} />
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
+            No Redemptions Yet
+          </h3>
+          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto' }}>
+            When you redeem digital perks with your fitness coins, your redemption claim codes and history will appear here.
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {redemptions.map((redemption) => (
             <div
               key={redemption.id}
-              className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl p-4 gap-3 transition"
+              className="card card-elevated"
               style={{
-                border: '1px solid var(--border-subtle)',
-                background: 'var(--bg-surface)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 'var(--space-3)',
+                padding: 'var(--space-4)',
               }}
             >
-              <div className="flex items-center gap-3">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <div
-                  className="flex h-9 w-9 items-center justify-center rounded-lg"
                   style={{
-                    background: 'var(--color-success-muted, rgba(16, 185, 129, 0.12))',
-                    color: 'var(--color-success, #10b981)',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--color-success-muted)',
+                    color: 'var(--color-success)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
                   }}
                 >
-                  <Award className="h-5 w-5" />
+                  <Award size={20} />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                     {redemption.rewardTitle || 'Redeemed Fitness Perk'}
                   </h4>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
                     Redeemed on {new Date(redemption.createdAt).toLocaleDateString()} at{' '}
                     {new Date(redemption.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 sm:self-center">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
                 {redemption.redemptionCode && (
                   <div
-                    className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-mono text-xs"
                     style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      borderRadius: 'var(--radius-sm)',
                       background: 'var(--bg-secondary)',
                       color: 'var(--accent-primary)',
                       border: '1px solid var(--border-medium)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.82rem',
                     }}
                   >
-                    <Key className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
+                    <Key size={13} style={{ color: 'var(--text-muted)' }} />
                     <span>{redemption.redemptionCode}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-1 font-mono text-xs font-bold" style={{ color: 'var(--color-warning, #f59e0b)' }}>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    color: 'var(--accent-primary)',
+                  }}
+                >
                   <span>-{redemption.coinSpent}</span>
-                  <Coins className="h-3 w-3" />
+                  <Coins size={14} />
                 </div>
               </div>
             </div>
@@ -421,54 +713,103 @@ export const RewardsShopView: React.FC = () => {
 
       {/* Redemption Confirmation Modal */}
       {confirmModalItem && (
-        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setConfirmModalItem(null); }}>
+        <div
+          className="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setConfirmModalItem(null);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-modal-title"
+        >
           <div
             className="modal-content"
             style={{
-              maxWidth: '420px',
+              maxWidth: '440px',
+              padding: 'var(--space-6)',
             }}
           >
-            <div className="flex items-center justify-between pb-3" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)', margin: 0 }}>Confirm Redemption</h3>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: 'var(--space-3)',
+                borderBottom: '1px solid var(--border-subtle)',
+              }}
+            >
+              <h3
+                id="confirm-modal-title"
+                style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}
+              >
+                Confirm Redemption
+              </h3>
               <button
                 onClick={() => setConfirmModalItem(null)}
                 className="btn btn-ghost btn-sm"
-                style={{ padding: '4px' }}
+                aria-label="Close dialog"
+                style={{ padding: '4px', minHeight: '32px' }}
               >
-                <X className="h-4 w-4" />
+                <X size={16} />
               </button>
             </div>
 
-            <div className="mt-4 space-y-3">
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Are you sure you want to redeem <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{confirmModalItem.title}</span>?
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: '0 0 var(--space-4)' }}>
+                Are you sure you want to redeem{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>{confirmModalItem.title}</strong>?
               </p>
 
               <div
-                className="rounded-lg p-3 text-xs space-y-1.5"
+                className="card"
                 style={{
+                  padding: 'var(--space-3) var(--space-4)',
                   background: 'var(--bg-secondary)',
                   border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-2)',
+                  fontSize: '0.82rem',
                 }}
               >
-                <div className="flex justify-between" style={{ color: 'var(--text-muted)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                   <span>Current Balance:</span>
-                  <span className="font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{balance} coins</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {balance} coins
+                  </span>
                 </div>
-                <div className="flex justify-between font-semibold" style={{ color: 'var(--color-warning)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: 'var(--color-warning)' }}>
                   <span>Cost:</span>
-                  <span className="font-mono">-{confirmModalItem.coinCost} coins</span>
+                  <span style={{ fontFamily: 'var(--font-mono)' }}>-{confirmModalItem.coinCost} coins</span>
                 </div>
-                <div className="flex justify-between pt-1.5 font-bold" style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    paddingTop: 'var(--space-2)',
+                    borderTop: '1px solid var(--border-subtle)',
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   <span>Remaining Balance:</span>
-                  <span className="font-mono" style={{ color: 'var(--color-success)' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-success)' }}>
                     {balance - confirmModalItem.coinCost} coins
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-2">
+            <div
+              style={{
+                marginTop: 'var(--space-6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 'var(--space-2)',
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setConfirmModalItem(null)}

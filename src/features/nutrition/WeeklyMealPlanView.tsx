@@ -19,7 +19,7 @@ interface WeeklyMealPlanViewProps {
 const MEAL_SLOT_LABELS: Record<string, { label: string; color: string; badgeClass: string }> = {
   breakfast: { label: 'Breakfast', color: 'var(--accent-primary)', badgeClass: 'badge-accent' },
   lunch: { label: 'Lunch', color: 'var(--color-success)', badgeClass: 'badge-success' },
-  snack: { label: 'Mid-Day Snack', color: 'var(--accent-gold)', badgeClass: 'badge' },
+  snack: { label: 'Mid-Day Snack', color: 'var(--color-warning)', badgeClass: 'badge' },
   dinner: { label: 'Dinner', color: 'var(--color-info)', badgeClass: 'badge-primary' },
 };
 

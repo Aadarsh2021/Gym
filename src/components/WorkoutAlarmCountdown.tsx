@@ -89,17 +89,57 @@ export const WorkoutAlarmCountdown: React.FC<WorkoutAlarmCountdownProps> = ({
 
   return (
     <div
-      className={`rounded-xl border border-blue-500/20 bg-blue-950/10 p-4 shadow-sm backdrop-blur-sm ${className}`}
+      className={`card card-elevated ${className}`}
+      style={{
+        padding: 'var(--space-4)',
+        border: '1px solid var(--border-medium)',
+        borderRadius: 'var(--radius-md)',
+      }}
       data-testid="workout-alarm-countdown"
     >
-      <div className="flex items-center justify-between pb-3 border-b border-white/5">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/20 text-blue-400">
-            <Clock className="h-4 w-4" />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingBottom: 'var(--space-3)',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--accent-primary-muted)',
+              color: 'var(--accent-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Clock size={16} />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white">Next Workout Alarm</h4>
-            <p className="text-xs text-slate-400">
+            <h4
+              style={{
+                fontSize: '0.88rem',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}
+            >
+              Next Workout Alarm
+            </h4>
+            <p
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--text-secondary)',
+                margin: '2px 0 0',
+              }}
+            >
               Scheduled for {preference.time} (
               {preference.days.length === 7
                 ? 'Every day'
@@ -110,54 +150,223 @@ export const WorkoutAlarmCountdown: React.FC<WorkoutAlarmCountdownProps> = ({
             </p>
           </div>
         </div>
-        <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-400 border border-blue-500/20">
-          <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+
+        <span
+          className="badge"
+          style={{
+            background: 'var(--accent-primary-muted)',
+            color: 'var(--accent-primary)',
+            border: '1px solid rgba(79, 140, 255, 0.25)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            fontSize: '0.72rem',
+            padding: '2px 8px',
+          }}
+        >
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--accent-primary)',
+              display: 'inline-block',
+            }}
+          />
           Active
         </span>
       </div>
 
       {snoozeActive && snoozeCountdown ? (
-        <div className="mt-3 flex items-center justify-between rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
-          <div className="flex items-center gap-2">
-            <Moon className="h-4 w-4 text-amber-400" />
+        <div
+          className="card"
+          style={{
+            marginTop: 'var(--space-3)',
+            padding: 'var(--space-3)',
+            background: 'var(--color-warning-muted)',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            borderRadius: 'var(--radius-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <Moon size={16} style={{ color: 'var(--color-warning)' }} />
             <div>
-              <p className="text-xs font-semibold text-amber-300">Snooze in Progress</p>
-              <p className="text-xs text-amber-400/80">Alarm ringing in {snoozeCountdown}</p>
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-warning)', margin: 0 }}>
+                Snooze in Progress
+              </p>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+                Alarm ringing in {snoozeCountdown}
+              </p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-          <div className="rounded-lg bg-slate-900/60 p-2 border border-slate-800">
-            <span className="block text-xl font-bold font-mono text-white" data-testid="countdown-days">
+        <div
+          style={{
+            marginTop: 'var(--space-3)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 'var(--space-2)',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              padding: 'var(--space-2)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <span
+              data-testid="countdown-days"
+              style={{
+                display: 'block',
+                fontSize: '1.25rem',
+                fontWeight: 800,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--text-primary)',
+              }}
+            >
               {countdown.days.toString().padStart(2, '0')}
             </span>
-            <span className="text-[10px] uppercase tracking-wider text-slate-400">Days</span>
+            <span
+              style={{
+                fontSize: '0.65rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+              }}
+            >
+              Days
+            </span>
           </div>
-          <div className="rounded-lg bg-slate-900/60 p-2 border border-slate-800">
-            <span className="block text-xl font-bold font-mono text-white" data-testid="countdown-hours">
+
+          <div
+            className="card"
+            style={{
+              padding: 'var(--space-2)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <span
+              data-testid="countdown-hours"
+              style={{
+                display: 'block',
+                fontSize: '1.25rem',
+                fontWeight: 800,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--text-primary)',
+              }}
+            >
               {countdown.hours.toString().padStart(2, '0')}
             </span>
-            <span className="text-[10px] uppercase tracking-wider text-slate-400">Hours</span>
+            <span
+              style={{
+                fontSize: '0.65rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+              }}
+            >
+              Hours
+            </span>
           </div>
-          <div className="rounded-lg bg-slate-900/60 p-2 border border-slate-800">
-            <span className="block text-xl font-bold font-mono text-white" data-testid="countdown-minutes">
+
+          <div
+            className="card"
+            style={{
+              padding: 'var(--space-2)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <span
+              data-testid="countdown-minutes"
+              style={{
+                display: 'block',
+                fontSize: '1.25rem',
+                fontWeight: 800,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--text-primary)',
+              }}
+            >
               {countdown.minutes.toString().padStart(2, '0')}
             </span>
-            <span className="text-[10px] uppercase tracking-wider text-slate-400">Mins</span>
+            <span
+              style={{
+                fontSize: '0.65rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+              }}
+            >
+              Mins
+            </span>
           </div>
-          <div className="rounded-lg bg-slate-900/60 p-2 border border-slate-800">
-            <span className="block text-xl font-bold font-mono text-blue-400" data-testid="countdown-seconds">
+
+          <div
+            className="card"
+            style={{
+              padding: 'var(--space-2)',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <span
+              data-testid="countdown-seconds"
+              style={{
+                display: 'block',
+                fontSize: '1.25rem',
+                fontWeight: 800,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--accent-primary)',
+              }}
+            >
               {countdown.seconds.toString().padStart(2, '0')}
             </span>
-            <span className="text-[10px] uppercase tracking-wider text-slate-400">Secs</span>
+            <span
+              style={{
+                fontSize: '0.65rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+              }}
+            >
+              Secs
+            </span>
           </div>
         </div>
       )}
 
-      <div className="mt-3 pt-3 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-400">
-        <div className="flex items-center gap-1.5 text-slate-400">
-          <Volume2 className="h-3.5 w-3.5 text-blue-400" />
+      <div
+        style={{
+          marginTop: 'var(--space-3)',
+          paddingTop: 'var(--space-3)',
+          borderTop: '1px solid var(--border-subtle)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 'var(--space-2)',
+          fontSize: '0.75rem',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Volume2 size={14} style={{ color: 'var(--accent-primary)' }} />
           <span>Plays audio chime + system alert</span>
         </div>
 
@@ -165,16 +374,26 @@ export const WorkoutAlarmCountdown: React.FC<WorkoutAlarmCountdownProps> = ({
           <button
             type="button"
             onClick={onSnooze}
-            className="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700 flex items-center gap-1"
+            className="btn btn-secondary btn-sm"
+            style={{ minHeight: '30px', padding: '2px 10px', fontSize: '0.75rem', gap: '4px' }}
           >
-            <Moon className="h-3 w-3" />
-            Quick Snooze 10m
+            <Moon size={12} />
+            <span>Quick Snooze 10m</span>
           </button>
         )}
       </div>
 
-      <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500">
-        <AlertCircle className="h-3 w-3 shrink-0 text-slate-400" />
+      <div
+        style={{
+          marginTop: 'var(--space-2)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '0.7rem',
+          color: 'var(--text-muted)',
+        }}
+      >
+        <AlertCircle size={13} style={{ flexShrink: 0 }} />
         <span>Alarms trigger while browser tab is open or running in background. Web Push remains V2.</span>
       </div>
     </div>

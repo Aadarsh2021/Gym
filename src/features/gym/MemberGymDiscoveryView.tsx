@@ -369,7 +369,7 @@ export const MemberGymDiscoveryView: React.FC = () => {
                 className="btn btn-secondary"
                 style={{ display: 'flex', flexDirection: 'column', padding: 'var(--space-3)', height: 'auto', gap: '4px', textAlign: 'center' }}
               >
-                <Trophy size={20} color="var(--accent-gold)" />
+                <Trophy size={20} color="var(--accent-primary)" />
                 <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>Challenges</span>
               </Link>
               <Link
@@ -413,7 +413,7 @@ export const MemberGymDiscoveryView: React.FC = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-gold)', fontSize: '0.85rem', fontWeight: 700 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-warning)', fontSize: '0.85rem', fontWeight: 700 }}>
                 <Megaphone size={16} />
                 <span>FACILITY BROADCASTS ({announcements.length})</span>
               </div>
@@ -431,7 +431,7 @@ export const MemberGymDiscoveryView: React.FC = () => {
                   badgeColor = 'var(--accent-fire)';
                 } else if (ann.priority === 'high') {
                   badgeBg = 'rgba(245, 158, 11, 0.18)';
-                  badgeColor = 'var(--accent-gold)';
+                  badgeColor = 'var(--color-warning)';
                 }
 
                 return (
@@ -440,8 +440,8 @@ export const MemberGymDiscoveryView: React.FC = () => {
                     style={{
                       padding: 'var(--space-3) var(--space-4)',
                       borderRadius: 'var(--radius-md)',
-                      background: ann.isPinned ? 'rgba(234, 179, 8, 0.06)' : 'var(--bg-surface-elevated)',
-                      border: ann.isPinned ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid var(--border-subtle)',
+                      background: ann.isPinned ? 'var(--color-warning-muted)' : 'var(--bg-surface-elevated)',
+                      border: ann.isPinned ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-subtle)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
@@ -449,8 +449,8 @@ export const MemberGymDiscoveryView: React.FC = () => {
                         <span
                           className="badge"
                           style={{
-                            background: 'rgba(234, 179, 8, 0.2)',
-                            color: 'var(--accent-gold)',
+                            background: 'var(--color-warning-muted)',
+                            color: 'var(--color-warning)',
                             fontWeight: 700,
                             fontSize: '0.68rem',
                             display: 'inline-flex',
@@ -795,7 +795,7 @@ export const MemberGymDiscoveryView: React.FC = () => {
         }}
       >
         <div style={{ maxWidth: '640px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-gold)', fontSize: '0.8rem', fontWeight: 700, marginBottom: 'var(--space-2)' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)', fontSize: '0.8rem', fontWeight: 700, marginBottom: 'var(--space-2)' }}>
             <Sparkles size={14} />
             <span>GYM EXPANSION</span>
           </div>

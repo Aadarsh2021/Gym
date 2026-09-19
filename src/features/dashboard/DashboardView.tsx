@@ -560,8 +560,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 fontSize: '0.82rem',
               }}
             >
-              <Megaphone size={15} color="var(--accent-gold)" />
-              <span style={{ fontWeight: 700, color: 'var(--accent-gold)' }}>Notice:</span>
+              <Megaphone size={15} color="var(--color-warning)" />
+              <span style={{ fontWeight: 700, color: 'var(--color-warning)' }}>Notice:</span>
               <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{gymAnnouncements[0].title}</span>
               <span style={{ color: 'var(--text-muted)' }}>— {gymAnnouncements[0].content.slice(0, 80)}...</span>
             </div>
@@ -739,7 +739,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div style={{ fontWeight: 700, fontSize: '0.94rem', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
               {streak.currentStreak} Days Active
             </div>
-            <span style={{ fontSize: '0.78rem', color: 'var(--accent-gold)', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
               {coins > 0 ? `${coins} Coins • ` : ''}Longest: {streak.longestStreak}d →
             </span>
           </div>
@@ -857,7 +857,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       background: dailyMission.isCompleted
                         ? 'var(--color-success)'
                         : dailyMission.isClaimable
-                        ? 'var(--accent-gold)'
+                        ? 'var(--accent-primary)'
                         : 'var(--accent-primary)',
                       transition: 'width 0.3s ease',
                     }}
@@ -875,14 +875,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     className="btn btn-primary btn-sm"
                     onClick={handleClaimMission}
                     disabled={isClaimingMission}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent-gold)', color: '#000', fontWeight: 700, border: 'none' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     {isClaimingMission ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}
                     Claim +{dailyMission.coinReward} Coins
                   </button>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '0.82rem', fontFamily: 'var(--font-mono)' }}>
-                    <Flame size={14} color="var(--accent-gold)" /> +{dailyMission.coinReward} Coins
+                    <Flame size={14} color="var(--accent-primary)" /> +{dailyMission.coinReward} Coins
                   </div>
                 )}
               </div>

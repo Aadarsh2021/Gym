@@ -217,7 +217,7 @@ export const GuidedCockpitSidebar: React.FC<GuidedCockpitSidebarProps> = ({
               </div>
             ) : null}
             {existing1RM && existing1RM > 0 ? (
-              <div style={{ fontSize: '0.76rem', color: 'var(--accent-gold)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ fontSize: '0.76rem', color: 'var(--accent-primary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Award size={12} /> Record 1RM: {existing1RM} kg
               </div>
             ) : null}

@@ -265,7 +265,7 @@ export const MemberGymCheckInView: React.FC = () => {
             border: '1px solid var(--border-subtle)',
           }}
         >
-          <Building2 size={48} style={{ color: 'var(--accent-gold)', margin: '0 auto var(--space-4)' }} />
+          <Building2 size={48} style={{ color: 'var(--accent-primary)', margin: '0 auto var(--space-4)' }} />
           <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 'var(--space-2)' }}>Owner Account</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: 'var(--space-6)' }}>
             You are signed in with a gym owner account. Member QR check-in & check-out is exclusively for athlete member accounts.
@@ -604,7 +604,7 @@ export const MemberGymCheckInView: React.FC = () => {
             border: '1px solid var(--border-subtle)',
           }}
         >
-          <AlertCircle size={44} style={{ color: 'var(--accent-gold)', margin: '0 auto var(--space-4)' }} />
+          <AlertCircle size={44} style={{ color: 'var(--color-warning)', margin: '0 auto var(--space-4)' }} />
           <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 'var(--space-2)' }}>
             Membership {activeMembership.status.toUpperCase()}
           </h2>
@@ -979,7 +979,7 @@ export const MemberGymCheckInView: React.FC = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
-              <ShieldCheck size={14} style={{ color: 'var(--accent-gold)' }} />
+              <ShieldCheck size={14} style={{ color: 'var(--accent-primary)' }} />
               <strong>Automated Test & Dev Helper (Non-Prod):</strong>
             </div>
             <div style={{ display: 'flex', gap: '6px' }}>

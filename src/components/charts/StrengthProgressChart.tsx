@@ -201,7 +201,7 @@ export const StrengthProgressChart: React.FC<StrengthProgressChartProps> = ({ se
               <span style={{ color: 'var(--text-secondary)' }}>Top Weight (kg)</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '12px', height: '2px', borderBottom: '2px dashed var(--accent-gold)', display: 'inline-block' }} />
+              <span style={{ width: '12px', height: '2px', borderBottom: '2px dashed var(--color-info)', display: 'inline-block' }} />
               <span style={{ color: 'var(--text-secondary)' }}>Estimated 1RM (kg)</span>
             </div>
           </div>
@@ -241,10 +241,10 @@ export const StrengthProgressChart: React.FC<StrengthProgressChartProps> = ({ se
                 );
               })}
 
-              {/* Estimated 1RM Line (Dashed Gold) */}
+              {/* Estimated 1RM Line (Dashed Info/Cyan) */}
               <polyline
                 fill="none"
-                stroke="var(--accent-gold)"
+                stroke="var(--color-info)"
                 strokeWidth="2"
                 strokeDasharray="5 4"
                 strokeLinecap="round"
@@ -289,7 +289,7 @@ export const StrengthProgressChart: React.FC<StrengthProgressChartProps> = ({ se
                       cx={x}
                       y={y1RM}
                       r={isHovered ? 5 : 3.5}
-                      fill="var(--accent-gold)"
+                      fill="var(--color-info)"
                       stroke="var(--bg-card)"
                       strokeWidth="1.5"
                     />
@@ -347,7 +347,7 @@ export const StrengthProgressChart: React.FC<StrengthProgressChartProps> = ({ se
                     </strong>
                   </div>
                   <div>
-                    Est 1RM: <strong style={{ color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
+                    Est 1RM: <strong style={{ color: 'var(--color-info)', fontFamily: 'var(--font-mono)' }}>
                       {dataPoints[hoveredIndex].estimated1RM}kg
                     </strong>
                   </div>

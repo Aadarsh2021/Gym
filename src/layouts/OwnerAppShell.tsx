@@ -87,9 +87,9 @@ export const OwnerAppShell: React.FC = () => {
             style={{
               fontSize: '0.68rem',
               letterSpacing: '0.04em',
-              background: 'rgba(214, 168, 79, 0.15)',
-              color: 'var(--accent-gold)',
-              border: '1px solid rgba(214, 168, 79, 0.3)',
+              background: 'var(--accent-primary-muted)',
+              color: 'var(--accent-primary)',
+              border: '1px solid rgba(79, 140, 255, 0.3)',
               fontWeight: 700,
             }}
           >
@@ -260,7 +260,7 @@ export const OwnerAppShell: React.FC = () => {
                 borderRadius: 'var(--radius-xs)',
               }}
             >
-              {isDark ? <Sun size={14} color="var(--text-secondary)" /> : <Moon size={14} color="var(--accent-gold)" />}
+              {isDark ? <Sun size={14} color="var(--text-secondary)" /> : <Moon size={14} color="var(--accent-primary)" />}
             </button>
           </div>
 
@@ -338,9 +338,9 @@ export const OwnerAppShell: React.FC = () => {
                 className="badge"
                 style={{
                   fontSize: '0.75rem',
-                  background: 'rgba(214, 168, 79, 0.12)',
-                  color: 'var(--accent-gold)',
-                  border: '1px solid rgba(214, 168, 79, 0.25)',
+                  background: 'var(--accent-primary-muted)',
+                  color: 'var(--accent-primary)',
+                  border: '1px solid rgba(79, 140, 255, 0.25)',
                 }}
               >
                 Facility: {activeGym.name}
@@ -382,8 +382,8 @@ export const OwnerAppShell: React.FC = () => {
               className="badge"
               style={{
                 fontSize: '0.65rem',
-                background: 'rgba(214, 168, 79, 0.15)',
-                color: 'var(--accent-gold)',
+                background: 'var(--accent-primary-muted)',
+                color: 'var(--accent-primary)',
               }}
             >
               Owner

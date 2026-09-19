@@ -17,6 +17,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useMemberGymContext } from '@/hooks/useMemberGymContext';
 import { useEntitlement } from '@/hooks/useEntitlement';
 import { profileService } from '@/services/profile.service';
 import { nutritionService } from '@/services/nutrition.service';
@@ -37,6 +38,14 @@ export const ProfileView: React.FC = () => {
   const { isPremium } = useEntitlement();
   const userId = session.user?.id || 'guest-user';
   const navigate = useNavigate();
+
+  let memberGymCtx: ReturnType<typeof useMemberGymContext> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    memberGymCtx = useMemberGymContext();
+  } catch {
+    // Safe fallback if rendered without provider in standalone tests
+  }
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -291,6 +300,9 @@ export const ProfileView: React.FC = () => {
         setSaving(false);
         return;
       }
+
+      // Synchronize member gym context immediately across app shell and pages
+      await memberGymCtx?.refreshContext();
 
       setSuccessMsg('Profile, nutrition baselines, and workout alarms saved successfully.');
     } catch (err: unknown) {

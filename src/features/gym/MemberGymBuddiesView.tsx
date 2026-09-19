@@ -236,25 +236,26 @@ export const MemberGymBuddiesView: React.FC = () => {
   const outgoingRequests = connections.filter(c => c.status === 'pending' && c.requesterId === userId);
   const activeBuddies = connections.filter(c => c.status === 'accepted');
 
+  // ── No Active Gym Guard ─────────────────────────────────────────────────────
   if (!activeGym) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="container animate-fade-in" style={{ padding: 'var(--space-8) var(--space-4)', maxWidth: '640px' }}>
         <button
           onClick={() => navigate('/app/gym')}
-          className="flex items-center gap-2 text-sm text-text-muted hover:text-text-primary mb-6 transition-colors"
+          className="btn btn-ghost btn-sm"
+          style={{ marginBottom: 'var(--space-5)', gap: 'var(--space-2)' }}
         >
           <ArrowLeft size={16} /> Back to Gym Hub
         </button>
-        <div className="p-8 rounded-xl bg-bg-surface border border-border-subtle text-center">
-          <Users size={48} className="mx-auto text-text-muted mb-4 opacity-40" />
-          <h2 className="text-xl font-bold text-text-primary mb-2">No Active Partner Gym Selected</h2>
-          <p className="text-sm text-text-secondary max-w-md mx-auto mb-6">
-            Gym Buddy Matching is an exclusive capability for athletes with an active membership at a registered partner facility.
+        <div className="card card-elevated" style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
+          <Users size={48} style={{ color: 'var(--text-muted)', opacity: 0.4, margin: '0 auto var(--space-4)' }} />
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
+            No Active Partner Gym
+          </h2>
+          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto var(--space-6)' }}>
+            Gym Buddy Matching is exclusively for athletes with an active membership at a registered partner facility.
           </p>
-          <button
-            onClick={() => navigate('/app/gym')}
-            className="px-5 py-2.5 bg-accent-primary text-white font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity"
-          >
+          <button onClick={() => navigate('/app/gym')} className="btn btn-primary">
             Discover Partner Facilities
           </button>
         </div>
@@ -262,231 +263,296 @@ export const MemberGymBuddiesView: React.FC = () => {
     );
   }
 
+  // ── Main View ────────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto pb-24">
-      {/* Header & Navigation */}
-      <div className="flex items-center justify-between gap-4 mb-6">
+    <div
+      className="container animate-fade-in"
+      style={{ padding: 'var(--space-4) var(--space-4) var(--space-12)', maxWidth: '960px' }}
+      data-testid="member-gym-buddies-view"
+    >
+      {/* ── Page Header ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-4)', marginBottom: 'var(--space-6)', flexWrap: 'wrap' }}>
         <div>
           <button
             onClick={() => navigate('/app/gym')}
-            className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary mb-2 transition-colors"
+            className="btn btn-ghost btn-sm"
+            style={{ marginBottom: 'var(--space-2)', paddingLeft: 0 }}
           >
-            <ArrowLeft size={14} /> Back to {activeGym.name}
+            <ArrowLeft size={14} />
+            Back to {activeGym.name}
           </button>
-          <h1 className="text-2xl font-black text-text-primary flex items-center gap-2">
-            <Users className="text-accent-primary" size={24} /> Gym Buddy Matching
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--accent-primary)', marginBottom: '4px' }}>
+            <Sparkles size={13} />
+            <span>Gym Buddy Matching</span>
+          </div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+            Find Your Training Partner
           </h1>
-          <p className="text-xs text-text-muted mt-1">
-            Connect with compatible lifters at <span className="text-text-secondary font-medium">{activeGym.name}</span>.
+          <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+            Connect with compatible lifters at <strong style={{ color: 'var(--text-primary)' }}>{activeGym.name}</strong>.
           </p>
         </div>
 
         <button
           onClick={() => setShowSettingsModal(true)}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-bg-surface border border-border-subtle text-xs font-semibold text-text-secondary hover:text-text-primary hover:border-border-medium transition-all"
+          className="btn btn-secondary btn-sm"
+          aria-label="Open Buddy Preferences"
         >
           <Settings size={15} /> Preferences
         </button>
       </div>
 
-      {/* Status Feedback */}
+      {/* ── Status Feedback ── */}
       {statusMessage && (
         <div
-          className={`mb-6 p-4 rounded-lg flex items-center justify-between text-sm ${
-            statusMessage.type === 'success'
-              ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
-              : 'bg-red-500/10 border border-red-500/30 text-red-400'
-          }`}
+          className="card"
+          style={{
+            marginBottom: 'var(--space-5)',
+            padding: 'var(--space-3) var(--space-4)',
+            background: statusMessage.type === 'success' ? 'rgba(16, 185, 129, 0.10)' : 'rgba(239, 68, 68, 0.10)',
+            border: `1px solid ${statusMessage.type === 'success' ? 'rgba(16, 185, 129, 0.30)' : 'rgba(239, 68, 68, 0.30)'}`,
+            color: statusMessage.type === 'success' ? 'var(--color-success)' : 'var(--color-error)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
         >
-          <div className="flex items-center gap-2">
-            <AlertCircle size={16} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
+            <AlertCircle size={15} />
             <span>{statusMessage.text}</span>
           </div>
-          <button onClick={() => setStatusMessage(null)} className="opacity-60 hover:opacity-100">
-            <X size={16} />
+          <button
+            onClick={() => setStatusMessage(null)}
+            className="btn btn-ghost btn-sm"
+            style={{ padding: '4px', opacity: 0.7 }}
+            aria-label="Dismiss"
+          >
+            <X size={15} />
           </button>
         </div>
       )}
 
-      {/* Opt-In Banner */}
-      <div className="mb-6 p-4 rounded-xl bg-bg-surface border border-border-subtle flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className={`p-2.5 rounded-lg ${isOptedIn ? 'bg-accent-primary/20 text-accent-primary' : 'bg-bg-tertiary text-text-muted'}`}>
+      {/* ── Opt-In Banner ── */}
+      <div
+        className="card"
+        style={{
+          marginBottom: 'var(--space-5)',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 'var(--space-4)',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: 'var(--radius-sm)',
+              background: isOptedIn ? 'var(--accent-primary-muted)' : 'var(--bg-secondary)',
+              border: `1px solid ${isOptedIn ? 'rgba(79, 140, 255, 0.30)' : 'var(--border-subtle)'}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: isOptedIn ? 'var(--accent-primary)' : 'var(--text-muted)',
+              flexShrink: 0,
+            }}
+          >
             <Sparkles size={20} />
           </div>
           <div>
-            <div className="text-sm font-bold text-text-primary">
-              {isOptedIn ? 'Buddy Matching is Active' : 'Buddy Matching is Paused'}
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {isOptedIn ? 'Buddy Matching Active' : 'Buddy Matching Paused'}
             </div>
-            <div className="text-xs text-text-muted">
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
               {isOptedIn
                 ? 'You are visible to compatible lifters at this gym.'
-                : 'Turn on to discover workout partners and allow peers to find you.'}
+                : 'Enable to discover workout partners and allow peers to find you.'}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-          <label className="switch-toggle" title="Toggle Buddy Matching" aria-label="Toggle Buddy Matching">
-            <input
-              type="checkbox"
-              checked={isOptedIn}
-              onChange={e => handleToggleOptIn(e.target.checked)}
-            />
-            <span className="slider" />
-          </label>
-        </div>
+        <label className="switch-toggle" title="Toggle Buddy Matching" aria-label="Toggle Buddy Matching">
+          <input
+            type="checkbox"
+            checked={isOptedIn}
+            onChange={e => handleToggleOptIn(e.target.checked)}
+          />
+          <span className="slider" />
+        </label>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-border-subtle mb-6 gap-6">
-        <button
-          onClick={() => setActiveTab('discover')}
-          className={`pb-3 text-sm font-bold transition-all relative ${
-            activeTab === 'discover'
-              ? 'text-accent-primary border-b-2 border-accent-primary'
-              : 'text-text-muted hover:text-text-secondary'
-          }`}
-        >
-          Discover Candidates ({candidates.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('my_buddies')}
-          className={`pb-3 text-sm font-bold transition-all relative ${
-            activeTab === 'my_buddies'
-              ? 'text-accent-primary border-b-2 border-accent-primary'
-              : 'text-text-muted hover:text-text-secondary'
-          }`}
-        >
-          My Buddies ({activeBuddies.length})
-          {incomingRequests.length > 0 && (
-            <span className="ml-2 px-1.5 py-0.5 text-[10px] font-black bg-accent-primary text-white rounded-full">
-              {incomingRequests.length}
-            </span>
-          )}
-        </button>
+      {/* ── Tabs ── */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', marginBottom: 'var(--space-5)', gap: 'var(--space-5)' }}>
+        {([
+          { key: 'discover', label: `Discover (${candidates.length})` },
+          { key: 'my_buddies', label: `My Buddies (${activeBuddies.length})`, badge: incomingRequests.length },
+        ] as const).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              paddingBottom: 'var(--space-3)',
+              paddingTop: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === tab.key ? '2px solid var(--accent-primary)' : '2px solid transparent',
+              color: activeTab === tab.key ? 'var(--accent-primary)' : 'var(--text-muted)',
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all var(--transition-fast)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            {tab.label}
+            {'badge' in tab && tab.badge > 0 && (
+              <span
+                className="badge badge-accent"
+                style={{ fontSize: '0.65rem', padding: '1px 6px', fontWeight: 800 }}
+              >
+                {tab.badge}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* TAB 1: DISCOVER CANDIDATES */}
+      {/* ══════════════════════════════════════════════════════════════════
+          TAB 1 — DISCOVER CANDIDATES
+          ══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'discover' && (
         <div>
           {!isOptedIn ? (
-            <div className="p-10 rounded-xl bg-bg-surface border border-border-subtle text-center">
-              <Users size={40} className="mx-auto text-text-muted mb-3 opacity-40" />
-              <h3 className="text-base font-bold text-text-primary mb-1">Enable Buddy Discovery to Find Partners</h3>
-              <p className="text-xs text-text-muted max-w-sm mx-auto mb-5">
+            <div className="card card-elevated" style={{ padding: 'var(--space-10)', textAlign: 'center' }}>
+              <Users size={42} style={{ color: 'var(--text-muted)', opacity: 0.4, margin: '0 auto var(--space-3)' }} />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
+                Enable Buddy Discovery to Find Partners
+              </h3>
+              <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', maxWidth: '380px', margin: '0 auto var(--space-5)' }}>
                 Turn on matching to see compatible members training at {activeGym.name} who match your schedule and lifting goals.
               </p>
-              <button
-                onClick={() => handleToggleOptIn(true)}
-                className="px-5 py-2.5 bg-accent-primary text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity"
-              >
+              <button onClick={() => handleToggleOptIn(true)} className="btn btn-primary">
                 Enable Buddy Discovery
               </button>
             </div>
           ) : loadingCandidates ? (
-            <div className="p-12 text-center text-xs text-text-muted">Scanning compatible gym members...</div>
+            <div style={{ padding: 'var(--space-12)', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+              <div className="spinner" style={{ width: '24px', height: '24px', margin: '0 auto var(--space-3)' }} />
+              Scanning compatible gym members...
+            </div>
           ) : candidates.length === 0 ? (
-            <div className="p-10 rounded-xl bg-bg-surface border border-border-subtle text-center">
-              <Sparkles size={36} className="mx-auto text-text-muted mb-3 opacity-40" />
-              <h3 className="text-base font-bold text-text-primary mb-1">All Caught Up!</h3>
-              <p className="text-xs text-text-muted max-w-md mx-auto mb-4">
+            <div className="card card-elevated" style={{ padding: 'var(--space-10)', textAlign: 'center' }}>
+              <Sparkles size={38} style={{ color: 'var(--text-muted)', opacity: 0.4, margin: '0 auto var(--space-3)' }} />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 'var(--space-1)' }}>
+                All Caught Up!
+              </h3>
+              <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', maxWidth: '380px', margin: '0 auto var(--space-4)' }}>
                 No new compatible candidates match your schedule right now. Try adjusting your training time or day preferences.
               </p>
-              <button
-                onClick={() => setShowSettingsModal(true)}
-                className="px-4 py-2 bg-bg-tertiary text-text-secondary hover:text-text-primary text-xs font-semibold rounded-lg transition-colors"
-              >
+              <button onClick={() => setShowSettingsModal(true)} className="btn btn-secondary btn-sm">
                 Edit Preferences
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 'var(--space-4)' }}>
               {candidates.map(c => (
-                <div
-                  key={c.userId}
-                  className="p-5 rounded-xl bg-bg-surface border border-border-subtle hover:border-border-medium transition-all flex flex-col justify-between"
-                >
-                  <div>
-                    {/* Top Row: Avatar, Name, Match Score */}
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-accent-primary/20 border border-accent-primary/40 flex items-center justify-center font-black text-accent-primary text-base">
-                          {c.avatarUrl ? (
-                            <img src={c.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
-                          ) : (
-                            c.displayName.charAt(0).toUpperCase()
-                          )}
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-text-primary">{c.displayName}</h4>
-                          <span className="text-[11px] text-text-muted font-medium capitalize">
-                            {c.experienceLevel} Lifter
-                          </span>
-                        </div>
+                <div key={c.userId} className="card card-interactive" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  {/* Top: Avatar + Name + Match score */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                      <div
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          background: 'var(--accent-primary-muted)',
+                          border: '1.5px solid rgba(79, 140, 255, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '1rem',
+                          color: 'var(--accent-primary)',
+                          flexShrink: 0,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {c.avatarUrl ? (
+                          <img src={c.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          c.displayName.charAt(0).toUpperCase()
+                        )}
                       </div>
-
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-primary/10 border border-accent-primary/30 text-accent-primary text-xs font-bold">
-                        <Flame size={13} />
-                        <span>{c.compatibilityScore}% Match</span>
+                      <div>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>{c.displayName}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                          {c.experienceLevel} Lifter
+                        </div>
                       </div>
                     </div>
 
-                    {/* Bio note if present */}
-                    {c.bioNote && (
-                      <p className="text-xs text-text-secondary bg-bg-tertiary/50 p-2.5 rounded-lg border border-border-subtle mb-3 italic">
-                        "{c.bioNote}"
-                      </p>
-                    )}
-
-                    {/* Explainable Badges */}
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      {c.matchReasons.map((r, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-0.5 rounded-md bg-bg-tertiary border border-border-subtle text-[11px] font-medium text-text-secondary flex items-center gap-1"
-                        >
-                          {r.icon === 'target' && <Target size={11} className="text-blue-400" />}
-                          {r.icon === 'sun' && <Sun size={11} className="text-amber-400" />}
-                          {r.icon === 'calendar' && <Calendar size={11} className="text-emerald-400" />}
-                          {r.icon === 'zap' && <Zap size={11} className="text-purple-400" />}
-                          {r.icon === 'clock' && <Clock size={11} className="text-indigo-400" />}
-                          <span>{r.label}</span>
-                        </span>
-                      ))}
-                    </div>
+                    <span className="badge badge-accent" style={{ fontWeight: 800, gap: '4px' }}>
+                      <Flame size={12} fill="var(--accent-primary)" />
+                      {c.compatibilityScore}% Match
+                    </span>
                   </div>
 
-                  {/* Actions Row */}
-                  <div className="pt-3 border-t border-border-subtle flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1">
+                  {/* Bio note */}
+                  {c.bioNote && (
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-subtle)', marginBottom: 'var(--space-3)', fontStyle: 'italic' }}>
+                      "{c.bioNote}"
+                    </p>
+                  )}
+
+                  {/* Match reason badges */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: 'var(--space-4)' }}>
+                    {c.matchReasons.map((r, i) => (
+                      <span key={i} className="badge" style={{ fontSize: '0.72rem', gap: '4px' }}>
+                        {r.icon === 'target' && <Target size={11} style={{ color: 'var(--accent-primary)' }} />}
+                        {r.icon === 'sun' && <Sun size={11} style={{ color: 'var(--color-warning)' }} />}
+                        {r.icon === 'calendar' && <Calendar size={11} style={{ color: 'var(--color-success)' }} />}
+                        {r.icon === 'zap' && <Zap size={11} style={{ color: 'var(--accent-indigo)' }} />}
+                        {r.icon === 'clock' && <Clock size={11} style={{ color: 'var(--accent-primary)' }} />}
+                        <span>{r.label}</span>
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Actions row */}
+                  <div style={{ paddingTop: 'var(--space-3)', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                       <button
                         onClick={() => setReportingTarget({ userId: c.userId, name: c.displayName })}
                         title="Report member"
-                        className="p-1.5 text-text-muted hover:text-red-400 transition-colors"
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: '6px', color: 'var(--text-muted)', minHeight: '32px' }}
+                        aria-label="Report member"
                       >
                         <ShieldAlert size={15} />
                       </button>
                       <button
                         onClick={() => setBlockingTarget({ userId: c.userId, name: c.displayName })}
                         title="Block member"
-                        className="p-1.5 text-text-muted hover:text-red-400 transition-colors"
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: '6px', color: 'var(--text-muted)', minHeight: '32px' }}
+                        aria-label="Block member"
                       >
                         <UserX size={15} />
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handlePassCandidate(c.userId)}
-                        className="px-3 py-1.5 rounded-lg bg-bg-tertiary text-text-muted hover:text-text-primary text-xs font-semibold transition-colors"
-                      >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      <button onClick={() => handlePassCandidate(c.userId)} className="btn btn-secondary btn-sm">
                         Pass
                       </button>
-                      <button
-                        onClick={() => handleSendRequest(c.userId, c.displayName)}
-                        className="px-4 py-1.5 rounded-lg bg-accent-primary text-white text-xs font-bold hover:opacity-90 transition-opacity"
-                      >
+                      <button onClick={() => handleSendRequest(c.userId, c.displayName)} className="btn btn-primary btn-sm">
                         Connect
                       </button>
                     </div>
@@ -498,51 +564,75 @@ export const MemberGymBuddiesView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: MY BUDDIES */}
+      {/* ══════════════════════════════════════════════════════════════════
+          TAB 2 — MY BUDDIES
+          ══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'my_buddies' && (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+
           {/* Incoming Requests */}
           {incomingRequests.length > 0 && (
             <div>
-              <h3 className="text-xs font-bold text-accent-primary uppercase tracking-wider mb-3">
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-3)' }}>
                 Incoming Requests ({incomingRequests.length})
-              </h3>
-              <div className="space-y-2">
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                 {incomingRequests.map(req => {
                   const partner = req.partnerProfile;
                   return (
                     <div
                       key={req.id}
-                      className="p-4 rounded-xl bg-bg-surface border border-accent-primary/30 flex items-center justify-between gap-4"
+                      className="card"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 'var(--space-4)',
+                        border: '1px solid rgba(79, 140, 255, 0.30)',
+                        background: 'rgba(79, 140, 255, 0.05)',
+                        flexWrap: 'wrap',
+                      }}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-accent-primary/20 flex items-center justify-center text-accent-primary font-bold text-sm">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                        <div
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: 'var(--accent-primary-muted)',
+                            border: '1px solid rgba(79, 140, 255, 0.30)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: '0.88rem',
+                            color: 'var(--accent-primary)',
+                            flexShrink: 0,
+                            overflow: 'hidden',
+                          }}
+                        >
                           {partner?.avatarUrl ? (
-                            <img src={partner.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
+                            <img src={partner.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                             partner?.displayName?.charAt(0) || '?'
                           )}
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-text-primary">{partner?.displayName || 'Gym Member'}</div>
-                          <div className="text-[11px] text-text-muted">
+                          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {partner?.displayName || 'Gym Member'}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                             {partner?.goal ? `Goal: ${partner.goal.replace('_', ' ')}` : 'Wants to workout together'}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleRespondRequest(req.id, 'decline')}
-                          className="px-3 py-1.5 rounded-lg bg-bg-tertiary text-text-muted hover:text-text-primary text-xs font-semibold transition-colors"
-                        >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <button onClick={() => handleRespondRequest(req.id, 'decline')} className="btn btn-secondary btn-sm">
                           Decline
                         </button>
-                        <button
-                          onClick={() => handleRespondRequest(req.id, 'accept')}
-                          className="px-3.5 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:opacity-90 transition-opacity"
-                        >
-                          Accept
+                        <button onClick={() => handleRespondRequest(req.id, 'accept')} className="btn btn-primary btn-sm">
+                          <Check size={14} /> Accept
                         </button>
                       </div>
                     </div>
@@ -555,31 +645,44 @@ export const MemberGymBuddiesView: React.FC = () => {
           {/* Outgoing Requests */}
           {outgoingRequests.length > 0 && (
             <div>
-              <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-3)' }}>
                 Sent Requests ({outgoingRequests.length})
-              </h3>
-              <div className="space-y-2">
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                 {outgoingRequests.map(req => {
                   const partner = req.partnerProfile;
                   return (
                     <div
                       key={req.id}
-                      className="p-3.5 rounded-xl bg-bg-surface border border-border-subtle flex items-center justify-between gap-4"
+                      className="card"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)', flexWrap: 'wrap' }}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-bg-tertiary flex items-center justify-center text-text-muted font-bold text-xs">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                        <div
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-subtle)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            color: 'var(--text-muted)',
+                          }}
+                        >
                           {partner?.displayName?.charAt(0) || '?'}
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-text-primary">{partner?.displayName || 'Gym Member'}</div>
-                          <div className="text-[11px] text-text-muted">Awaiting response</div>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {partner?.displayName || 'Gym Member'}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Awaiting response</div>
                         </div>
                       </div>
-
-                      <button
-                        onClick={() => handleCancelRequest(req.id)}
-                        className="px-3 py-1 rounded-lg bg-bg-tertiary text-text-muted hover:text-text-primary text-xs font-medium transition-colors"
-                      >
+                      <button onClick={() => handleCancelRequest(req.id)} className="btn btn-secondary btn-sm">
                         Cancel
                       </button>
                     </div>
@@ -591,42 +694,59 @@ export const MemberGymBuddiesView: React.FC = () => {
 
           {/* Active Buddies */}
           <div>
-            <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-3)' }}>
               Active Gym Buddies ({activeBuddies.length})
-            </h3>
+            </div>
             {activeBuddies.length === 0 ? (
-              <div className="p-8 rounded-xl bg-bg-surface border border-border-subtle text-center text-xs text-text-muted">
+              <div className="card" style={{ padding: 'var(--space-8)', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 No active gym buddies yet. Head to the Discover tab to connect with lifters!
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 'var(--space-3)' }}>
                 {activeBuddies.map(b => {
                   const partner = b.partnerProfile;
                   return (
                     <div
                       key={b.id}
-                      className="p-4 rounded-xl bg-bg-surface border border-border-subtle flex flex-col justify-between"
+                      className="card"
+                      style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
                     >
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-400 text-sm">
-                            {partner?.avatarUrl ? (
-                              <img src={partner.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                              partner?.displayName?.charAt(0) || '?'
-                            )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                        <div
+                          style={{
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '50%',
+                            background: 'rgba(16, 185, 129, 0.12)',
+                            border: '1.5px solid rgba(16, 185, 129, 0.35)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: '0.88rem',
+                            color: 'var(--color-success)',
+                            flexShrink: 0,
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {partner?.avatarUrl ? (
+                            <img src={partner.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            partner?.displayName?.charAt(0) || '?'
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {partner?.displayName}
                           </div>
-                          <div>
-                            <div className="text-sm font-bold text-text-primary">{partner?.displayName}</div>
-                            <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-                              <Check size={12} /> Active Training Partner
-                            </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Check size={12} /> Active Training Partner
                           </div>
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-border-subtle flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                      <div style={{ paddingTop: 'var(--space-3)', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                           <button
                             onClick={() =>
                               setReportingTarget({
@@ -634,12 +754,11 @@ export const MemberGymBuddiesView: React.FC = () => {
                                 name: partner?.displayName || 'Member',
                               })
                             }
-                            title="Report"
-                            className="text-xs text-text-muted hover:text-red-400"
+                            className="btn btn-ghost btn-sm"
+                            style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '4px 8px', minHeight: '28px' }}
                           >
                             Report
                           </button>
-                          <span className="text-text-muted opacity-40">·</span>
                           <button
                             onClick={() =>
                               setBlockingTarget({
@@ -647,25 +766,24 @@ export const MemberGymBuddiesView: React.FC = () => {
                                 name: partner?.displayName || 'Member',
                               })
                             }
-                            title="Block"
-                            className="text-xs text-text-muted hover:text-red-400"
+                            className="btn btn-ghost btn-sm"
+                            style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '4px 8px', minHeight: '28px' }}
                           >
                             Block
                           </button>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                           <button
                             onClick={() => navigate(`/app/gym/buddies/${b.id}/chat`)}
-                            className="btn btn-primary btn-sm flex items-center gap-1 text-xs py-1 px-3"
+                            className="btn btn-primary btn-sm"
                           >
-                            <MessageSquare size={13} />
-                            <span>Chat</span>
+                            <MessageSquare size={13} /> Chat
                           </button>
-
                           <button
                             onClick={() => handleUnmatch(b.id)}
-                            className="text-xs font-semibold text-text-muted hover:text-red-400 transition-colors"
+                            className="btn btn-ghost btn-sm"
+                            style={{ fontSize: '0.75rem', color: 'var(--text-muted)', minHeight: '28px' }}
                           >
                             Unmatch
                           </button>
@@ -680,33 +798,34 @@ export const MemberGymBuddiesView: React.FC = () => {
         </div>
       )}
 
-      {/* PREFERENCES / SETTINGS MODAL */}
+      {/* ══════════════════════════════════════════════════════════════════
+          PREFERENCES / SETTINGS MODAL
+          ══════════════════════════════════════════════════════════════════ */}
       {showSettingsModal && (
-        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowSettingsModal(false); }}>
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowSettingsModal(false); }}>
           <div className="modal-content" style={{ maxWidth: '520px' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
-                <Settings size={18} className="text-accent-primary" /> Buddy Matching Preferences
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                <Settings size={18} style={{ color: 'var(--accent-primary)' }} /> Buddy Matching Preferences
               </h3>
-              <button onClick={() => setShowSettingsModal(false)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }}>
+              <button onClick={() => setShowSettingsModal(false)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }} aria-label="Close">
                 <X size={18} />
               </button>
             </div>
 
             {/* Time Window */}
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-text-muted uppercase mb-2">Preferred Training Time</label>
-              <div className="grid grid-cols-2 gap-2">
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <label className="label" style={{ display: 'block', marginBottom: 'var(--space-2)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>
+                Preferred Training Time
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
                 {VALID_TIME_WINDOWS.map(tw => (
                   <button
                     key={tw}
                     type="button"
                     onClick={() => setPreferredTime(tw)}
-                    className={`p-2.5 rounded-lg text-xs font-semibold text-left border transition-all capitalize ${
-                      preferredTime === tw
-                        ? 'bg-accent-primary/20 border-accent-primary text-text-primary'
-                        : 'bg-bg-tertiary border-border-subtle text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={preferredTime === tw ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+                    style={{ textTransform: 'capitalize', justifyContent: 'flex-start' }}
                   >
                     {tw.replace('_', ' ')}
                   </button>
@@ -715,19 +834,18 @@ export const MemberGymBuddiesView: React.FC = () => {
             </div>
 
             {/* Training Days */}
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-text-muted uppercase mb-2">Preferred Training Days</label>
-              <div className="flex gap-1.5">
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <label className="label" style={{ display: 'block', marginBottom: 'var(--space-2)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>
+                Preferred Training Days
+              </label>
+              <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
                 {DAY_LABELS.map((d, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => toggleDay(idx)}
-                    className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${
-                      preferredDays.includes(idx)
-                        ? 'bg-accent-primary text-white'
-                        : 'bg-bg-tertiary text-text-muted hover:text-text-primary'
-                    }`}
+                    className={preferredDays.includes(idx) ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+                    style={{ flex: 1, padding: '0 4px', fontSize: '0.72rem' }}
                   >
                     {d}
                   </button>
@@ -736,37 +854,28 @@ export const MemberGymBuddiesView: React.FC = () => {
             </div>
 
             {/* Gender Filter */}
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-text-muted uppercase mb-2">Partner Gender Preference</label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPreferredGender('any')}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${
-                    preferredGender === 'any'
-                      ? 'bg-accent-primary/20 border-accent-primary text-text-primary'
-                      : 'bg-bg-tertiary border-border-subtle text-text-secondary'
-                  }`}
-                >
-                  Any Gender
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreferredGender('same_gender')}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${
-                    preferredGender === 'same_gender'
-                      ? 'bg-accent-primary/20 border-accent-primary text-text-primary'
-                      : 'bg-bg-tertiary border-border-subtle text-text-secondary'
-                  }`}
-                >
-                  Same Gender Only
-                </button>
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <label className="label" style={{ display: 'block', marginBottom: 'var(--space-2)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>
+                Partner Gender Preference
+              </label>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                {(['any', 'same_gender'] as const).map(val => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setPreferredGender(val)}
+                    className={preferredGender === val ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+                    style={{ flex: 1 }}
+                  >
+                    {val === 'any' ? 'Any Gender' : 'Same Gender Only'}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Bio Note */}
-            <div className="mb-6">
-              <label className="block text-xs font-bold text-text-muted uppercase mb-1">
+            <div style={{ marginBottom: 'var(--space-5)' }}>
+              <label className="label" style={{ display: 'block', marginBottom: 'var(--space-1)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>
                 Short Training Bio (Max 160 chars)
               </label>
               <textarea
@@ -774,26 +883,19 @@ export const MemberGymBuddiesView: React.FC = () => {
                 onChange={e => setBioNote(e.target.value.slice(0, 160))}
                 rows={3}
                 placeholder="e.g., Training for hypertrophy, looking for a bench spotter on push days."
-                className="input textarea"
-                style={{ width: '100%', minHeight: '80px', fontSize: '0.85rem' }}
+                className="textarea"
+                style={{ width: '100%', fontSize: '0.85rem' }}
               />
-              <div className="text-[10px] text-text-muted text-right mt-1">{bioNote.length}/160</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'right', marginTop: '4px' }}>
+                {bioNote.length}/160
+              </div>
             </div>
 
-            {/* Save Buttons */}
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowSettingsModal(false)}
-                className="btn btn-secondary btn-sm"
-              >
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setShowSettingsModal(false)} className="btn btn-secondary btn-sm">
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={handleSaveSettings}
-                className="btn btn-primary btn-sm"
-              >
+              <button type="button" onClick={handleSaveSettings} className="btn btn-primary btn-sm">
                 Save Preferences
               </button>
             </div>
@@ -801,26 +903,24 @@ export const MemberGymBuddiesView: React.FC = () => {
         </div>
       )}
 
-      {/* BLOCK CONFIRMATION MODAL */}
+      {/* ══════════════════════════════════════════════════════════════════
+          BLOCK CONFIRMATION MODAL
+          ══════════════════════════════════════════════════════════════════ */}
       {blockingTarget && (
-        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setBlockingTarget(null); }}>
-          <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', borderColor: 'rgba(239, 68, 68, 0.4)' }}>
-            <UserX size={36} className="mx-auto text-red-400 mb-3" />
-            <h3 className="text-base font-bold text-text-primary mb-2">Block {blockingTarget.name}?</h3>
-            <p className="text-xs text-text-muted mb-6">
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setBlockingTarget(null); }}>
+          <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', borderColor: 'rgba(239, 68, 68, 0.35)' }}>
+            <UserX size={36} style={{ color: 'var(--color-error)', margin: '0 auto var(--space-3)' }} />
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
+              Block {blockingTarget.name}?
+            </h3>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 'var(--space-5)' }}>
               Blocking is global. You will become mutually invisible across all partner gyms, and any active buddy connection will be immediately ended.
             </p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => setBlockingTarget(null)}
-                className="btn btn-secondary btn-sm"
-              >
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
+              <button onClick={() => setBlockingTarget(null)} className="btn btn-secondary btn-sm">
                 Cancel
               </button>
-              <button
-                onClick={handleConfirmBlock}
-                className="btn btn-danger btn-sm"
-              >
+              <button onClick={handleConfirmBlock} className="btn btn-danger btn-sm">
                 Confirm Block
               </button>
             </div>
@@ -828,25 +928,29 @@ export const MemberGymBuddiesView: React.FC = () => {
         </div>
       )}
 
-      {/* REPORT MODAL */}
+      {/* ══════════════════════════════════════════════════════════════════
+          REPORT MODAL
+          ══════════════════════════════════════════════════════════════════ */}
       {reportingTarget && (
-        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setReportingTarget(null); }}>
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setReportingTarget(null); }}>
           <div className="modal-content" style={{ maxWidth: '480px' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
-                <ShieldAlert size={18} className="text-red-400" /> Report Member
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-error)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                <ShieldAlert size={18} /> Report Member
               </h3>
-              <button onClick={() => setReportingTarget(null)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }}>
+              <button onClick={() => setReportingTarget(null)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }} aria-label="Close">
                 <X size={18} />
               </button>
             </div>
 
-            <p className="text-xs text-text-muted mb-4">
-              Filing a confidential conduct report for <span className="font-semibold text-text-primary">{reportingTarget.name}</span>. The reported user will never see your identity.
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 'var(--space-4)' }}>
+              Filing a confidential conduct report for <strong style={{ color: 'var(--text-primary)' }}>{reportingTarget.name}</strong>. The reported user will never see your identity.
             </p>
 
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-text-muted uppercase mb-1.5">Reason</label>
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <label className="label" style={{ display: 'block', marginBottom: 'var(--space-1)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.04em' }}>
+                Reason
+              </label>
               <select
                 value={reportReason}
                 onChange={e => setReportReason(e.target.value as GymBuddyReportReason)}
@@ -863,29 +967,25 @@ export const MemberGymBuddiesView: React.FC = () => {
               </select>
             </div>
 
-            <div className="mb-6">
-              <label className="block text-xs font-bold text-text-muted uppercase mb-1.5">Additional Details</label>
+            <div style={{ marginBottom: 'var(--space-5)' }}>
+              <label className="label" style={{ display: 'block', marginBottom: 'var(--space-1)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.04em' }}>
+                Additional Details
+              </label>
               <textarea
                 value={reportDetails}
                 onChange={e => setReportDetails(e.target.value)}
                 rows={3}
                 placeholder="Describe what occurred (optional)..."
-                className="input textarea"
-                style={{ width: '100%', minHeight: '80px', fontSize: '0.85rem' }}
+                className="textarea"
+                style={{ width: '100%', fontSize: '0.85rem' }}
               />
             </div>
 
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setReportingTarget(null)}
-                className="btn btn-secondary btn-sm"
-              >
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
+              <button onClick={() => setReportingTarget(null)} className="btn btn-secondary btn-sm">
                 Cancel
               </button>
-              <button
-                onClick={handleConfirmReport}
-                className="btn btn-danger btn-sm"
-              >
+              <button onClick={handleConfirmReport} className="btn btn-danger btn-sm">
                 Submit Report
               </button>
             </div>
