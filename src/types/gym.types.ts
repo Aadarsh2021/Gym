@@ -372,3 +372,89 @@ export interface GymBuddyReport {
   };
 }
 
+// ==============================================================================
+// PHASE G4: PERSONAL 1:1 BUDDY CHAT TYPES
+// ==============================================================================
+
+export interface GymChatMessage {
+  id: string;
+  connectionId: string;
+  senderId: string;
+  content: string;
+  readAt?: string | null;
+  editedAt?: string | null;
+  deletedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sender?: {
+    displayName?: string;
+    avatarUrl?: string | null;
+  };
+}
+
+// ==============================================================================
+// PHASE G5-A: GYM CHALLENGES TYPES
+// ==============================================================================
+
+export type GymChallengeType =
+  | 'attendance_count'
+  | 'workout_count'
+  | 'workout_volume'
+  | 'attendance_streak';
+
+export type GymChallengeStatus = 'draft' | 'published' | 'active' | 'completed' | 'archived';
+
+export type GymChallengeScoringUnit = 'days' | 'workouts' | 'kg' | 'streak_days';
+
+export interface GymChallenge {
+  id: string;
+  gymId: string;
+  title: string;
+  description?: string | null;
+  challengeType: GymChallengeType;
+  status: GymChallengeStatus;
+  targetValue: number;
+  scoringUnit: GymChallengeScoringUnit;
+  startAt: string;
+  endAt: string;
+  rewardBadgeName?: string | null;
+  rewardCoins?: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  participantCount?: number;
+}
+
+export type GymChallengeParticipantStatus = 'active' | 'completed' | 'withdrawn';
+
+export interface GymChallengeParticipant {
+  id: string;
+  challengeId: string;
+  gymId: string;
+  userId: string;
+  status: GymChallengeParticipantStatus;
+  currentScore: number;
+  targetAchievedAt?: string | null;
+  lastProgressAt?: string | null;
+  joinedAt: string;
+  updatedAt: string;
+}
+
+// ==============================================================================
+// PHASE G5-B: GYM LEADERBOARD TYPES
+// ==============================================================================
+
+export interface GymChallengeLeaderboardEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  currentScore: number;
+  targetValue: number;
+  scoringUnit: string;
+  progressPercentage: number;
+  isCompleted: boolean;
+  targetAchievedAt?: string | null;
+  lastProgressAt?: string | null;
+}
+

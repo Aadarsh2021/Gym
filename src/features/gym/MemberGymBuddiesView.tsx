@@ -16,6 +16,7 @@ import {
   Sparkles,
   ArrowLeft,
   Flame,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMemberGymContext } from '@/hooks/useMemberGymContext';
@@ -654,12 +655,22 @@ export const MemberGymBuddiesView: React.FC = () => {
                           </button>
                         </div>
 
-                        <button
-                          onClick={() => handleUnmatch(b.id)}
-                          className="text-xs font-semibold text-text-muted hover:text-red-400 transition-colors"
-                        >
-                          Unmatch
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => navigate(`/app/gym/buddies/${b.id}/chat`)}
+                            className="btn btn-primary btn-sm flex items-center gap-1 text-xs py-1 px-3"
+                          >
+                            <MessageSquare size={13} />
+                            <span>Chat</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleUnmatch(b.id)}
+                            className="text-xs font-semibold text-text-muted hover:text-red-400 transition-colors"
+                          >
+                            Unmatch
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );

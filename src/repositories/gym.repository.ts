@@ -26,6 +26,11 @@ import {
   GymBuddyBlock,
   GymBuddyReport,
   GymBuddyReportReason,
+  GymChatMessage,
+  GymChallenge,
+  GymChallengeStatus,
+  GymChallengeParticipant,
+  GymChallengeLeaderboardEntry,
 } from '@/types/gym.types';
 import { logger } from '@/lib/logger';
 import { platform } from '@/platform';
@@ -4362,6 +4367,676 @@ export class GymRepository {
       return [];
     }
   }
+
+  // ── 15. G4 Personal 1:1 Buddy Chat ───────────────────────────────────────
+  async fetchChatMessages(connectionId: string, limit = 50, beforeTimestamp?: string): Promise<GymChatMessage[]> {
+    if (!connectionId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(connectionId)) {
+      const raw = platform.storage.getItem(`chat_messages_${connectionId}`);
+      if (raw && typeof raw === 'string') {
+        try {
+          const list: GymChatMessage[] = JSON.parse(raw);
+          return list.filter(m => !m.deletedAt).slice(-limit);
+        } catch { return []; }
+      }
+      return [];
+    }
+
+    try {
+      let query = supabase
+        .from('gym_chat_messages')
+        .select(`
+          id,
+          connection_id,
+          sender_id,
+          content,
+          read_at,
+          edited_at,
+          deleted_at,
+          created_at,
+          updated_at,
+          sender:sender_id (
+            display_name,
+            avatar_url
+          )
+        `)
+        .eq('connection_id', connectionId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true })
+        .limit(limit);
+
+      if (beforeTimestamp) {
+        query = query.lt('created_at', beforeTimestamp);
+      }
+
+      const { data, error } = await query;
+      if (error || !data) return [];
+
+      return data.map((m: any) => {
+        const prof = Array.isArray(m.sender) ? m.sender[0] : m.sender;
+        return {
+          id: m.id,
+          connectionId: m.connection_id,
+          senderId: m.sender_id,
+          content: m.content,
+          readAt: m.read_at,
+          editedAt: m.edited_at,
+          deletedAt: m.deleted_at,
+          createdAt: m.created_at,
+          updatedAt: m.updated_at,
+          sender: prof ? {
+            displayName: prof.display_name || 'Athlete',
+            avatarUrl: prof.avatar_url,
+          } : undefined,
+        };
+      });
+    } catch (err) {
+      logger.error('GymRepository: Error fetching chat messages', { err });
+      return [];
+    }
+  }
+
+  async sendChatMessage(connectionId: string, content: string): Promise<GymChatMessage> {
+    const trimmed = (content || '').trim();
+    if (!trimmed) throw new Error('Message content cannot be empty');
+    if (trimmed.length > 2000) throw new Error('Message exceeds 2000 character limit');
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(connectionId)) {
+      const stored = platform.storage.getItem(`chat_messages_${connectionId}`);
+      let messages: GymChatMessage[] = [];
+      if (stored && typeof stored === 'string') {
+        try { messages = JSON.parse(stored); } catch { /* ignore */ }
+      }
+      const newMsg: GymChatMessage = {
+        id: `mock-msg-${Date.now()}`,
+        connectionId,
+        senderId: 'mock-user-current',
+        content: trimmed,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      messages.push(newMsg);
+      platform.storage.setItem(`chat_messages_${connectionId}`, JSON.stringify(messages));
+      return newMsg;
+    }
+
+    const { data, error } = await supabase.rpc('send_gym_chat_message', {
+      p_connection_id: connectionId,
+      p_content: trimmed,
+    });
+
+    if (error || !data) {
+      throw new Error(error?.message || 'Failed to send message');
+    }
+
+    return {
+      id: data.id,
+      connectionId: data.connection_id,
+      senderId: data.sender_id,
+      content: data.content,
+      readAt: data.read_at,
+      editedAt: data.edited_at,
+      deletedAt: data.deleted_at,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
+  async markChatRead(connectionId: string): Promise<number> {
+    if (!connectionId) return 0;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(connectionId)) {
+      const stored = platform.storage.getItem(`chat_messages_${connectionId}`);
+      if (stored && typeof stored === 'string') {
+        try {
+          const list: GymChatMessage[] = JSON.parse(stored);
+          let count = 0;
+          const updated = list.map(m => {
+            if (!m.readAt) {
+              count++;
+              return { ...m, readAt: new Date().toISOString() };
+            }
+            return m;
+          });
+          platform.storage.setItem(`chat_messages_${connectionId}`, JSON.stringify(updated));
+          return count;
+        } catch { return 0; }
+      }
+      return 0;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('mark_gym_chat_read', {
+        p_connection_id: connectionId,
+      });
+      if (error || typeof data !== 'number') return 0;
+      return data;
+    } catch {
+      return 0;
+    }
+  }
+
+  async fetchChatUnreadCount(connectionId: string, currentUserId: string): Promise<number> {
+    if (!connectionId) return 0;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(connectionId)) {
+      const stored = platform.storage.getItem(`chat_messages_${connectionId}`);
+      if (stored && typeof stored === 'string') {
+        try {
+          const list: GymChatMessage[] = JSON.parse(stored);
+          return list.filter(m => m.senderId !== currentUserId && !m.readAt && !m.deletedAt).length;
+        } catch { return 0; }
+      }
+      return 0;
+    }
+
+    try {
+      const { count, error } = await supabase
+        .from('gym_chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('connection_id', connectionId)
+        .neq('sender_id', currentUserId)
+        .is('read_at', null)
+        .is('deleted_at', null);
+
+      if (error) return 0;
+      return count || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  async editChatMessage(messageId: string, newContent: string): Promise<GymChatMessage> {
+    const trimmed = (newContent || '').trim();
+    if (!trimmed) throw new Error('Message content cannot be empty');
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(messageId)) {
+      return {
+        id: messageId,
+        connectionId: 'mock-conn',
+        senderId: 'mock-user-current',
+        content: trimmed,
+        editedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    const { data, error } = await supabase.rpc('edit_gym_chat_message', {
+      p_message_id: messageId,
+      p_new_content: trimmed,
+    });
+
+    if (error || !data) {
+      throw new Error(error?.message || 'Failed to edit message');
+    }
+
+    return {
+      id: data.id,
+      connectionId: data.connection_id,
+      senderId: data.sender_id,
+      content: data.content,
+      readAt: data.read_at,
+      editedAt: data.edited_at,
+      deletedAt: data.deleted_at,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
+  async deleteChatMessage(messageId: string): Promise<boolean> {
+    if (!messageId) return false;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(messageId)) {
+      return true;
+    }
+
+    const { data, error } = await supabase.rpc('delete_gym_chat_message', {
+      p_message_id: messageId,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to delete message');
+    }
+
+    return !!data;
+  }
+
+  // ── 16. G5-A Gym Challenges ──────────────────────────────────────────────
+  async fetchGymChallenges(gymId: string, statusFilter?: string): Promise<GymChallenge[]> {
+    if (!gymId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`gym_challenges_${gymId}`);
+      if (raw && typeof raw === 'string') {
+        try {
+          const list: GymChallenge[] = JSON.parse(raw);
+          if (statusFilter) return list.filter(c => c.status === statusFilter);
+          return list;
+        } catch { return []; }
+      }
+      return [];
+    }
+
+    try {
+      let query = supabase
+        .from('gym_challenges')
+        .select(`
+          *,
+          participants:gym_challenge_participants(count)
+        `)
+        .eq('gym_id', gymId)
+        .order('start_at', { ascending: false });
+
+      if (statusFilter) {
+        query = query.eq('status', statusFilter);
+      }
+
+      const { data, error } = await query;
+      if (error || !data) return [];
+
+      return data.map((c: any) => ({
+        id: c.id,
+        gymId: c.gym_id,
+        title: c.title,
+        description: c.description,
+        challengeType: c.challenge_type,
+        status: c.status,
+        targetValue: Number(c.target_value),
+        scoringUnit: c.scoring_unit,
+        startAt: c.start_at,
+        endAt: c.end_at,
+        rewardBadgeName: c.reward_badge_name,
+        rewardCoins: c.reward_coins,
+        createdBy: c.created_by,
+        createdAt: c.created_at,
+        updatedAt: c.updated_at,
+        participantCount: c.participants?.[0]?.count || 0,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: Error fetching challenges', { err });
+      return [];
+    }
+  }
+
+  async fetchChallengeById(challengeId: string): Promise<GymChallenge | null> {
+    if (!challengeId) return null;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(challengeId)) {
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_challenges')
+        .select(`
+          *,
+          participants:gym_challenge_participants(count)
+        `)
+        .eq('id', challengeId)
+        .single();
+
+      if (error || !data) return null;
+
+      return {
+        id: data.id,
+        gymId: data.gym_id,
+        title: data.title,
+        description: data.description,
+        challengeType: data.challenge_type,
+        status: data.status,
+        targetValue: Number(data.target_value),
+        scoringUnit: data.scoring_unit,
+        startAt: data.start_at,
+        endAt: data.end_at,
+        rewardBadgeName: data.reward_badge_name,
+        rewardCoins: data.reward_coins,
+        createdBy: data.created_by,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+        participantCount: data.participants?.[0]?.count || 0,
+      };
+    } catch (err) {
+      logger.error('GymRepository: Error fetching challenge by id', { err });
+      return null;
+    }
+  }
+
+  async createGymChallenge(challenge: {
+    gymId: string;
+    title: string;
+    description?: string;
+    challengeType: string;
+    targetValue: number;
+    scoringUnit: string;
+    startAt: string;
+    endAt: string;
+    rewardBadgeName?: string;
+    rewardCoins?: number;
+  }): Promise<GymChallenge> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(challenge.gymId)) {
+      const mockChallenge: GymChallenge = {
+        id: `mock-chall-${Date.now()}`,
+        gymId: challenge.gymId,
+        title: challenge.title,
+        description: challenge.description || null,
+        challengeType: challenge.challengeType as any,
+        status: 'draft',
+        targetValue: challenge.targetValue,
+        scoringUnit: challenge.scoringUnit as any,
+        startAt: challenge.startAt,
+        endAt: challenge.endAt,
+        rewardBadgeName: challenge.rewardBadgeName || null,
+        rewardCoins: challenge.rewardCoins || 0,
+        createdBy: 'mock-owner',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        participantCount: 0,
+      };
+      const stored = platform.storage.getItem(`gym_challenges_${challenge.gymId}`);
+      let list: GymChallenge[] = [];
+      if (stored && typeof stored === 'string') {
+        try { list = JSON.parse(stored); } catch { /* ignore */ }
+      }
+      list.unshift(mockChallenge);
+      platform.storage.setItem(`gym_challenges_${challenge.gymId}`, JSON.stringify(list));
+      return mockChallenge;
+    }
+
+    const { data, error } = await supabase.rpc('create_gym_challenge', {
+      p_gym_id: challenge.gymId,
+      p_title: challenge.title,
+      p_description: challenge.description || null,
+      p_challenge_type: challenge.challengeType,
+      p_target_value: challenge.targetValue,
+      p_scoring_unit: challenge.scoringUnit,
+      p_start_at: challenge.startAt,
+      p_end_at: challenge.endAt,
+      p_reward_badge_name: challenge.rewardBadgeName || null,
+      p_reward_coins: challenge.rewardCoins || 0,
+    });
+
+    if (error || !data) {
+      throw new Error(error?.message || 'Failed to create challenge');
+    }
+
+    return {
+      id: data.id,
+      gymId: data.gym_id,
+      title: data.title,
+      description: data.description,
+      challengeType: data.challenge_type,
+      status: data.status,
+      targetValue: Number(data.target_value),
+      scoringUnit: data.scoring_unit,
+      startAt: data.start_at,
+      endAt: data.end_at,
+      rewardBadgeName: data.reward_badge_name,
+      rewardCoins: data.reward_coins,
+      createdBy: data.created_by,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      participantCount: 0,
+    };
+  }
+
+  async publishGymChallenge(challengeId: string): Promise<GymChallenge> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(challengeId)) {
+      throw new Error('Supabase not configured');
+    }
+
+    const { data, error } = await supabase.rpc('publish_gym_challenge', {
+      p_challenge_id: challengeId,
+    });
+
+    if (error || !data) {
+      throw new Error(error?.message || 'Failed to publish challenge');
+    }
+
+    return {
+      id: data.id,
+      gymId: data.gym_id,
+      title: data.title,
+      description: data.description,
+      challengeType: data.challenge_type,
+      status: data.status,
+      targetValue: Number(data.target_value),
+      scoringUnit: data.scoring_unit,
+      startAt: data.start_at,
+      endAt: data.end_at,
+      rewardBadgeName: data.reward_badge_name,
+      rewardCoins: data.reward_coins,
+      createdBy: data.created_by,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
+  async updateGymChallengeStatus(
+    challengeId: string,
+    targetStatus: GymChallengeStatus
+  ): Promise<GymChallenge> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(challengeId)) {
+      const mockKey = 'gym_challenges_mock-gym-1';
+      const raw = platform.storage.getItem(mockKey);
+      if (raw && typeof raw === 'string') {
+        try {
+          const list: GymChallenge[] = JSON.parse(raw);
+          const idx = list.findIndex(c => c.id === challengeId);
+          if (idx !== -1) {
+            list[idx].status = targetStatus;
+            list[idx].updatedAt = new Date().toISOString();
+            platform.storage.setItem(mockKey, JSON.stringify(list));
+            return list[idx];
+          }
+        } catch { /* ignore */ }
+      }
+      return {
+        id: challengeId,
+        gymId: 'mock-gym-1',
+        title: 'Mock Challenge',
+        challengeType: 'attendance_count',
+        status: targetStatus,
+        targetValue: 10,
+        scoringUnit: 'days',
+        startAt: new Date().toISOString(),
+        endAt: new Date(Date.now() + 864000000).toISOString(),
+        createdBy: 'mock-owner',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    const { data, error } = await supabase.rpc('update_gym_challenge_status', {
+      p_challenge_id: challengeId,
+      p_target_status: targetStatus,
+    });
+
+    if (error || !data) {
+      throw new Error(error?.message || 'Failed to update challenge status');
+    }
+
+    return {
+      id: data.id,
+      gymId: data.gym_id,
+      title: data.title,
+      description: data.description,
+      challengeType: data.challenge_type,
+      status: data.status,
+      targetValue: Number(data.target_value),
+      scoringUnit: data.scoring_unit,
+      startAt: data.start_at,
+      endAt: data.end_at,
+      rewardBadgeName: data.reward_badge_name,
+      rewardCoins: data.reward_coins,
+      createdBy: data.created_by,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
+  async deleteGymChallengeDraft(challengeId: string): Promise<boolean> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(challengeId)) {
+      const mockKey = 'gym_challenges_mock-gym-1';
+      const raw = platform.storage.getItem(mockKey);
+      if (raw && typeof raw === 'string') {
+        try {
+          let list: GymChallenge[] = JSON.parse(raw);
+          list = list.filter(c => c.id !== challengeId);
+          platform.storage.setItem(mockKey, JSON.stringify(list));
+        } catch { /* ignore */ }
+      }
+      return true;
+    }
+
+    const { data, error } = await supabase.rpc('delete_gym_challenge_draft', {
+      p_challenge_id: challengeId,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to delete challenge draft');
+    }
+
+    return !!data;
+  }
+
+  async joinGymChallenge(challengeId: string): Promise<GymChallengeParticipant> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(challengeId)) {
+      const mockPart: GymChallengeParticipant = {
+        id: `mock-part-${Date.now()}`,
+        challengeId,
+        gymId: 'mock-gym',
+        userId: 'mock-user-current',
+        status: 'active',
+        currentScore: 0,
+        joinedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      platform.storage.setItem(`part_${challengeId}_mock-user-current`, JSON.stringify(mockPart));
+      return mockPart;
+    }
+
+    const { data, error } = await supabase.rpc('join_gym_challenge', {
+      p_challenge_id: challengeId,
+    });
+
+    if (error || !data) {
+      throw new Error(error?.message || 'Failed to join challenge');
+    }
+
+    return {
+      id: data.id,
+      challengeId: data.challenge_id,
+      gymId: data.gym_id,
+      userId: data.user_id,
+      status: data.status,
+      currentScore: Number(data.current_score),
+      targetAchievedAt: data.target_achieved_at,
+      lastProgressAt: data.last_progress_at,
+      joinedAt: data.joined_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
+  async fetchMyChallengeParticipation(challengeId: string, userId: string): Promise<GymChallengeParticipant | null> {
+    if (!challengeId || !userId) return null;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(challengeId)) {
+      const raw = platform.storage.getItem(`part_${challengeId}_${userId}`);
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { return null; }
+      }
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_challenge_participants')
+        .select('*')
+        .eq('challenge_id', challengeId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error || !data) return null;
+
+      return {
+        id: data.id,
+        challengeId: data.challenge_id,
+        gymId: data.gym_id,
+        userId: data.user_id,
+        status: data.status,
+        currentScore: Number(data.current_score),
+        targetAchievedAt: data.target_achieved_at,
+        lastProgressAt: data.last_progress_at,
+        joinedAt: data.joined_at,
+        updatedAt: data.updated_at,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async syncMemberChallengeProgress(challengeId: string, userId?: string): Promise<{ currentScore: number; isCompleted: boolean }> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(challengeId)) {
+      return { currentScore: 0, isCompleted: false };
+    }
+
+    const { data, error } = await supabase.rpc('sync_member_challenge_progress', {
+      p_challenge_id: challengeId,
+      p_user_id: userId || null,
+    });
+
+    if (error || !data) {
+      return { currentScore: 0, isCompleted: false };
+    }
+
+    return {
+      currentScore: Number(data.current_score || 0),
+      isCompleted: !!data.is_completed,
+    };
+  }
+
+  // ── 17. G5-B Gym Leaderboard ─────────────────────────────────────────────
+  async fetchChallengeLeaderboard(challengeId: string, limit = 20, offset = 0): Promise<GymChallengeLeaderboardEntry[]> {
+    if (!challengeId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(challengeId)) {
+      const raw = platform.storage.getItem(`leaderboard_${challengeId}`);
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { return []; }
+      }
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_gym_challenge_leaderboard', {
+        p_challenge_id: challengeId,
+        p_limit: limit,
+        p_offset: offset,
+      });
+
+      if (error || !data) return [];
+
+      return data.map((row: any) => ({
+        rank: Number(row.rank),
+        userId: row.user_id,
+        displayName: row.display_name,
+        avatarUrl: row.avatar_url,
+        currentScore: Number(row.current_score),
+        targetValue: Number(row.target_value),
+        scoringUnit: row.scoring_unit,
+        progressPercentage: Number(row.progress_percentage),
+        isCompleted: !!row.is_completed,
+        targetAchievedAt: row.target_achieved_at,
+        lastProgressAt: row.last_progress_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: Error fetching challenge leaderboard', { err });
+      return [];
+    }
+  }
 }
 
 export const gymRepository = new GymRepository();
+
