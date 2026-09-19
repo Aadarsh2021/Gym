@@ -42,6 +42,11 @@ export class DailyMissionRepository {
     }
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.user) {
+        return this.getLocalFallbackMission();
+      }
+
       const { data, error } = await supabase.rpc('get_or_create_daily_mission');
 
       if (error) {
