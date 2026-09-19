@@ -9,6 +9,7 @@ export function useRestTimer() {
   const intervalRef = useRef<any>(null);
 
   const startTimer = useCallback((durationSeconds: number) => {
+    platform.audio.unlockAudio?.();
     if (intervalRef.current) clearInterval(intervalRef.current);
     setTotalDuration(durationSeconds);
     setSecondsRemaining(durationSeconds);
@@ -22,6 +23,7 @@ export function useRestTimer() {
   }, []);
 
   const resumeTimer = useCallback(() => {
+    platform.audio.unlockAudio?.();
     if (isActive && secondsRemaining > 0) {
       setIsPaused(false);
     }

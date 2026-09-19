@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { WorkoutPlan, WorkoutSession, PersonalRecord } from '@/types/workout.types';
+import { WorkoutPlan, WorkoutSession, PersonalRecord, PRHistoryEvent } from '@/types/workout.types';
 import { GeneratedPlan } from '@/domain/workout-generator';
 import { logger } from '@/lib/logger';
 import { clearActiveSessionDraft } from '@/utils/storage';
@@ -551,6 +551,14 @@ export const workoutService = {
 
   async getWorkoutHistory(userId: string, limit = 20): Promise<WorkoutSession[]> {
     return workoutRepository.fetchWorkoutHistory(userId, limit);
+  },
+
+  /**
+   * Fetches append-only PR milestone timeline events.
+   * Leverages workoutRepository.fetchPRHistory.
+   */
+  async getPRHistory(userId: string, exerciseId?: string, limit = 50): Promise<PRHistoryEvent[]> {
+    return workoutRepository.fetchPRHistory(userId, exerciseId, limit);
   },
 
   /**

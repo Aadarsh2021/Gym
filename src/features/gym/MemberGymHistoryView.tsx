@@ -16,15 +16,25 @@ import {
   Hourglass,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import {
   gymHistoryService,
   GymAttendanceSummaryResult,
   formatFriendlyDuration,
 } from '@/services/gym-history.service';
 import { gymCheckoutService } from '@/services/gym-checkout.service';
-import { GymAttendanceSession, Gym } from '@/types/gym.types';
+import { gymRepository } from '@/repositories/gym.repository';
+import {
+  GymAttendanceSession,
+  Gym,
+  GymAttendanceStreak,
+  GymReward,
+  GymRewardRedemption,
+} from '@/types/gym.types';
+import { useAuth } from '@/hooks/useAuth';
+import { useMemberGymContext } from '@/hooks/useMemberGymContext';
 import { formatVisitDateIST, formatVisitTimeIST } from '@/utils/date';
+import { formatDate } from '@/utils/formatters';
+import { Flame, Award, Gift, Ticket } from 'lucide-react';
 
 export const MemberGymHistoryView: React.FC = () => {
   const { session } = useAuth();
@@ -50,6 +60,22 @@ export const MemberGymHistoryView: React.FC = () => {
   const [selectedVisit, setSelectedVisit] = useState<
     (GymAttendanceSession & { gym?: Gym }) | null
   >(null);
+
+  // Phase G1: Gym Streak & Rewards state
+  let memberGymCtx: ReturnType<typeof useMemberGymContext> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    memberGymCtx = useMemberGymContext();
+  } catch {
+    // Standalone test fallback
+  }
+
+  const [gymStreak, setGymStreak] = useState<GymAttendanceStreak | null>(null);
+  const [rewards, setRewards] = useState<GymReward[]>([]);
+  const [redemptions, setRedemptions] = useState<GymRewardRedemption[]>([]);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [claimSuccessMsg, setClaimSuccessMsg] = useState<string | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<GymRewardRedemption | null>(null);
 
   // Fetch initial summary and history
   const loadData = useCallback(async () => {
@@ -93,17 +119,51 @@ export const MemberGymHistoryView: React.FC = () => {
       } else {
         setActiveSession(null);
       }
+
+      // 4. Phase G1: Load Gym Attendance Streak & Rewards for active gym
+      const targetGymId = memberGymCtx?.activeGym?.id || historyRes.sessions[0]?.gymId;
+      if (targetGymId) {
+        const [streakData, rewardsData, redemptionsData] = await Promise.all([
+          gymRepository.getGymAttendanceStreak(targetGymId, userId),
+          gymRepository.fetchGymRewards(targetGymId),
+          gymRepository.fetchMemberRedemptions(userId, targetGymId),
+        ]);
+        setGymStreak(streakData);
+        setRewards(rewardsData);
+        setRedemptions(redemptionsData);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to load attendance history';
       setError(msg);
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, memberGymCtx?.activeGym?.id]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleClaimReward = async (rewardId: string) => {
+    if (!userId || claimingId) return;
+    try {
+      setClaimingId(rewardId);
+      setError(null);
+      setClaimSuccessMsg(null);
+      const res = await gymRepository.claimGymReward(rewardId, userId);
+      if (!res.success || !res.redemption) {
+        setError(res.error || 'Failed to claim milestone perk');
+        return;
+      }
+      setSelectedTicket(res.redemption);
+      setClaimSuccessMsg('Perk claimed successfully! Show verification code at reception.');
+      await loadData();
+    } catch {
+      setError('An error occurred while claiming reward');
+    } finally {
+      setClaimingId(null);
+    }
+  };
 
   // Load more pages
   const handleLoadMore = async () => {
@@ -246,6 +306,47 @@ export const MemberGymHistoryView: React.FC = () => {
           </div>
         )}
 
+        {/* Phase G1: Gym Attendance Streak Banner */}
+        <div
+          className="p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-950/40 via-slate-900/90 to-slate-900 flex flex-col md:flex-row md:items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center flex-shrink-0 text-amber-400">
+              <Flame className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                  GYM STREAK
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium">
+                  Facility-Local
+                </span>
+              </div>
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span className="text-2xl sm:text-3xl font-extrabold text-white">
+                  {gymStreak?.currentStreak ?? 0} {gymStreak?.currentStreak === 1 ? 'Day' : 'Days'}
+                </span>
+                <span className="text-xs text-slate-400">
+                  (Best: {gymStreak?.longestStreak ?? 0} Days)
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Consecutive facility attendance. Separate from your personal workout streak.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 pt-3 md:pt-0 border-t md:border-t-0 border-slate-800">
+            <div className="text-left md:text-right">
+              <span className="text-xs text-slate-400 block">Total Facility Visits</span>
+              <span className="text-lg sm:text-xl font-bold text-amber-300">
+                {gymStreak?.totalVisitDays ?? (summary?.totalVisits ?? 0)} Days
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Feature 3: Attendance Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           {/* Card 1: Total Completed Visits */}
@@ -312,6 +413,118 @@ export const MemberGymHistoryView: React.FC = () => {
             <p className="text-[11px] text-slate-500">Current calendar month</p>
           </div>
         </div>
+
+        {/* Phase G1: Gym Milestone Perks */}
+        {rewards.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <h2 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
+                <Award className="w-5 h-5 text-amber-400" />
+                <span>Gym Milestone Perks</span>
+              </h2>
+              <span className="text-xs text-slate-400">
+                Earned through verified physical attendance
+              </span>
+            </div>
+
+            {claimSuccessMsg && (
+              <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span>{claimSuccessMsg}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {rewards.map(reward => {
+                const uniqueVisits = gymStreak?.totalVisitDays ?? (summary?.totalVisits ?? 0);
+                const isEligible = uniqueVisits >= reward.requiredVisits;
+                const redemption = redemptions.find(r => r.rewardId === reward.id);
+                const isClaimed = !!redemption;
+                const isRedeemed = redemption?.status === 'redeemed';
+                const progressPct = Math.min(100, Math.round((uniqueVisits / reward.requiredVisits) * 100));
+
+                return (
+                  <div
+                    key={reward.id}
+                    className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between space-y-3"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-amber-400">
+                          {reward.requiredVisits} Visits Milestone
+                        </span>
+                        {isRedeemed ? (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">
+                            ✓ Redeemed
+                          </span>
+                        ) : isClaimed ? (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800">
+                            ⏳ Ready at Desk
+                          </span>
+                        ) : isEligible ? (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800">
+                            Unlocked!
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-slate-500">
+                            {reward.requiredVisits - uniqueVisits} to go
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-sm font-semibold text-white">{reward.title}</h3>
+                      {reward.description && (
+                        <p className="text-xs text-slate-400 line-clamp-2">{reward.description}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-amber-500 h-full transition-all duration-300"
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+
+                      {isClaimed && redemption ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTicket(redemption)}
+                          className="w-full py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg border border-amber-500/30 transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <Ticket className="w-3.5 h-3.5" />
+                          <span>View Code: {redemption.redemptionCode}</span>
+                        </button>
+                      ) : isEligible ? (
+                        <button
+                          type="button"
+                          onClick={() => handleClaimReward(reward.id)}
+                          disabled={claimingId === reward.id}
+                          className="w-full py-1.5 text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        >
+                          {claimingId === reward.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Gift className="w-3.5 h-3.5" />
+                          )}
+                          <span>Claim Perk</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full py-1.5 text-xs text-slate-500 bg-slate-800/40 rounded-lg cursor-not-allowed"
+                        >
+                          {uniqueVisits} / {reward.requiredVisits} Visits
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Feature 1: Attendance History Feed */}
         <div className="space-y-3">
@@ -565,6 +778,64 @@ export const MemberGymHistoryView: React.FC = () => {
                   className="px-4 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Phase G1: Redemption Ticket Modal */}
+        {selectedTicket && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in"
+            onClick={() => setSelectedTicket(null)}
+          >
+            <div
+              className="w-full max-w-md bg-slate-900 border border-amber-500/40 rounded-2xl p-6 shadow-2xl space-y-5"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                    <Ticket className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Milestone Perk Ticket</h3>
+                    <p className="text-xs text-slate-400">Present to staff at gym reception</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedTicket(null)}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 text-center space-y-3">
+                <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold block">
+                  Authoritative Verification Code
+                </span>
+                <div className="py-3 px-4 bg-slate-900 rounded-lg border border-amber-500/40 inline-block">
+                  <code className="text-2xl sm:text-3xl font-mono font-extrabold tracking-widest text-amber-400">
+                    {selectedTicket.redemptionCode}
+                  </code>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Status: <span className="font-semibold text-amber-300 uppercase">{selectedTicket.status}</span> • Claimed on {formatDate(selectedTicket.claimedAt)}
+                </p>
+              </div>
+
+              <div className="text-center text-xs text-slate-400">
+                Gym reception will inspect this code on their dashboard to mark your perk fulfilled.
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setSelectedTicket(null)}
+                  className="w-full py-2.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors"
+                >
+                  Done
                 </button>
               </div>
             </div>

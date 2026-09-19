@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Play,
@@ -16,15 +16,21 @@ import {
   AlertTriangle,
   Loader2,
   X,
+  Target,
+  Gift,
 } from 'lucide-react';
 import { WorkoutPlan, WorkoutSession, WorkoutPlanDay } from '@/types/workout.types';
 import { UserStreak } from '@/types/streak.types';
 import { NutritionProfile, DailyMacroTotals } from '@/types/nutrition.types';
 import { FitnessProfile } from '@/types/user.types';
+import { getGoalContextDetails } from '@/domain/goal-context';
 import { AuthSession } from '@/services/auth.service';
 import { getTodaysScheduledWorkout } from '@/domain/scheduled-workout';
 import { streakService } from '@/services/streak.service';
 import { calculateWorkoutSummary } from '@/domain/workout-tonnage';
+import { dailyMissionService } from '@/services/daily-mission.service';
+import { DailyMission, getMissionMeta, getMissionProgressPercent } from '@/domain/daily-mission';
+import { getQualityScoreMeta } from '@/domain/workout-quality';
 import { isToday, getTodayIST } from '@/utils/date';
 import { isWithinGymRadius } from '@/utils/geo';
 import { PRODUCT_NAME } from '@/config/branding';
@@ -64,8 +70,64 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     });
   }, [activePlan, recentSessions]);
 
+  // Goal context derivation with full null-safety
+  const goalContext = useMemo(() => {
+    return getGoalContextDetails(fitnessProfile?.goal);
+  }, [fitnessProfile?.goal]);
+
   const scheduledDay = scheduleResult.scheduledDay;
   const [restDayLogged, setRestDayLogged] = useState(false);
+
+  // Onboarding Guard State Logic (States A, B, C)
+  const hasProfileAndGoal = Boolean(fitnessProfile && fitnessProfile.goal);
+  const hasActivePlan = Boolean(activePlan);
+  const isStateA = !hasProfileAndGoal;
+  const isStateB = hasProfileAndGoal && !hasActivePlan;
+
+  // State A session-only dismissal
+  const [dismissedStateA, setDismissedStateA] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('dismiss_dashboard_state_a') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleDismissStateA = () => {
+    try {
+      sessionStorage.setItem('dismiss_dashboard_state_a', 'true');
+    } catch {}
+    setDismissedStateA(true);
+  };
+
+  // Daily Mission State
+  const [dailyMission, setDailyMission] = useState<DailyMission | null>(null);
+  const [isClaimingMission, setIsClaimingMission] = useState(false);
+  const [claimFeedback, setClaimFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    dailyMissionService.getTodayMission().then(mission => {
+      if (mission) setDailyMission(mission);
+    });
+  }, [recentSessions, dailyTotals]);
+
+  const handleClaimMission = async () => {
+    if (!dailyMission || isClaimingMission) return;
+    setIsClaimingMission(true);
+    setClaimFeedback(null);
+    try {
+      const res = await dailyMissionService.claimMission(dailyMission.id);
+      if (res.success) {
+        setClaimFeedback(`+${res.result?.coinsAwarded || 15} Coins Claimed!`);
+        const updated = await dailyMissionService.getTodayMission();
+        if (updated) setDailyMission(updated);
+      } else {
+        setClaimFeedback(res.error || 'Unable to claim reward.');
+      }
+    } finally {
+      setIsClaimingMission(false);
+    }
+  };
 
   // Gym Geofencing Check State
   const [gymModalOpen, setGymModalOpen] = useState(false);
@@ -105,6 +167,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const handleStartWorkoutWithCheck = (day?: WorkoutPlanDay, mode: 'standard' | 'quick' = 'standard') => {
+    platform.audio.unlockAudio?.();
     if (fitnessProfile?.gymLatitude && fitnessProfile?.gymLongitude) {
       performGymVerification(day, mode);
     } else {
@@ -117,6 +180,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const handleConfirmStart = () => {
+    platform.audio.unlockAudio?.();
     setGymModalOpen(false);
     const isVerified = gymCheckStatus === 'verified';
     if (pendingWorkoutMode === 'quick' && onStartQuickWorkout) {
@@ -162,6 +226,118 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="container-app animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)' }}>
+      {/* 0. ONBOARDING COMPLETION GUARD & DASHBOARD GUIDANCE BANNERS */}
+      {isStateA && !dismissedStateA && (
+        <div
+          className="card card-elevated animate-fade-in"
+          style={{
+            marginBottom: 'var(--space-5)',
+            padding: 'var(--space-4) var(--space-5)',
+            background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.12) 0%, rgba(234, 88, 12, 0.05) 100%)',
+            border: '1px solid rgba(249, 115, 22, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(249, 115, 22, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-fire)',
+              }}
+            >
+              <Target size={20} />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                Finish Setting Up Your Athlete Profile
+              </h4>
+              <p style={{ margin: '2px 0 0', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                Set your personal fitness goals and biometrics to unlock structured training routines and accurate nutrition targets.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <Link
+              to="/onboarding"
+              className="btn btn-primary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            >
+              Complete Setup →
+            </Link>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={handleDismissStateA}
+              aria-label="Dismiss banner for session"
+              style={{ color: 'var(--text-muted)', padding: '6px' }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isStateB && (
+        <div
+          className="card card-elevated animate-fade-in"
+          style={{
+            marginBottom: 'var(--space-5)',
+            padding: 'var(--space-4) var(--space-5)',
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(79, 70, 229, 0.05) 100%)',
+            border: '1px solid rgba(99, 102, 241, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(99, 102, 241, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-indigo, #818cf8)',
+              }}
+            >
+              <Zap size={20} />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                Build Your Structured Training Split
+              </h4>
+              <p style={{ margin: '2px 0 0', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                Your athlete profile is ready. Build a science-backed workout plan matched to your target goal.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            to="/plan/build"
+            className="btn btn-primary btn-sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+          >
+            Generate Workout Plan →
+          </Link>
+        </div>
+      )}
+
       {/* Personalized Welcome Banner */}
       <div className="dashboard-welcome-banner">
         <div
@@ -174,10 +350,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             marginBottom: 'var(--space-3)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
             <span className="badge badge-accent" style={{ fontWeight: 700, letterSpacing: '0.04em' }}>
               {PRODUCT_NAME} PRO
             </span>
+            {fitnessProfile?.goal && goalContext?.label && goalContext.label !== 'undefined' && (
+              <span
+                className="badge"
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  background: goalContext.badgeStyle?.bg,
+                  color: goalContext.badgeStyle?.color,
+                  border: goalContext.badgeStyle?.border,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}
+              >
+                <Target size={12} />
+                Goal: {goalContext.label}
+              </span>
+            )}
             <span
               className="badge"
               style={{
@@ -232,6 +426,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             ? 'Welcome to your athlete command center. Set up your personalized training plan to unlock your scheduled daily routine.'
             : `Today’s objective is ${scheduledDay?.name || 'Workout Session'}. Execute every set with strict form and disciplined intensity.`}
         </p>
+        {fitnessProfile?.goal && goalContext?.subtitle && goalContext.subtitle !== 'undefined' && (
+          <div
+            style={{
+              marginTop: 'var(--space-2)',
+              fontSize: '0.85rem',
+              color: 'var(--text-muted)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span style={{ color: goalContext.badgeStyle?.color || 'var(--accent-primary)', fontWeight: 600 }}>Goal Target:</span>
+            <span>{goalContext.subtitle}</span>
+          </div>
+        )}
       </div>
 
       {/* Athlete Status & Quick Glance Strip (4 3D Glass Cards) */}
@@ -382,6 +591,123 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </Link>
       </div>
+
+      {/* DAILY MISSION CARD */}
+      {dailyMission && (
+        <div
+          className="card card-elevated"
+          style={{
+            marginBottom: 'var(--space-6)',
+            background: 'linear-gradient(135deg, rgba(24, 24, 27, 0.95), rgba(39, 39, 42, 0.95))',
+            borderColor: dailyMission.isCompleted
+              ? 'rgba(114, 184, 121, 0.4)'
+              : dailyMission.isClaimable
+              ? 'rgba(234, 179, 8, 0.4)'
+              : 'var(--border-medium)',
+            padding: 'var(--space-4) var(--space-5)',
+            boxShadow: 'var(--shadow-md)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: '240px', flex: 1 }}>
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: 'var(--radius-sm)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.4rem',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                {getMissionMeta(dailyMission.missionType).icon}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: '2px', flexWrap: 'wrap' }}>
+                  <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                    Today's Daily Mission
+                  </small>
+                  <span className={`badge ${getMissionMeta(dailyMission.missionType).bgColor} ${getMissionMeta(dailyMission.missionType).textColor} ${getMissionMeta(dailyMission.missionType).borderColor}`} style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
+                    {getMissionMeta(dailyMission.missionType).badge}
+                  </span>
+                  {dailyMission.isCompleted && (
+                    <span className="badge badge-success" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
+                      ✓ Completed
+                    </span>
+                  )}
+                  {dailyMission.isExpired && !dailyMission.isCompleted && (
+                    <span className="badge" style={{ fontSize: '0.68rem', padding: '1px 6px', color: 'var(--text-muted)', background: 'var(--bg-secondary)' }}>
+                      Expired
+                    </span>
+                  )}
+                </div>
+                <h3 style={{ fontSize: '1.05rem', margin: '0 0 2px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {dailyMission.title}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                  {dailyMission.description}
+                </p>
+              </div>
+            </div>
+
+            {/* Progress & Claim CTA */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+              <div style={{ minWidth: '130px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '4px', fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Progress</span>
+                  <span style={{ fontWeight: 700, color: dailyMission.isClaimable || dailyMission.isCompleted ? 'var(--color-success)' : 'var(--text-secondary)' }}>
+                    {dailyMission.progressValue ?? 0} / {dailyMission.targetValue}
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: '6px', background: 'var(--bg-secondary)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${getMissionProgressPercent(dailyMission.progressValue ?? 0, dailyMission.targetValue)}%`,
+                      background: dailyMission.isCompleted
+                        ? 'var(--color-success)'
+                        : dailyMission.isClaimable
+                        ? 'var(--accent-gold)'
+                        : 'var(--accent-primary)',
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                {dailyMission.isCompleted ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: 'rgba(114, 184, 121, 0.12)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(114, 184, 121, 0.3)', color: 'var(--color-success)', fontSize: '0.84rem', fontWeight: 600 }}>
+                    <CheckCircle2 size={15} /> +{dailyMission.coinReward} Coins Earned
+                  </div>
+                ) : dailyMission.isClaimable ? (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handleClaimMission}
+                    disabled={isClaimingMission}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent-gold)', color: '#000', fontWeight: 700, border: 'none' }}
+                  >
+                    {isClaimingMission ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}
+                    Claim +{dailyMission.coinReward} Coins
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '0.82rem', fontFamily: 'var(--font-mono)' }}>
+                    <Flame size={14} color="var(--accent-gold)" /> +{dailyMission.coinReward} Coins
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          {claimFeedback && (
+            <div style={{ marginTop: 'var(--space-2)', fontSize: '0.8rem', color: claimFeedback.includes('+') ? 'var(--color-success)' : 'var(--color-warning)', fontWeight: 600 }}>
+              {claimFeedback}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Grid: Mission + Coach */}
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)' }}>
@@ -665,7 +991,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <p style={{ fontSize: '0.88rem', lineHeight: 1.55, color: 'var(--text-secondary)', margin: '0 0 var(--space-2)' }}>
               {dailyTotals && dailyTotals.entriesCount > 0
                 ? `${dailyTotals.entriesCount} meal item${dailyTotals.entriesCount > 1 ? 's' : ''} logged today. Target remaining: ${Math.max(0, (nutritionProfile?.targetCalories || 2200) - dailyTotals.totalCalories)} kcal and ${Math.max(0, Math.round(((nutritionProfile?.targetProteinG || 140) - dailyTotals.totalProteinG) * 10) / 10)}g protein.`
-                : 'Hit your daily protein and calorie targets to fuel muscular recovery, support hypertrophy, and maintain energy levels.'}
+                : goalContext.nutritionHint}
             </p>
           </div>
 
@@ -763,6 +1089,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <strong style={{ textTransform: 'capitalize', color: todaySession.sessionRating === 'exhausting' ? 'var(--color-warning)' : todaySession.sessionRating === 'easy' ? 'var(--color-success)' : 'var(--accent-primary)' }}>
                           {todaySession.sessionRating === 'easy' ? 'Easy (Recovery)' : todaySession.sessionRating === 'normal' ? 'Normal (Target RPE)' : 'Exhausting (Max Effort)'}
                         </strong>
+                      </div>
+                    )}
+
+                    {/* Authoritative Quality Score Badge */}
+                    {todaySession.qualityScore !== null && todaySession.qualityScore !== undefined && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: 'var(--space-2)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-secondary)', fontSize: '0.78rem' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Quality Score:</span>
+                        <span className={`badge ${getQualityScoreMeta(todaySession.qualityScore).badgeColor}`} style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                          {todaySession.qualityScore}/100 ({getQualityScoreMeta(todaySession.qualityScore).tier})
+                        </span>
                       </div>
                     )}
 

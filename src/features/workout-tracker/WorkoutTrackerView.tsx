@@ -26,6 +26,7 @@ import { GuidedExerciseStage } from './GuidedExerciseStage';
 import { GuidedRestOverlay } from './GuidedRestOverlay';
 import { GuidedWorkoutOutlineDrawer } from './GuidedWorkoutOutlineDrawer';
 import { GuidedCockpitSidebar } from './GuidedCockpitSidebar';
+import { platform } from '@/platform';
 
 interface WorkoutTrackerViewProps {
   session: WorkoutSession;
@@ -171,8 +172,22 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
     }
   }, [isResting, isTimerActive, secondsRemaining, currentExerciseIndex, currentSetIndex, session.exercises]);
 
+  // Unlock Web Audio from synchronous user gesture on first interaction
+  useEffect(() => {
+    const handleGesture = () => {
+      platform.audio.unlockAudio?.();
+    };
+    window.addEventListener('click', handleGesture, { once: true, passive: true });
+    window.addEventListener('touchstart', handleGesture, { once: true, passive: true });
+    return () => {
+      window.removeEventListener('click', handleGesture);
+      window.removeEventListener('touchstart', handleGesture);
+    };
+  }, []);
+
   // Toggle set completed with strict Last-Set rule (User Correction #3)
   const toggleSetCompleted = (exerciseIndex: number, setIndex: number) => {
+    platform.audio.unlockAudio?.();
     const targetEx = session.exercises[exerciseIndex];
     if (!targetEx) return;
 
@@ -244,6 +259,7 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
 
   // Adjust weight with stepper (+2.5, -2.5, +5, etc.)
   const adjustWeight = (exerciseIndex: number, setIndex: number, delta: number) => {
+    platform.audio.unlockAudio?.();
     setSession(prev => {
       const updatedExercises = [...prev.exercises];
       const targetEx = { ...updatedExercises[exerciseIndex] };
@@ -260,6 +276,7 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
 
   // Add new set to exercise
   const addSetToExercise = (exerciseIndex: number) => {
+    platform.audio.unlockAudio?.();
     setSession(prev => {
       const updatedExercises = [...prev.exercises];
       const targetEx = { ...updatedExercises[exerciseIndex] };

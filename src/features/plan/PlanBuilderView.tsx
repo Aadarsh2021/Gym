@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { profileService } from '@/services/profile.service';
 import { exerciseService, FALLBACK_EXERCISES } from '@/services/exercise.service';
 import { generateWorkoutPlan } from '@/domain/workout-generator';
 import { saveDraftPlan } from '@/utils/storage';
-import { ExperienceLevel, FitnessGoal, WorkoutEnvironment } from '@/types/user.types';
+import { ExperienceLevel, FitnessGoal, WorkoutEnvironment, FitnessProfile } from '@/types/user.types';
 
 export const PlanBuilderView: React.FC = () => {
   const { session } = useAuth();
@@ -22,12 +22,16 @@ export const PlanBuilderView: React.FC = () => {
   const [fetchingProfile, setFetchingProfile] = useState(true);
   const [limitations, setLimitations] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     const loadProfileDefaults = async () => {
       try {
         const profile = await profileService.getFitnessProfile(userId);
+        if (isMounted) {
+          setFitnessProfile(profile);
+        }
         if (isMounted && profile) {
           if (profile.daysPerWeek) setDaysPerWeek(profile.daysPerWeek);
           if (profile.experienceLevel) setExperienceLevel(profile.experienceLevel);
@@ -108,6 +112,44 @@ export const PlanBuilderView: React.FC = () => {
     return (
       <div className="container" style={{ padding: 'var(--space-12) var(--space-4)', textAlign: 'center' }}>
         <p style={{ color: 'var(--text-muted)' }}>Loading training preferences...</p>
+      </div>
+    );
+  }
+
+  // Plan Build Guard: Require a valid fitness profile with goal before generating a plan
+  if (!fitnessProfile || !fitnessProfile.goal) {
+    return (
+      <div className="container-narrow animate-fade-in" style={{ padding: 'var(--space-12) var(--space-4)', textAlign: 'center' }}>
+        <div className="card card-elevated" style={{ padding: 'var(--space-8) var(--space-6)', maxWidth: '520px', margin: '0 auto' }}>
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: 'var(--radius-md)',
+              background: 'rgba(249, 115, 22, 0.15)',
+              color: 'var(--accent-fire)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto var(--space-4)',
+            }}
+          >
+            <AlertCircle size={28} />
+          </div>
+          <h2 style={{ fontSize: '1.35rem', margin: '0 0 var(--space-2)' }}>
+            Finish Setting Up Your Athlete Profile
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.6, margin: '0 0 var(--space-6)' }}>
+            Generating a structured, science-backed workout routine requires your fitness goal and biometric preferences. Please complete your profile setup before building a personalized plan.
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            onClick={() => navigate('/onboarding')}
+          >
+            Complete Your Profile →
+          </button>
+        </div>
       </div>
     );
   }

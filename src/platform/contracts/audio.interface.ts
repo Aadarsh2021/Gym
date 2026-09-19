@@ -6,4 +6,5 @@ export interface IPlatformAudio {
   playRestTimerChime(): Promise<void> | void;
   vibrate(pattern?: number | number[]): void;
   setDocumentTitle?(title: string): void;
+  unlockAudio?(): void;
 }

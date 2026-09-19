@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Sliders,
   Lock,
+  Pencil,
 } from 'lucide-react';
 
 import { nutritionService } from '@/services/nutrition.service';
@@ -122,6 +123,12 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
   // Budget Tab Controls State
   const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>('weekly');
   const [budgetAmount, setBudgetAmount] = useState<number>(1500);
+
+  // Food Diary In-Place Edit Modal State
+  const [editingEntry, setEditingEntry] = useState<FoodDiaryEntry | null>(null);
+  const [editServings, setEditServings] = useState<number>(1.0);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
 
   // Load Diary Entries & Totals for Selected Date
   const loadDiary = useCallback(async () => {
@@ -306,6 +313,54 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
       await loadDiary();
     } catch {
       // Fallback
+    }
+  };
+
+  // Open Edit Modal for an existing diary entry
+  const handleOpenEditModal = (entry: FoodDiaryEntry) => {
+    setEditingEntry(entry);
+    setEditServings(entry.servings);
+    setEditError(null);
+  };
+
+  // Save in-place edit for diary entry
+  const handleSaveEdit = async () => {
+    if (!editingEntry) return;
+
+    if (
+      typeof editServings !== 'number' ||
+      !Number.isFinite(editServings) ||
+      Number.isNaN(editServings) ||
+      editServings < 0.1 ||
+      editServings > 20
+    ) {
+      setEditError('Serving quantity must be between 0.1 and 20.');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError(null);
+
+    try {
+      const res = await foodDiaryService.updateFoodEntry(
+        userId,
+        editingEntry.id,
+        editServings,
+        editingEntry
+      );
+
+      if (res.success) {
+        setEditingEntry(null);
+        setLogSuccessMessage(`Updated ${editingEntry.foodName} to ${editServings} serving(s)!`);
+        setTimeout(() => setLogSuccessMessage(null), 3000);
+        await loadDiary();
+      } else {
+        setEditError(res.error || 'Failed to update food entry.');
+      }
+    } catch (err: any) {
+      setEditError(err?.message || 'Failed to update food entry.');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -1136,6 +1191,16 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
                             </span>
                             <button
                               type="button"
+                              onClick={() => handleOpenEditModal(item)}
+                              className="btn btn-ghost btn-sm"
+                              style={{ padding: '4px', color: 'var(--text-secondary)' }}
+                              title="Edit serving quantity"
+                              aria-label={`Edit ${item.foodName}`}
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleDeleteEntry(item.id)}
                               className="btn btn-ghost btn-sm"
                               style={{ padding: '4px', color: 'var(--accent-fire)', opacity: 0.8 }}
@@ -1604,6 +1669,183 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
             <div style={{ display: 'flex', justifyContent: 'center', padding: '0 var(--space-4) var(--space-4)' }}>
               <button className="btn btn-ghost btn-sm" onClick={() => setLockedModalPrompt(null)}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 11. FOOD DIARY IN-PLACE EDIT MODAL */}
+      {editingEntry && (
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            if (!isSavingEdit) setEditingEntry(null);
+          }}
+        >
+          <div
+            className="modal-content animate-fade-in"
+            style={{ maxWidth: '460px', padding: 'var(--space-6)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)' }}>Edit Food Item</h3>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Adjust serving quantity and recalculate macros</span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setEditingEntry(null)}
+                disabled={isSavingEdit}
+                aria-label="Close modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Food Name & Original Baseline */}
+            <div
+              style={{
+                background: 'var(--bg-primary)',
+                padding: 'var(--space-3) var(--space-4)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                marginBottom: 'var(--space-4)',
+              }}
+            >
+              <strong style={{ fontSize: '1rem', color: 'var(--text-primary)', display: 'block' }}>
+                {editingEntry.foodName}
+              </strong>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Baseline: {editingEntry.servings} serving(s) • {Math.round(editingEntry.calories)} kcal • {Math.round(editingEntry.proteinG * 10) / 10}g P
+              </div>
+            </div>
+
+            {/* Serving Input & Steppers */}
+            <div style={{ marginBottom: 'var(--space-5)' }}>
+              <label className="label" style={{ fontWeight: 600, fontSize: '0.88rem', marginBottom: 'var(--space-2)' }}>
+                Current Serving Quantity (0.1 – 20)
+              </label>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <input
+                  type="number"
+                  min="0.1"
+                  max="20"
+                  step="0.1"
+                  value={editServings}
+                  onChange={e => {
+                    const val = parseFloat(e.target.value);
+                    setEditServings(isNaN(val) ? 0 : val);
+                  }}
+                  className="input"
+                  style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: '1.05rem', textAlign: 'center' }}
+                  disabled={isSavingEdit}
+                />
+              </div>
+
+              {/* Stepper Quick-Adjust Buttons */}
+              <div style={{ display: 'flex', gap: '6px', marginTop: 'var(--space-2)', justifyContent: 'center' }}>
+                {[-0.5, -0.1, 0.1, 0.5].map(delta => (
+                  <button
+                    key={delta}
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '0.76rem', padding: '4px 10px', fontFamily: 'var(--font-mono)' }}
+                    disabled={isSavingEdit}
+                    onClick={() => {
+                      const next = Math.max(0.1, Math.min(20, Math.round((editServings + delta) * 10) / 10));
+                      setEditServings(next);
+                    }}
+                  >
+                    {delta > 0 ? `+${delta}` : delta}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Live Macro Preview */}
+            {(() => {
+              const baseCals = editingEntry.servings > 0 ? (editingEntry.calories / editingEntry.servings) : 0;
+              const basePro = editingEntry.servings > 0 ? (editingEntry.proteinG / editingEntry.servings) : 0;
+              const baseCarbs = editingEntry.servings > 0 ? ((editingEntry.carbsG || 0) / editingEntry.servings) : 0;
+              const baseFat = editingEntry.servings > 0 ? ((editingEntry.fatG || 0) / editingEntry.servings) : 0;
+
+              const previewCalories = Math.max(0, Math.round(baseCals * editServings));
+              const previewProtein = Math.max(0, Math.round(basePro * editServings * 10) / 10);
+              const previewCarbs = Math.max(0, Math.round(baseCarbs * editServings * 10) / 10);
+              const previewFat = Math.max(0, Math.round(baseFat * editServings * 10) / 10);
+
+              return (
+                <div
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--accent-primary-border)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: 'var(--space-4)',
+                    marginBottom: 'var(--space-5)',
+                  }}
+                >
+                  <div style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 700, marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Live Recalculated Preview
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-2)', textAlign: 'center' }}>
+                    <div style={{ background: 'var(--bg-primary)', padding: '6px', borderRadius: 'var(--radius-sm)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Calories</span>
+                      <strong style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{previewCalories}</strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-primary)', padding: '6px', borderRadius: 'var(--radius-sm)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Protein</span>
+                      <strong style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)' }}>{previewProtein}g</strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-primary)', padding: '6px', borderRadius: 'var(--radius-sm)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Carbs</span>
+                      <strong style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{previewCarbs}g</strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-primary)', padding: '6px', borderRadius: 'var(--radius-sm)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Fat</span>
+                      <strong style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{previewFat}g</strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Error Display */}
+            {editError && (
+              <div
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid var(--accent-fire)',
+                  color: 'var(--accent-fire)',
+                  padding: 'var(--space-2) var(--space-3)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.82rem',
+                  marginBottom: 'var(--space-4)',
+                }}
+              >
+                {editError}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setEditingEntry(null)}
+                disabled={isSavingEdit}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={handleSaveEdit}
+                disabled={isSavingEdit}
+              >
+                {isSavingEdit ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>

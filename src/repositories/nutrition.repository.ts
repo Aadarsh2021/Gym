@@ -484,6 +484,112 @@ export class NutritionRepository {
     }
   }
 
+  async updateFoodDiaryEntry(
+    userId: string,
+    entryId: string,
+    dateStr: string,
+    updates: {
+      servings: number;
+      calories: number;
+      proteinG: number;
+      carbsG?: number;
+      fatG?: number;
+    }
+  ): Promise<{ success: boolean; entry?: FoodDiaryEntry; error?: string }> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const existing = await this.fetchFoodDiaryEntries(userId, dateStr);
+      const targetIndex = existing.findIndex(e => e.id === entryId);
+      if (targetIndex === -1) {
+        return { success: false, error: 'Entry not found' };
+      }
+      const updated: FoodDiaryEntry = {
+        ...existing[targetIndex],
+        servings: updates.servings,
+        calories: updates.calories,
+        proteinG: updates.proteinG,
+        carbsG: updates.carbsG ?? existing[targetIndex].carbsG,
+        fatG: updates.fatG ?? existing[targetIndex].fatG,
+      };
+      existing[targetIndex] = updated;
+      platform.storage.setItem(`food_diary_${userId}_${dateStr}`, JSON.stringify(existing));
+      return { success: true, entry: updated };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('food_diary_entries')
+        .update({
+          servings: updates.servings,
+          calories: updates.calories,
+          protein_g: updates.proteinG,
+          carbs_g: updates.carbsG ?? 0,
+          fat_g: updates.fatG ?? 0,
+        })
+        .eq('id', entryId)
+        .eq('user_id', userId)
+        .select(`
+          id,
+          user_id,
+          logged_date,
+          meal_type,
+          food_id,
+          custom_food_name,
+          servings,
+          calories,
+          protein_g,
+          carbs_g,
+          fat_g,
+          created_at,
+          foods (
+            name,
+            serving_size,
+            serving_unit
+          )
+        `)
+        .maybeSingle();
+
+      if (error || !data) {
+        return { success: false, error: error?.message || 'Failed to update food diary entry' };
+      }
+
+      const resolvedName = data.custom_food_name || (data as any).foods?.name || 'Food Item';
+      const resolvedServing = (data as any).foods
+        ? `${(data as any).foods.serving_size} ${(data as any).foods.serving_unit}`
+        : `${data.servings} serving`;
+
+      const updatedEntry: FoodDiaryEntry = {
+        id: data.id,
+        userId: data.user_id,
+        loggedDate: data.logged_date,
+        mealType: data.meal_type as MealSlot,
+        foodId: data.food_id,
+        customFoodName: data.custom_food_name,
+        foodName: resolvedName,
+        servings: parseFloat(data.servings),
+        servingSize: resolvedServing,
+        calories: parseFloat(data.calories),
+        proteinG: parseFloat(data.protein_g),
+        carbsG: parseFloat(data.carbs_g || 0),
+        fatG: parseFloat(data.fat_g || 0),
+        createdAt: data.created_at,
+      };
+
+      // Keep local cache in sync
+      const existing = await this.fetchFoodDiaryEntries(userId, dateStr);
+      const targetIndex = existing.findIndex(e => e.id === entryId);
+      if (targetIndex !== -1) {
+        existing[targetIndex] = updatedEntry;
+        platform.storage.setItem(`food_diary_${userId}_${dateStr}`, JSON.stringify(existing));
+      }
+
+      return { success: true, entry: updatedEntry };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception updating diary entry';
+      logger.error('NutritionRepository: Exception in updateFoodDiaryEntry', { err });
+      return { success: false, error: msg };
+    }
+  }
+
   // ── 5. Weekly Meal Plans ───────────────────────────────────────────────────
   async fetchWeeklyMealPlan(userId: string): Promise<WeeklyMealPlan | null> {
     if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {

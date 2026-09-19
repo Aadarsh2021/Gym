@@ -128,6 +128,7 @@ export interface WorkoutSession {
   notes?: string;
   gymId?: string | null;
   gymVerified?: boolean;
+  qualityScore?: number | null;
   exercises: WorkoutSessionExercise[];
 }
 
@@ -141,3 +142,17 @@ export interface PersonalRecord {
   estimatedOneRepMax: number;
   achievedAt: string;
 }
+
+export interface PRHistoryEvent {
+  id: string;
+  userId: string;
+  exerciseId: string;
+  exerciseName?: string;
+  weightKg: number;
+  reps: number;
+  estimatedOneRepMax: number;
+  achievedAt: string;
+  sessionId?: string | null;
+  createdAt?: string;
+}
+

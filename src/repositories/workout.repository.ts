@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { WorkoutSession, WorkoutPlan, PersonalRecord } from '@/types/workout.types';
+import { WorkoutSession, WorkoutPlan, PersonalRecord, PRHistoryEvent } from '@/types/workout.types';
 import { logger } from '@/lib/logger';
 import { platform } from '@/platform';
 
@@ -132,6 +132,7 @@ export class WorkoutRepository {
       notes: s.notes || undefined,
       gymId: s.gym_id || undefined,
       gymVerified: Boolean(s.gym_verified),
+      qualityScore: s.quality_score ?? null,
       exercises,
     };
   }
@@ -432,6 +433,62 @@ export class WorkoutRepository {
       }));
     } catch (err) {
       logger.error('WorkoutRepository: Error fetching PRs', { err });
+      return [];
+    }
+  }
+
+  /**
+   * Fetches append-only personal record milestone history for a user.
+   * Can optionally filter by specific exerciseId and limit rows.
+   */
+  async fetchPRHistory(userId: string, exerciseId?: string, limit = 50): Promise<PRHistoryEvent[]> {
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const raw = platform.storage.getItem(`pr_history_${userId}`);
+      if (raw && typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            let filtered = parsed;
+            if (exerciseId) {
+              filtered = filtered.filter((item: PRHistoryEvent) => item.exerciseId === exerciseId);
+            }
+            return filtered.slice(0, limit);
+          }
+        } catch { /* ignore */ }
+      }
+      return [];
+    }
+
+    try {
+      let query = supabase
+        .from('pr_history')
+        .select('*, exercises(name)')
+        .eq('user_id', userId)
+        .order('achieved_at', { ascending: false })
+        .limit(limit);
+
+      if (exerciseId && UUID_REGEX.test(exerciseId)) {
+        query = query.eq('exercise_id', exerciseId);
+      }
+
+      const { data, error } = await query;
+
+      if (error || !data) return [];
+
+      return data.map(r => ({
+        id: r.id,
+        userId: r.user_id,
+        exerciseId: r.exercise_id,
+        exerciseName: (r.exercises as any)?.name || 'Exercise',
+        weightKg: Number(r.weight_kg),
+        reps: r.reps,
+        estimatedOneRepMax: Number(r.estimated_one_rep_max),
+        achievedAt: r.achieved_at,
+        sessionId: r.session_id,
+        createdAt: r.created_at,
+      }));
+    } catch (err) {
+      logger.error('WorkoutRepository: Error fetching PR history', { err });
       return [];
     }
   }

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Share2, TrendingUp, BarChart3, Scale, Layers } from 'lucide-react';
+import { Trophy, Calendar, Share2, TrendingUp, BarChart3, Scale, Layers, History, Filter } from 'lucide-react';
 import { workoutService } from '@/services/workout.service';
 import { progressService, ProgressEntry } from '@/services/progress.service';
-import { PersonalRecord, WorkoutSession } from '@/types/workout.types';
+import { PersonalRecord, WorkoutSession, PRHistoryEvent } from '@/types/workout.types';
 import { formatDate, formatDuration } from '@/utils/formatters';
 import { useAuth } from '@/hooks/useAuth';
 import { PRODUCT_NAME } from '@/config/branding';
@@ -20,9 +20,11 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
   const { session } = useAuth();
   const userId = propUserId || session.user?.id || 'guest-user';
   const [prs, setPrs] = useState<PersonalRecord[]>([]);
+  const [prHistory, setPrHistory] = useState<PRHistoryEvent[]>([]);
   const [history, setHistory] = useState<WorkoutSession[]>([]);
   const [weightEntries, setWeightEntries] = useState<ProgressEntry[]>([]);
   const [activeTab, setActiveTab] = useState<ChartTab>('all');
+  const [selectedExerciseFilter, setSelectedExerciseFilter] = useState<string>('all');
   const [activeSharePR, setActiveSharePR] = useState<PersonalRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -33,14 +35,16 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
   useEffect(() => {
     async function loadData() {
       try {
-        const [prData, historyData, weightData] = await Promise.all([
+        const [prData, historyData, weightData, prHistoryData] = await Promise.all([
           workoutService.getPersonalRecords(userId),
           workoutService.getWorkoutHistory(userId),
           progressService.getProgressEntries(userId),
+          workoutService.getPRHistory(userId),
         ]);
         setPrs(prData);
         setHistory(historyData);
         setWeightEntries(weightData);
+        setPrHistory(prHistoryData);
       } finally {
         setLoading(false);
       }
@@ -62,6 +66,21 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
     await progressService.deleteProgressEntry(userId, id);
     setWeightEntries(prev => prev.filter(e => e.id !== id));
   };
+
+  const distinctExercises = React.useMemo(() => {
+    const map = new Map<string, string>();
+    prHistory.forEach(item => {
+      if (item.exerciseId && item.exerciseName) {
+        map.set(item.exerciseId, item.exerciseName);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [prHistory]);
+
+  const filteredPRHistory = React.useMemo(() => {
+    if (selectedExerciseFilter === 'all') return prHistory;
+    return prHistory.filter(item => item.exerciseId === selectedExerciseFilter);
+  }, [prHistory, selectedExerciseFilter]);
 
   if (loading) {
     return (
@@ -181,6 +200,141 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ userId: propUserId }
                     style={{ padding: '4px 10px', fontSize: '0.8rem' }}
                   >
                     <Share2 size={13} /> Share
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* PERSONAL BEST TIMELINE (Feature 2) */}
+      <div style={{ marginBottom: 'var(--space-8)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+          <div>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <History size={20} color="var(--accent-primary)" /> Personal Best Timeline
+            </h3>
+            <small style={{ color: 'var(--text-muted)', fontSize: '0.84rem' }}>
+              Chronological milestone feed of every record breakthrough
+            </small>
+          </div>
+
+          {distinctExercises.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Filter size={14} color="var(--text-muted)" />
+              <select
+                aria-label="Filter timeline by exercise"
+                className="select select-sm"
+                value={selectedExerciseFilter}
+                onChange={e => setSelectedExerciseFilter(e.target.value)}
+                style={{ fontSize: '0.82rem', padding: '4px 8px', borderRadius: 'var(--radius-sm)' }}
+              >
+                <option value="all">All Movements ({prHistory.length})</option>
+                {distinctExercises.map(ex => (
+                  <option key={ex.id} value={ex.id}>
+                    {ex.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {filteredPRHistory.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: 'var(--space-8)', borderColor: 'var(--border-subtle)' }}>
+            <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+              {selectedExerciseFilter === 'all'
+                ? 'No milestone breakthroughs logged in timeline yet. Complete workouts and break records to build your timeline!'
+                : 'No historical milestones for the selected exercise.'}
+            </p>
+          </div>
+        ) : (
+          <div
+            style={{
+              position: 'relative',
+              paddingLeft: 'var(--space-6)',
+              borderLeft: '2px solid var(--border-subtle)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--space-4)',
+              marginLeft: 'var(--space-2)',
+            }}
+          >
+            {filteredPRHistory.map((item) => (
+              <div
+                key={item.id}
+                className="card card-interactive"
+                style={{
+                  position: 'relative',
+                  padding: 'var(--space-3) var(--space-4)',
+                  borderColor: 'var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                {/* Glowing timeline node */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 'calc(-1 * var(--space-6) - 5px)',
+                    top: '18px',
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    background: 'var(--accent-gold)',
+                    boxShadow: '0 0 8px var(--accent-gold)',
+                  }}
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                  <div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      {formatDate(item.achievedAt)}
+                    </span>
+                    <h4 style={{ margin: '2px 0 var(--space-1)', fontSize: '1rem', color: 'var(--text-primary)' }}>
+                      {item.exerciseName || 'Exercise'}
+                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                      <span style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)' }}>
+                        {item.weightKg} kg
+                      </span>
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                        × {item.reps} {item.reps === 1 ? 'rep' : 'reps'}
+                      </span>
+                      <span
+                        className="badge"
+                        style={{
+                          fontSize: '0.72rem',
+                          fontFamily: 'var(--font-mono)',
+                          background: 'rgba(234, 179, 8, 0.12)',
+                          color: 'var(--accent-gold)',
+                          border: '1px solid rgba(234, 179, 8, 0.3)',
+                          padding: '2px 6px',
+                        }}
+                      >
+                        1RM: {item.estimatedOneRepMax} kg
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() =>
+                      handleOpenPRShare({
+                        id: item.id,
+                        userId: item.userId,
+                        exerciseId: item.exerciseId,
+                        exerciseName: item.exerciseName,
+                        weightKg: item.weightKg,
+                        reps: item.reps,
+                        estimatedOneRepMax: item.estimatedOneRepMax,
+                        achievedAt: item.achievedAt,
+                      })
+                    }
+                    style={{ padding: '3px 8px', fontSize: '0.78rem' }}
+                    title="Share record milestone"
+                  >
+                    <Share2 size={12} /> Share
                   </button>
                 </div>
               </div>

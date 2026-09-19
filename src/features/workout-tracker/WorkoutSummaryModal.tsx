@@ -5,6 +5,7 @@ import { WorkoutSession } from '@/types/workout.types';
 import { calculateWorkoutSummary } from '@/domain/workout-tonnage';
 import { formatTimerClock } from '@/utils/formatters';
 import { hasCompletedCoreExercise } from '@/domain/streak-calculator';
+import { calculateWorkoutQualityScore, getQualityScoreMeta } from '@/domain/workout-quality';
 
 interface WorkoutSummaryModalProps {
   session: WorkoutSession;
@@ -38,6 +39,19 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
       }
     }
   }, [summary.newPersonalRecords.length]);
+
+  const validWorkingSets = (session.exercises || []).flatMap(e => e.sets || []).filter(s => Boolean(s.completed) && Number(s.weightKg) > 0 && Number(s.reps) > 0).length;
+  const qualityBreakdown = calculateWorkoutQualityScore({
+    validSets: validWorkingSets,
+    isCoreCompleted: isCoreDone,
+    durationSeconds: session.durationSeconds || 0,
+    sessionRating: session.sessionRating,
+    newPrCount: summary.newPersonalRecords.length,
+  });
+  const effectiveQualityScore = session.qualityScore !== undefined && session.qualityScore !== null
+    ? session.qualityScore
+    : qualityBreakdown.score;
+  const qualityMeta = getQualityScoreMeta(effectiveQualityScore);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -86,6 +100,60 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
           <small style={{ color: 'var(--text-muted)' }}>
             Logged on {new Date(session.completedAt || Date.now()).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
           </small>
+        </div>
+
+        {/* Quality Score Hero Card */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(24, 24, 27, 0.9), rgba(39, 39, 42, 0.9))',
+          border: '1px solid var(--border-medium)',
+          borderRadius: 'var(--radius-md)',
+          padding: 'var(--space-4)',
+          marginBottom: 'var(--space-4)',
+          textAlign: 'center',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+            <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+              Workout Quality Score
+            </span>
+            <span className={`badge ${qualityMeta.badgeColor}`} style={{ fontWeight: 600 }}>
+              {qualityMeta.tier}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '4px', margin: 'var(--space-2) 0' }}>
+            <span style={{ fontSize: '2.8rem', fontWeight: 800, fontFamily: 'var(--font-mono)', lineHeight: 1 }} className={qualityMeta.textColor}>
+              {effectiveQualityScore}
+            </span>
+            <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)', fontWeight: 600 }}>/100</span>
+          </div>
+
+          {/* Quality Breakdown Pills */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 'var(--space-2)',
+            marginTop: 'var(--space-3)',
+            paddingTop: 'var(--space-3)',
+            borderTop: '1px solid var(--border-subtle)',
+            fontSize: '0.75rem',
+          }}>
+            <div>
+              <div style={{ color: 'var(--text-muted)', marginBottom: '2px' }}>Volume</div>
+              <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{qualityBreakdown.volumePoints}/40</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-muted)', marginBottom: '2px' }}>Core</div>
+              <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{qualityBreakdown.corePoints}/25</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-muted)', marginBottom: '2px' }}>Cadence</div>
+              <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{qualityBreakdown.cadencePoints}/20</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-muted)', marginBottom: '2px' }}>Milestones</div>
+              <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{qualityBreakdown.milestonePoints}/15</div>
+            </div>
+          </div>
         </div>
 
         {/* 4-Stat Metric Grid with IBM Plex Mono figures */}

@@ -70,7 +70,7 @@ export const OwnerAppShell: React.FC = () => {
   );
 
   return (
-    <div className="app-shell-layout" style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+    <div className="app-shell-layout">
       {/* ====================================================================
           1. DESKTOP SIDEBAR (Visible on min-width: 1024px)
           ==================================================================== */}
@@ -299,7 +299,7 @@ export const OwnerAppShell: React.FC = () => {
       {/* ====================================================================
           2. MAIN CONTENT WRAPPER & DESKTOP TOPBAR
           ==================================================================== */}
-      <div className="app-main-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div className="app-main-wrapper">
         {/* Desktop Topbar (>= 1024px) */}
         <header
           className="desktop-topbar"

@@ -7,6 +7,10 @@ import {
   GymVerificationMethod,
   GymAttendanceSession,
   GymCheckoutMethod,
+  GymAttendanceStreak,
+  GymAnnouncement,
+  GymReward,
+  GymRewardRedemption,
 } from '@/types/gym.types';
 import { logger } from '@/lib/logger';
 import { platform } from '@/platform';
@@ -650,23 +654,59 @@ export class GymRepository {
     }
 
     if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const nowIso = new Date().toISOString();
       const mockSession: GymAttendanceSession = {
         id: `mock-att-${Date.now()}`,
         gymId,
         userId,
-        checkInAt: new Date().toISOString(),
+        checkInAt: nowIso,
         checkOutAt: null,
         durationSeconds: null,
         verificationMethod,
         checkoutMethod: null,
         status: 'active',
-        createdAt: new Date().toISOString(),
+        createdAt: nowIso,
       };
       platform.storage.setItem(`active_attendance_${userId}`, JSON.stringify(mockSession));
+
+      // Update mock attendance streak
+      this.updateMockGymAttendanceStreak(gymId, userId, nowIso);
+
       return { success: true, session: mockSession };
     }
 
     try {
+      // 1. Try authoritative stored procedure record_verified_gym_checkin
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('record_verified_gym_checkin', {
+        p_gym_id: gymId,
+        p_verification_method: verificationMethod,
+      });
+
+      if (!rpcErr && rpcData?.success) {
+        const created: GymAttendanceSession = {
+          id: rpcData.session_id,
+          gymId,
+          userId,
+          checkInAt: rpcData.check_in_at || new Date().toISOString(),
+          checkOutAt: null,
+          durationSeconds: null,
+          verificationMethod,
+          checkoutMethod: null,
+          status: 'active',
+          createdAt: rpcData.check_in_at || new Date().toISOString(),
+        };
+        platform.storage.setItem(`active_attendance_${userId}`, JSON.stringify(created));
+        return { success: true, session: created };
+      }
+
+      if (rpcErr && (rpcErr.message.includes('Active attendance session already in progress') || rpcErr.message.includes('already in progress'))) {
+        return { success: false, error: "You're already checked in." };
+      }
+      if (rpcErr && rpcErr.message.includes('Active membership required')) {
+        return { success: false, error: 'Active membership required for check-in' };
+      }
+
+      // 2. Direct insert fallback if RPC is unavailable in current migration state
       const { data, error } = await supabase
         .from('gym_attendance_sessions')
         .insert({
@@ -1794,6 +1834,855 @@ export class GymRepository {
         checkedInAt: res.session!.checkInAt,
       },
     };
+  }
+
+  // ── Phase G1: Gym Attendance Streaks ──────────────────────────────────────
+
+  updateMockGymAttendanceStreak(
+    gymId: string,
+    userId: string,
+    visitIsoString: string,
+    timezone: string = 'Asia/Kolkata'
+  ): GymAttendanceStreak {
+    let visitDate = visitIsoString.split('T')[0];
+    try {
+      const d = new Date(visitIsoString);
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      visitDate = formatter.format(d);
+    } catch {
+      visitDate = visitIsoString.split('T')[0];
+    }
+    const key = `gym_attendance_streak_${userId}_${gymId}`;
+    const raw = platform.storage.getItem(key);
+    let streak: GymAttendanceStreak;
+
+    if (raw && typeof raw === 'string') {
+      try {
+        const existing = JSON.parse(raw);
+        if (existing.lastVisitDate === visitDate) {
+          // Idempotent same-day visit: no change
+          return existing;
+        }
+
+        const prevDate = new Date(existing.lastVisitDate);
+        const currDate = new Date(visitDate);
+        const diffDays = Math.round((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        let currentStreak = 1;
+        if (diffDays === 1) {
+          currentStreak = existing.currentStreak + 1;
+        }
+
+        streak = {
+          ...existing,
+          currentStreak,
+          longestStreak: Math.max(existing.longestStreak, currentStreak),
+          lastVisitDate: visitDate,
+          totalVisitDays: (existing.totalVisitDays || 1) + 1,
+          updatedAt: visitIsoString,
+        };
+      } catch {
+        streak = {
+          id: `strk-${Date.now()}`,
+          userId,
+          gymId,
+          currentStreak: 1,
+          longestStreak: 1,
+          lastVisitDate: visitDate,
+          totalVisitDays: 1,
+          createdAt: visitIsoString,
+          updatedAt: visitIsoString,
+        };
+      }
+    } else {
+      streak = {
+        id: `strk-${Date.now()}`,
+        userId,
+        gymId,
+        currentStreak: 1,
+        longestStreak: 1,
+        lastVisitDate: visitDate,
+        totalVisitDays: 1,
+        createdAt: visitIsoString,
+        updatedAt: visitIsoString,
+      };
+    }
+
+    platform.storage.setItem(key, JSON.stringify(streak));
+    return streak;
+  }
+
+  async getGymAttendanceStreak(gymId: string, userId: string): Promise<GymAttendanceStreak | null> {
+    if (!gymId || !userId) return null;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const raw = platform.storage.getItem(`gym_attendance_streak_${userId}_${gymId}`);
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { /* ignore */ }
+      }
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_attendance_streaks')
+        .select('*')
+        .eq('gym_id', gymId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error || !data) return null;
+
+      return {
+        id: data.id,
+        userId: data.user_id,
+        gymId: data.gym_id,
+        currentStreak: data.current_streak,
+        longestStreak: data.longest_streak,
+        lastVisitDate: data.last_visit_date,
+        totalVisitDays: data.total_visit_days,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (err) {
+      logger.error('GymRepository: Error fetching gym streak', { err });
+      return null;
+    }
+  }
+
+  // ── Phase G1: Facility Announcements ──────────────────────────────────────
+
+  async fetchGymAnnouncements(gymId: string, isOwner: boolean = false): Promise<GymAnnouncement[]> {
+    if (!gymId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`gym_announcements_${gymId}`);
+      let list: GymAnnouncement[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+
+      if (!isOwner) {
+        const now = new Date().toISOString();
+        list = list.filter(a => a.status === 'published' && (!a.expiresAt || a.expiresAt > now));
+      }
+
+      return list.sort((a, b) => {
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    }
+
+    try {
+      let query = supabase
+        .from('gym_announcements')
+        .select('*')
+        .eq('gym_id', gymId);
+
+      if (!isOwner) {
+        query = query
+          .eq('status', 'published')
+          .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+      }
+
+      query = query
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      const { data, error } = await query;
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching announcements', { error });
+        return [];
+      }
+
+      return data.map(row => ({
+        id: row.id,
+        gymId: row.gym_id,
+        title: row.title,
+        content: row.content,
+        priority: row.priority,
+        isPinned: row.is_pinned,
+        status: row.status,
+        expiresAt: row.expires_at,
+        createdBy: row.created_by,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching announcements', { err });
+      return [];
+    }
+  }
+
+  async createGymAnnouncement(
+    announcement: Omit<GymAnnouncement, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<{ success: boolean; announcement?: GymAnnouncement; error?: string }> {
+    if (!announcement.gymId || !announcement.title || !announcement.content) {
+      return { success: false, error: 'Missing required announcement fields' };
+    }
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(announcement.gymId)) {
+      const now = new Date().toISOString();
+      const created: GymAnnouncement = {
+        ...announcement,
+        id: `ann-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const raw = platform.storage.getItem(`gym_announcements_${announcement.gymId}`);
+      let list: GymAnnouncement[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      list.unshift(created);
+      platform.storage.setItem(`gym_announcements_${announcement.gymId}`, JSON.stringify(list));
+      return { success: true, announcement: created };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_announcements')
+        .insert({
+          gym_id: announcement.gymId,
+          title: announcement.title,
+          content: announcement.content,
+          priority: announcement.priority || 'normal',
+          is_pinned: announcement.isPinned || false,
+          status: announcement.status || 'published',
+          expires_at: announcement.expiresAt || null,
+          created_by: announcement.createdBy,
+        })
+        .select('*')
+        .single();
+
+      if (error) {
+        logger.error('GymRepository: Error creating announcement', { error });
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        announcement: {
+          id: data.id,
+          gymId: data.gym_id,
+          title: data.title,
+          content: data.content,
+          priority: data.priority,
+          isPinned: data.is_pinned,
+          status: data.status,
+          expiresAt: data.expires_at,
+          createdBy: data.created_by,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create announcement';
+      return { success: false, error: msg };
+    }
+  }
+
+  async updateGymAnnouncement(
+    id: string,
+    updates: Partial<GymAnnouncement>
+  ): Promise<{ success: boolean; announcement?: GymAnnouncement; error?: string }> {
+    if (!id) return { success: false, error: 'Announcement ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(id)) {
+      if (updates.gymId) {
+        const raw = platform.storage.getItem(`gym_announcements_${updates.gymId}`);
+        if (raw && typeof raw === 'string') {
+          try {
+            const list: GymAnnouncement[] = JSON.parse(raw);
+            const idx = list.findIndex(a => a.id === id);
+            if (idx >= 0) {
+              list[idx] = { ...list[idx], ...updates, updatedAt: new Date().toISOString() };
+              platform.storage.setItem(`gym_announcements_${updates.gymId}`, JSON.stringify(list));
+              return { success: true, announcement: list[idx] };
+            }
+          } catch { /* ignore */ }
+        }
+      }
+      return { success: true };
+    }
+
+    try {
+      const payload: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (updates.title !== undefined) payload.title = updates.title;
+      if (updates.content !== undefined) payload.content = updates.content;
+      if (updates.priority !== undefined) payload.priority = updates.priority;
+      if (updates.isPinned !== undefined) payload.is_pinned = updates.isPinned;
+      if (updates.status !== undefined) payload.status = updates.status;
+      if (updates.expiresAt !== undefined) payload.expires_at = updates.expiresAt;
+
+      const { data, error } = await supabase
+        .from('gym_announcements')
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single();
+
+      if (error) {
+        logger.error('GymRepository: Error updating announcement', { error });
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        announcement: {
+          id: data.id,
+          gymId: data.gym_id,
+          title: data.title,
+          content: data.content,
+          priority: data.priority,
+          isPinned: data.is_pinned,
+          status: data.status,
+          expiresAt: data.expires_at,
+          createdBy: data.created_by,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update announcement';
+      return { success: false, error: msg };
+    }
+  }
+
+  async deleteGymAnnouncement(id: string, gymId?: string): Promise<{ success: boolean; error?: string }> {
+    if (!id) return { success: false, error: 'Announcement ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(id)) {
+      if (gymId) {
+        const raw = platform.storage.getItem(`gym_announcements_${gymId}`);
+        if (raw && typeof raw === 'string') {
+          try {
+            const list: GymAnnouncement[] = JSON.parse(raw);
+            const filtered = list.filter(a => a.id !== id);
+            platform.storage.setItem(`gym_announcements_${gymId}`, JSON.stringify(filtered));
+          } catch { /* ignore */ }
+        }
+      }
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('gym_announcements')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        logger.error('GymRepository: Error deleting announcement', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete announcement';
+      return { success: false, error: msg };
+    }
+  }
+
+  // ── Phase G1: Gym Rewards & Milestone Perks ───────────────────────────────
+
+  async fetchGymRewards(gymId: string): Promise<GymReward[]> {
+    if (!gymId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`gym_rewards_${gymId}`);
+      let list: GymReward[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      return list.sort((a, b) => a.requiredVisits - b.requiredVisits);
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_rewards')
+        .select('*')
+        .eq('gym_id', gymId)
+        .order('required_visits', { ascending: true });
+
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching rewards', { error });
+        return [];
+      }
+
+      return data.map(r => ({
+        id: r.id,
+        gymId: r.gym_id,
+        title: r.title,
+        description: r.description,
+        requiredVisits: r.required_visits,
+        isActive: r.is_active,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching rewards', { err });
+      return [];
+    }
+  }
+
+  async createGymReward(
+    reward: Omit<GymReward, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<{ success: boolean; reward?: GymReward; error?: string }> {
+    if (!reward.gymId || !reward.title || !reward.requiredVisits) {
+      return { success: false, error: 'Missing required reward fields' };
+    }
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(reward.gymId)) {
+      const now = new Date().toISOString();
+      const created: GymReward = {
+        ...reward,
+        id: `rew-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const raw = platform.storage.getItem(`gym_rewards_${reward.gymId}`);
+      let list: GymReward[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      list.push(created);
+      platform.storage.setItem(`gym_rewards_${reward.gymId}`, JSON.stringify(list));
+      platform.storage.setItem(`gym_reward_lookup_${created.id}`, JSON.stringify(created));
+      return { success: true, reward: created };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_rewards')
+        .insert({
+          gym_id: reward.gymId,
+          title: reward.title,
+          description: reward.description || null,
+          required_visits: reward.requiredVisits,
+          is_active: reward.isActive !== false,
+        })
+        .select('*')
+        .single();
+
+      if (error) {
+        logger.error('GymRepository: Error creating reward', { error });
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        reward: {
+          id: data.id,
+          gymId: data.gym_id,
+          title: data.title,
+          description: data.description,
+          requiredVisits: data.required_visits,
+          isActive: data.is_active,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create reward';
+      return { success: false, error: msg };
+    }
+  }
+
+  async updateGymReward(
+    id: string,
+    updates: Partial<GymReward>
+  ): Promise<{ success: boolean; reward?: GymReward; error?: string }> {
+    if (!id) return { success: false, error: 'Reward ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(id)) {
+      if (updates.gymId) {
+        const raw = platform.storage.getItem(`gym_rewards_${updates.gymId}`);
+        if (raw && typeof raw === 'string') {
+          try {
+            const list: GymReward[] = JSON.parse(raw);
+            const idx = list.findIndex(r => r.id === id);
+            if (idx >= 0) {
+              list[idx] = { ...list[idx], ...updates, updatedAt: new Date().toISOString() };
+              platform.storage.setItem(`gym_rewards_${updates.gymId}`, JSON.stringify(list));
+              return { success: true, reward: list[idx] };
+            }
+          } catch { /* ignore */ }
+        }
+      }
+      return { success: true };
+    }
+
+    try {
+      const payload: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (updates.title !== undefined) payload.title = updates.title;
+      if (updates.description !== undefined) payload.description = updates.description;
+      if (updates.requiredVisits !== undefined) payload.required_visits = updates.requiredVisits;
+      if (updates.isActive !== undefined) payload.is_active = updates.isActive;
+
+      const { data, error } = await supabase
+        .from('gym_rewards')
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single();
+
+      if (error) {
+        logger.error('GymRepository: Error updating reward', { error });
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        reward: {
+          id: data.id,
+          gymId: data.gym_id,
+          title: data.title,
+          description: data.description,
+          requiredVisits: data.required_visits,
+          isActive: data.is_active,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update reward';
+      return { success: false, error: msg };
+    }
+  }
+
+  async deleteGymReward(id: string, gymId?: string): Promise<{ success: boolean; error?: string }> {
+    if (!id) return { success: false, error: 'Reward ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(id)) {
+      // 1. Guard against deleting rewards with historical redemptions
+      try {
+        let hasRedemptions = false;
+        if (gymId) {
+          const ownerReds = await this.fetchOwnerRedemptions(gymId);
+          if (ownerReds.some(r => r.rewardId === id)) {
+            hasRedemptions = true;
+          }
+        }
+        // Also check global storage keys if in mock mode
+        if (!hasRedemptions && typeof localStorage !== 'undefined') {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && (k.startsWith('member_redemptions_') || k.startsWith('gym_redemption_lookup_'))) {
+              const val = localStorage.getItem(k);
+              if (val && val.includes(id)) {
+                hasRedemptions = true;
+                break;
+              }
+            }
+          }
+        }
+
+        if (hasRedemptions) {
+          return {
+            success: false,
+            error: 'Cannot delete reward with claimed or redeemed history. Deactivate the reward instead.',
+          };
+        }
+      } catch { /* ignore */ }
+
+      if (gymId) {
+        const raw = platform.storage.getItem(`gym_rewards_${gymId}`);
+        if (raw && typeof raw === 'string') {
+          try {
+            const list: GymReward[] = JSON.parse(raw);
+            const filtered = list.filter(r => r.id !== id);
+            platform.storage.setItem(`gym_rewards_${gymId}`, JSON.stringify(filtered));
+          } catch { /* ignore */ }
+        }
+      }
+      return { success: true };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('gym_rewards')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        if (error.code === '23503' || error.message?.includes('violates foreign key constraint') || error.message?.includes('gym_reward_redemptions')) {
+          return {
+            success: false,
+            error: 'Cannot delete reward with claimed or redeemed history. Deactivate the reward instead.',
+          };
+        }
+        logger.error('GymRepository: Error deleting reward', { error });
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete reward';
+      return { success: false, error: msg };
+    }
+  }
+
+  async claimGymReward(
+    rewardId: string,
+    userId: string,
+    gymId?: string
+  ): Promise<{ success: boolean; redemption?: GymRewardRedemption; error?: string }> {
+    if (!rewardId || !userId) {
+      return { success: false, error: 'Reward ID and User ID required' };
+    }
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      // Mock claim validation
+      let resolvedGymId = gymId;
+      if (!resolvedGymId) {
+        const lookupRaw = platform.storage.getItem(`gym_reward_lookup_${rewardId}`);
+        if (lookupRaw && typeof lookupRaw === 'string') {
+          try {
+            const parsed = JSON.parse(lookupRaw);
+            if (parsed?.gymId) resolvedGymId = parsed.gymId;
+          } catch { /* ignore */ }
+        }
+      }
+      if (!resolvedGymId) resolvedGymId = 'mock-gym-1';
+
+      const code = 'FB-REW-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const redemption: GymRewardRedemption = {
+        id: `red-${Date.now()}`,
+        rewardId,
+        gymId: resolvedGymId,
+        userId,
+        status: 'claimed',
+        redemptionCode: code,
+        claimedAt: new Date().toISOString(),
+      };
+
+      const key = `member_redemptions_${userId}`;
+      const raw = platform.storage.getItem(key);
+      let list: GymRewardRedemption[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      list.push(redemption);
+      platform.storage.setItem(key, JSON.stringify(list));
+      platform.storage.setItem(`gym_redemption_lookup_${redemption.id}`, JSON.stringify(redemption));
+
+      const ownerKey = `owner_redemptions_${resolvedGymId}`;
+      const ownerRaw = platform.storage.getItem(ownerKey);
+      let ownerList: GymRewardRedemption[] = [];
+      if (ownerRaw && typeof ownerRaw === 'string') {
+        try { ownerList = JSON.parse(ownerRaw); } catch { ownerList = []; }
+      }
+      ownerList.push(redemption);
+      platform.storage.setItem(ownerKey, JSON.stringify(ownerList));
+
+      return { success: true, redemption };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('claim_gym_reward', {
+        p_reward_id: rewardId,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error claiming reward via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      if (!data?.success) {
+        return { success: false, error: data?.error || 'Failed to claim reward' };
+      }
+
+      const r = data.redemption;
+      return {
+        success: true,
+        redemption: {
+          id: r.id,
+          rewardId: r.reward_id,
+          gymId: r.gym_id,
+          userId: r.user_id,
+          status: r.status,
+          redemptionCode: r.redemption_code,
+          claimedAt: r.claimed_at,
+        },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception claiming reward';
+      return { success: false, error: msg };
+    }
+  }
+
+  async fetchMemberRedemptions(userId: string, gymId?: string): Promise<GymRewardRedemption[]> {
+    if (!userId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId)) {
+      const raw = platform.storage.getItem(`member_redemptions_${userId}`);
+      let list: GymRewardRedemption[] = [];
+      if (raw && typeof raw === 'string') {
+        try { list = JSON.parse(raw); } catch { list = []; }
+      }
+      if (gymId) list = list.filter(r => r.gymId === gymId);
+      return list;
+    }
+
+    try {
+      let query = supabase
+        .from('gym_reward_redemptions')
+        .select('*, gym_rewards(*)')
+        .eq('user_id', userId)
+        .order('claimed_at', { ascending: false });
+
+      if (gymId) {
+        query = query.eq('gym_id', gymId);
+      }
+
+      const { data, error } = await query;
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching redemptions', { error });
+        return [];
+      }
+
+      return data.map(r => ({
+        id: r.id,
+        rewardId: r.reward_id,
+        gymId: r.gym_id,
+        userId: r.user_id,
+        status: r.status,
+        redemptionCode: r.redemption_code,
+        claimedAt: r.claimed_at,
+        redeemedAt: r.redeemed_at,
+        reward: r.gym_rewards
+          ? {
+              id: r.gym_rewards.id,
+              gymId: r.gym_rewards.gym_id,
+              title: r.gym_rewards.title,
+              description: r.gym_rewards.description,
+              requiredVisits: r.gym_rewards.required_visits,
+              isActive: r.gym_rewards.is_active,
+            }
+          : undefined,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching member redemptions', { err });
+      return [];
+    }
+  }
+
+  async fetchOwnerRedemptions(gymId: string): Promise<GymRewardRedemption[]> {
+    if (!gymId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      const raw = platform.storage.getItem(`owner_redemptions_${gymId}`);
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { /* ignore */ }
+      }
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_reward_redemptions')
+        .select('*, gym_rewards(*)')
+        .eq('gym_id', gymId)
+        .order('claimed_at', { ascending: false });
+
+      if (error || !data) {
+        logger.error('GymRepository: Error fetching owner redemptions', { error });
+        return [];
+      }
+
+      return data.map(r => ({
+        id: r.id,
+        rewardId: r.reward_id,
+        gymId: r.gym_id,
+        userId: r.user_id,
+        status: r.status,
+        redemptionCode: r.redemption_code,
+        claimedAt: r.claimed_at,
+        redeemedAt: r.redeemed_at,
+        reward: r.gym_rewards
+          ? {
+              id: r.gym_rewards.id,
+              gymId: r.gym_rewards.gym_id,
+              title: r.gym_rewards.title,
+              description: r.gym_rewards.description,
+              requiredVisits: r.gym_rewards.required_visits,
+              isActive: r.gym_rewards.is_active,
+            }
+          : undefined,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: Exception fetching owner redemptions', { err });
+      return [];
+    }
+  }
+
+  async redeemGymReward(redemptionId: string): Promise<{ success: boolean; error?: string }> {
+    if (!redemptionId) return { success: false, error: 'Redemption ID required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(redemptionId)) {
+      const redRaw = platform.storage.getItem(`gym_redemption_lookup_${redemptionId}`);
+      if (redRaw && typeof redRaw === 'string') {
+        try {
+          const parsed: GymRewardRedemption = JSON.parse(redRaw);
+          parsed.status = 'redeemed';
+          parsed.redeemedAt = new Date().toISOString();
+          platform.storage.setItem(`gym_redemption_lookup_${redemptionId}`, JSON.stringify(parsed));
+
+          const memberKey = `member_redemptions_${parsed.userId}`;
+          const memListRaw = platform.storage.getItem(memberKey);
+          if (memListRaw && typeof memListRaw === 'string') {
+            const list: GymRewardRedemption[] = JSON.parse(memListRaw);
+            const idx = list.findIndex(r => r.id === redemptionId);
+            if (idx >= 0) {
+              list[idx] = parsed;
+              platform.storage.setItem(memberKey, JSON.stringify(list));
+            }
+          }
+
+          if (parsed.gymId) {
+            const ownerKey = `owner_redemptions_${parsed.gymId}`;
+            const ownerRaw = platform.storage.getItem(ownerKey);
+            if (ownerRaw && typeof ownerRaw === 'string') {
+              const oList: GymRewardRedemption[] = JSON.parse(ownerRaw);
+              const oIdx = oList.findIndex(r => r.id === redemptionId);
+              if (oIdx >= 0) {
+                oList[oIdx] = parsed;
+                platform.storage.setItem(ownerKey, JSON.stringify(oList));
+              }
+            }
+          }
+        } catch { /* ignore */ }
+      }
+      return { success: true };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('redeem_gym_reward', {
+        p_redemption_id: redemptionId,
+      });
+
+      if (error) {
+        logger.error('GymRepository: Error redeeming reward via RPC', { error });
+        return { success: false, error: error.message };
+      }
+
+      if (!data?.success) {
+        return { success: false, error: data?.error || 'Redemption failed' };
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Exception redeeming reward';
+      return { success: false, error: msg };
+    }
   }
 }
 

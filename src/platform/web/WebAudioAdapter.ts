@@ -5,13 +5,44 @@ import { logger } from '@/lib/logger';
  * Web implementation of IPlatformAudio using Web Audio API and navigator.vibrate.
  */
 export class WebAudioAdapter implements IPlatformAudio {
+  private ctx: AudioContext | null = null;
+
+  /**
+   * Initializes or resumes the shared AudioContext from a synchronous user gesture.
+   * Safe to call multiple times; reuses existing context.
+   */
+  unlockAudio(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      if (!this.ctx) {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        this.ctx = new AudioCtx();
+      }
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(err => {
+          logger.warn('WebAudioAdapter: AudioContext resume failed', { err });
+        });
+      }
+    } catch (err) {
+      logger.warn('WebAudioAdapter: unlockAudio error', { err });
+    }
+  }
+
   playRestTimerChime(): void {
     if (typeof window === 'undefined') return;
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
+      if (!this.ctx) {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        this.ctx = new AudioCtx();
+      }
 
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+
+      const ctx = this.ctx;
       const playTone = (freq: number, startTime: number, duration: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();

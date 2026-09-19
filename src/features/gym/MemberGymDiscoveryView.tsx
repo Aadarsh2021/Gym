@@ -17,10 +17,12 @@ import {
   ShieldCheck,
   RefreshCw,
   QrCode,
+  Megaphone,
+  Pin,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { gymRepository } from '@/repositories/gym.repository';
-import { Gym, GymMembership, GymMembershipStatus } from '@/types/gym.types';
+import { Gym, GymMembership, GymMembershipStatus, GymAnnouncement } from '@/types/gym.types';
 import { useAuth } from '@/hooks/useAuth';
 import { useMemberGymContext } from '@/hooks/useMemberGymContext';
 import { logger } from '@/lib/logger';
@@ -57,6 +59,28 @@ export const MemberGymDiscoveryView: React.FC = () => {
   const [inviteGymName, setInviteGymName] = useState<string>('');
   const [inviteCity, setInviteCity] = useState<string>('');
   const [inviteSubmitted, setInviteSubmitted] = useState<boolean>(false);
+
+  // Phase G1: Facility Announcements
+  const [announcements, setAnnouncements] = useState<GymAnnouncement[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (memberGymCtx?.mode === 'integrated' && memberGymCtx.activeGym?.id) {
+      gymRepository
+        .fetchGymAnnouncements(memberGymCtx.activeGym.id, false)
+        .then(data => {
+          if (mounted) setAnnouncements(data);
+        })
+        .catch(() => {
+          if (mounted) setAnnouncements([]);
+        });
+    } else {
+      setAnnouncements([]);
+    }
+    return () => {
+      mounted = false;
+    };
+  }, [memberGymCtx?.mode, memberGymCtx?.activeGym?.id]);
 
   useEffect(() => {
     let mounted = true;
@@ -280,6 +304,91 @@ export const MemberGymDiscoveryView: React.FC = () => {
               <QrCode size={15} />
               <span>Scan QR to Check In</span>
             </Link>
+          </div>
+        )}
+
+        {/* Phase G1: Facility Announcements Board for Integrated Gym Members */}
+        {memberGymCtx?.mode === 'integrated' && memberGymCtx.activeGym && announcements.length > 0 && (
+          <div
+            className="card card-elevated"
+            style={{
+              marginTop: 'var(--space-4)',
+              padding: 'var(--space-5)',
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-gold)', fontSize: '0.85rem', fontWeight: 700 }}>
+                <Megaphone size={16} />
+                <span>FACILITY BROADCASTS ({announcements.length})</span>
+              </div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {memberGymCtx.activeGym.name}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              {announcements.map(ann => {
+                let badgeBg = 'rgba(79, 140, 255, 0.15)';
+                let badgeColor = 'var(--accent-primary)';
+                if (ann.priority === 'urgent') {
+                  badgeBg = 'rgba(239, 68, 68, 0.18)';
+                  badgeColor = 'var(--accent-fire)';
+                } else if (ann.priority === 'high') {
+                  badgeBg = 'rgba(245, 158, 11, 0.18)';
+                  badgeColor = 'var(--accent-gold)';
+                }
+
+                return (
+                  <div
+                    key={ann.id}
+                    style={{
+                      padding: 'var(--space-3) var(--space-4)',
+                      borderRadius: 'var(--radius-md)',
+                      background: ann.isPinned ? 'rgba(234, 179, 8, 0.06)' : 'var(--bg-surface-elevated)',
+                      border: ann.isPinned ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid var(--border-subtle)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                      {ann.isPinned && (
+                        <span
+                          className="badge"
+                          style={{
+                            background: 'rgba(234, 179, 8, 0.2)',
+                            color: 'var(--accent-gold)',
+                            fontWeight: 700,
+                            fontSize: '0.68rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                        >
+                          <Pin size={10} /> Pinned
+                        </span>
+                      )}
+                      <span
+                        className="badge"
+                        style={{
+                          background: badgeBg,
+                          color: badgeColor,
+                          fontWeight: 700,
+                          fontSize: '0.68rem',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {ann.priority}
+                      </span>
+                      <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>{ann.title}</span>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 6px 0', lineHeight: 1.4 }}>
+                      {ann.content}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

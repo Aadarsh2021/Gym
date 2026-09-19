@@ -77,6 +77,7 @@ export interface Gym {
   qrCodeHash: string;
   logoUrl?: string;
   coverImageUrl?: string;
+  timezone?: string;
   createdAt?: string;
 }
 
@@ -128,4 +129,60 @@ export interface GymVerificationResult {
   gymId?: string;
   gymName?: string;
   message?: string;
+}
+
+// ── Phase G1 Retention Foundation Types ─────────────────────────────────────
+
+export interface GymAttendanceStreak {
+  id: string;
+  userId: string;
+  gymId: string;
+  currentStreak: number;
+  longestStreak: number;
+  lastVisitDate: string; // YYYY-MM-DD
+  totalVisitDays: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type GymAnnouncementPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type GymAnnouncementStatus = 'draft' | 'published' | 'archived';
+
+export interface GymAnnouncement {
+  id: string;
+  gymId: string;
+  title: string;
+  content: string;
+  priority: GymAnnouncementPriority;
+  isPinned: boolean;
+  status: GymAnnouncementStatus;
+  expiresAt?: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GymReward {
+  id: string;
+  gymId: string;
+  title: string;
+  description?: string | null;
+  requiredVisits: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type GymRewardRedemptionStatus = 'claimed' | 'redeemed' | 'expired';
+
+export interface GymRewardRedemption {
+  id: string;
+  rewardId: string;
+  gymId: string;
+  userId: string;
+  status: GymRewardRedemptionStatus;
+  redemptionCode: string;
+  claimedAt: string;
+  redeemedAt?: string | null;
+  reward?: GymReward;
 }
