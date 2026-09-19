@@ -1,15 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Coins, Shield, Award, RotateCcw } from 'lucide-react';
+import { Flame, Coins, Shield, Award, RotateCcw, Building2, ArrowRight } from 'lucide-react';
 import { streakService } from '@/services/streak.service';
+import { gymRepository } from '@/repositories/gym.repository';
 import { UserStreak, FitnessCoinTransaction } from '@/types/streak.types';
+import { GymAttendanceStreak } from '@/types/gym.types';
 import { formatDate } from '@/utils/formatters';
+import { useMemberGymContext } from '@/hooks/useMemberGymContext';
+import { Link } from 'react-router-dom';
 
 interface StreaksViewProps {
   userId: string;
 }
 
 export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
+  // Safe consumption of MemberGymContext (fallback if rendered standalone in unit tests)
+  let memberGymCtx: ReturnType<typeof useMemberGymContext> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    memberGymCtx = useMemberGymContext();
+  } catch {
+    memberGymCtx = null;
+  }
+
+  const isIntegrated = memberGymCtx?.mode === 'integrated' && Boolean(memberGymCtx?.activeGym);
+  const isExternalGym = memberGymCtx?.mode === 'non_integrated';
+  const activeGym = memberGymCtx?.activeGym ?? null;
+
   const [streak, setStreak] = useState<UserStreak>({ currentStreak: 0, longestStreak: 0, lastActivityDate: null });
+  const [gymStreak, setGymStreak] = useState<GymAttendanceStreak | null>(null);
   const [coins, setCoins] = useState<number>(0);
   const [transactions, setTransactions] = useState<FitnessCoinTransaction[]>([]);
   const [revivesRemaining, setRevivesRemaining] = useState<number>(3);
@@ -17,21 +35,30 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
   const [message, setMessage] = useState<string | null>(null);
 
   const loadData = async () => {
-    const [s, c, t, rStatus] = await Promise.all([
+    const promises: Promise<any>[] = [
       streakService.getStreak(userId),
       streakService.getCoinBalance(userId),
       streakService.getCoinHistory(userId),
       streakService.getMonthlyRevivesStatus(userId),
-    ]);
+    ];
+
+    if (isIntegrated && activeGym?.id) {
+      promises.push(gymRepository.getGymAttendanceStreak(activeGym.id, userId));
+    }
+
+    const [s, c, t, rStatus, gStreak] = await Promise.all(promises);
     setStreak(s);
     setCoins(c);
     setTransactions(t);
     setRevivesRemaining(rStatus.remaining);
+    if (gStreak) {
+      setGymStreak(gStreak);
+    }
   };
 
   useEffect(() => {
     loadData();
-  }, [userId]);
+  }, [userId, isIntegrated, activeGym?.id]);
 
   const handleUseRevive = async () => {
     setReviving(true);
@@ -67,9 +94,21 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
     <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-6)' }}>
-        <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>Consistency Ledger</span>
-        <h1>Streaks & Rewards</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>Your consistency is recorded authoritatively. Complete scheduled workouts to protect your streak.</p>
+        <span className="badge badge-accent" style={{ marginBottom: 'var(--space-2)' }}>
+          {isIntegrated
+            ? 'Integrated Facility & Personal Ledgers'
+            : isExternalGym
+            ? 'Commercial Gym Mode'
+            : 'Personal Consistency'}
+        </span>
+        <h1>Streaks & Consistency</h1>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          {isIntegrated
+            ? `Your personal workout consistency and physical attendance at ${activeGym?.name || 'your club'} are tracked as distinct authoritative ledgers.`
+            : isExternalGym
+            ? 'Your personal workout consistency is recorded authoritatively. Workouts logged with commercial gym equipment count toward your Personal Workout Streak.'
+            : 'Your consistency is recorded authoritatively. Complete scheduled workouts anywhere to protect your Personal Workout Streak.'}
+        </p>
       </div>
 
       {message && (
@@ -86,20 +125,65 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
       )}
 
       {/* Top Banner Cards */}
-      <div className="grid grid-cols-2" style={{ gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
-        {/* Active Streak Hero Tile */}
+      <div
+        className="grid"
+        style={{
+          gridTemplateColumns: isIntegrated ? 'repeat(auto-fit, minmax(280px, 1fr))' : 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: 'var(--space-4)',
+          marginBottom: 'var(--space-8)',
+        }}
+      >
+        {/* Personal Workout Streak Tile */}
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', borderColor: 'var(--border-medium)' }}>
           <div style={{ padding: '16px', background: 'var(--accent-primary-muted)', borderRadius: 'var(--radius-lg)', color: 'var(--accent-primary)' }}>
             <Flame size={36} fill="var(--accent-primary)" />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Current Active Streak</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)', lineHeight: 1.1 }}>
-              {streak.currentStreak} <span style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Days</span>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Personal Workout Streak
+            </div>
+            <div style={{ fontSize: '2.4rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)', lineHeight: 1.1 }}>
+              {streak.currentStreak} <span style={{ fontSize: '1.05rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Days</span>
             </div>
             <small style={{ color: 'var(--text-muted)' }}>Longest Streak: {streak.longestStreak} days</small>
           </div>
         </div>
+
+        {/* Integrated Facility Attendance Streak Tile (Only when integrated) */}
+        {isIntegrated && (
+          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', borderColor: 'var(--border-medium)' }}>
+            <div style={{ padding: '16px', background: 'var(--color-success-muted, rgba(16, 185, 129, 0.12))', borderRadius: 'var(--radius-lg)', color: 'var(--color-success, #10b981)' }}>
+              <Building2 size={36} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Gym Attendance Streak
+              </div>
+              <div style={{ fontSize: '2.4rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-success, #10b981)', lineHeight: 1.1 }}>
+                {gymStreak?.currentStreak ?? 0} <span style={{ fontSize: '1.05rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Days</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                <small style={{ color: 'var(--text-muted)' }}>
+                  Total Visits: {gymStreak?.totalVisitDays ?? 0}
+                </small>
+                <Link
+                  to="/app/gym/check-in"
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'var(--accent-primary)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Check In <ArrowRight size={12} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Coin Balance */}
         <div className="card" style={{ borderColor: 'var(--border-medium)', display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
@@ -107,9 +191,11 @@ export const StreaksView: React.FC<StreaksViewProps> = ({ userId }) => {
             <Coins size={36} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Coin Balance</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-warning)', lineHeight: 1.1 }}>
-              {coins} <span style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Coins</span>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Personal FitCoins
+            </div>
+            <div style={{ fontSize: '2.4rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-warning)', lineHeight: 1.1 }}>
+              {coins} <span style={{ fontSize: '1.05rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Coins</span>
             </div>
             <small style={{ color: 'var(--text-muted)' }}>Earned through workouts & milestones</small>
           </div>

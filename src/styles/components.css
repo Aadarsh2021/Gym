@@ -540,5 +540,116 @@
   }
 }
 
+/* ==========================================================================
+   Mobile Bottom Sheet & More Drawer System (App-Like Ergonomics)
+   ========================================================================== */
 
+.mobile-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: fadeIn 180ms ease-out forwards;
+}
 
+.mobile-sheet-content {
+  background: var(--bg-surface-elevated);
+  border-top: 1px solid var(--border-medium);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-4) calc(var(--safe-bottom) + var(--space-6));
+  max-height: 85vh;
+  max-height: 85dvh;
+  overflow-y: auto;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+  animation: slideUpSheet 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mobile-sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--border-strong);
+  margin: 0 auto var(--space-4);
+}
+
+.mobile-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+}
+
+@media (max-width: 360px) {
+  .mobile-sheet-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.mobile-sheet-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-height: 68px;
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.mobile-sheet-item:active {
+  transform: scale(0.96);
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+}
+
+.mobile-sheet-item.active {
+  background: var(--accent-primary-muted);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* Context Hero & Command Cards */
+.card-gym-command {
+  background: linear-gradient(135deg, rgba(79, 140, 255, 0.08) 0%, rgba(23, 26, 31, 0.95) 100%);
+  border: 1px solid rgba(79, 140, 255, 0.28);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-external-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(98, 121, 166, 0.15);
+  border: 1px solid rgba(98, 121, 166, 0.3);
+  color: var(--accent-indigo);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+@keyframes slideUpSheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

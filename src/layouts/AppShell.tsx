@@ -15,6 +15,15 @@ import {
   Moon,
   Sun,
   Building2,
+  Users,
+  Trophy,
+  Calendar,
+  ShieldAlert,
+  MessageSquare,
+  MoreHorizontal,
+  X,
+  Compass,
+  QrCode,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
@@ -37,6 +46,12 @@ export const AppShell: React.FC = () => {
     lastActivityDate: null,
   });
   const [coins, setCoins] = useState<number>(0);
+  const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
+
+  // Automatically close bottom sheet upon route change
+  useEffect(() => {
+    setIsMoreSheetOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     let mounted = true;
@@ -91,27 +106,47 @@ export const AppShell: React.FC = () => {
     // Safe fallback if rendered without provider in standalone tests
   }
 
-  // Mobile bottom nav: Home, Workouts, Nutrition, Streaks, Progress
-  // (Exercises accessible from Workouts hub and desktop sidebar)
-  const primaryNavItems = [
+  const isIntegratedGym = memberGymContext?.mode === 'integrated' && Boolean(memberGymContext?.activeGym);
+
+  // Core Personal Navigation Items (Always Preserved)
+  const personalNavItems = [
     { to: '/app', label: 'Home', icon: Home, end: true },
     { to: '/app/workouts', label: 'Workouts', icon: Dumbbell, end: false },
     { to: '/app/nutrition', label: 'Nutrition', icon: Utensils, end: false },
     { to: '/app/streaks', label: 'Streaks', icon: Flame, end: false },
     { to: '/app/progress', label: 'Progress', icon: TrendingUp, end: false },
+    { to: '/app/rewards', label: 'Rewards Shop', icon: Coins, end: false },
+    { to: '/app/exercises', label: 'Exercises', icon: BookOpen, end: false },
   ];
 
-  const sidebarNavItems = [
-    { to: '/app', label: 'Home', icon: Home, end: true },
-    { to: '/app/workouts', label: 'Workouts', icon: Dumbbell, end: false },
-    { to: '/app/exercises', label: 'Exercises', icon: BookOpen, end: false },
-    { to: '/app/gym', label: 'Gym', icon: Building2, end: false },
-    { to: '/app/nutrition', label: 'Nutrition', icon: Utensils, end: false },
-    { to: '/app/progress', label: 'Progress', icon: TrendingUp, end: false },
-    { to: '/app/streaks', label: 'Streaks', icon: Flame, end: false },
-    { to: '/app/rewards', label: 'Rewards Shop', icon: Coins, end: false },
-    { to: '/app/profile', label: 'Profile & Settings', icon: Settings, end: false },
-  ];
+  // Gym Layer Items (Contextual: Unlocked for Active Integrated Members)
+  const gymNavItems = isIntegratedGym
+    ? [
+        { to: '/app/gym', label: 'My Gym', icon: Building2, end: true },
+        { to: '/app/gym/community', label: 'Community', icon: MessageSquare, end: false },
+        { to: '/app/gym/buddies', label: 'Gym Buddies', icon: Users, end: false },
+        { to: '/app/gym/challenges', label: 'Challenges', icon: Trophy, end: false },
+        { to: '/app/gym/events', label: 'Events', icon: Calendar, end: false },
+        { to: '/app/gym/safety', label: 'Safety & SOS', icon: ShieldAlert, end: false },
+      ]
+    : [
+        { to: '/app/gym', label: 'Explore Gyms', icon: Compass, end: false },
+      ];
+
+  // Mobile Bottom Bar (Strictly 5 items, contextual)
+  const mobilePrimaryItems = isIntegratedGym
+    ? [
+        { to: '/app', label: 'Home', icon: Home, end: true },
+        { to: '/app/workouts', label: 'Workouts', icon: Dumbbell, end: false },
+        { to: '/app/gym', label: 'My Gym', icon: Building2, end: true },
+        { to: '/app/gym/community', label: 'Community', icon: MessageSquare, end: false },
+      ]
+    : [
+        { to: '/app', label: 'Home', icon: Home, end: true },
+        { to: '/app/workouts', label: 'Workouts', icon: Dumbbell, end: false },
+        { to: '/app/nutrition', label: 'Nutrition', icon: Utensils, end: false },
+        { to: '/app/streaks', label: 'Streaks', icon: Flame, end: false },
+      ];
 
   const todayFormatted = new Intl.DateTimeFormat('en-US', {
     weekday: 'short',
@@ -163,7 +198,7 @@ export const AppShell: React.FC = () => {
                 {coins}
               </span>
             </div>
-            {memberGymContext?.mode === 'integrated' && memberGymContext.activeGym && (
+            {isIntegratedGym && memberGymContext?.activeGym && (
               <div
                 className="badge"
                 style={{
@@ -191,23 +226,23 @@ export const AppShell: React.FC = () => {
                 style={{
                   fontSize: '0.72rem',
                   padding: '2px 7px',
-                  background: 'rgba(79, 140, 255, 0.12)',
-                  color: 'var(--accent-primary)',
-                  border: '1px solid rgba(79, 140, 255, 0.25)',
+                  background: 'rgba(98, 121, 166, 0.15)',
+                  color: 'var(--accent-indigo)',
+                  border: '1px solid rgba(98, 121, 166, 0.3)',
                 }}
-                title="Personal Non-Integrated Gym"
+                title="External Commercial Gym Mode"
               >
                 <Building2 size={12} />
-                <span>Personal Gym</span>
+                <span>External Gym</span>
               </div>
             )}
           </div>
         </NavLink>
 
-        {/* Navigation Links */}
-        <nav className="sidebar-nav-group">
-          <span className="sidebar-section-title">Navigation</span>
-          {sidebarNavItems.map(item => {
+        {/* Navigation Links - Section 1: Personal Training Core */}
+        <nav className="sidebar-nav-group" style={{ marginBottom: 'var(--space-2)' }}>
+          <span className="sidebar-section-title">Personal Training</span>
+          {personalNavItems.map(item => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -218,26 +253,52 @@ export const AppShell: React.FC = () => {
                   `sidebar-link ${isActive ? 'active' : ''}`
                 }
               >
-                <Icon size={18} />
+                <Icon size={17} />
                 <span style={{ flex: 1 }}>{item.label}</span>
-                {item.to === '/app/gym' && memberGymContext?.mode === 'integrated' && (
-                  <span
-                    className="badge"
-                    style={{
-                      fontSize: '0.62rem',
-                      padding: '1px 5px',
-                      background: 'rgba(34, 197, 94, 0.18)',
-                      color: 'var(--color-success)',
-                      fontWeight: 700,
-                    }}
-                  >
-                    Active
-                  </span>
-                )}
               </NavLink>
             );
           })}
         </nav>
+
+        {/* Navigation Links - Section 2: Gym & Community Layer */}
+        <nav className="sidebar-nav-group">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 var(--space-3)' }}>
+            <span className="sidebar-section-title" style={{ padding: 0, margin: 0 }}>
+              {isIntegratedGym ? 'My Gym & Community' : 'Partner Gyms'}
+            </span>
+            {isIntegratedGym && (
+              <span
+                className="badge"
+                style={{
+                  fontSize: '0.62rem',
+                  padding: '1px 5px',
+                  background: 'rgba(34, 197, 94, 0.18)',
+                  color: 'var(--color-success)',
+                  fontWeight: 700,
+                }}
+              >
+                Active
+              </span>
+            )}
+          </div>
+          {gymNavItems.map(item => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `sidebar-link ${isActive ? 'active' : ''}`
+                }
+              >
+                <Icon size={17} />
+                <span style={{ flex: 1 }}>{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
+
 
         {/* Sidebar Footer / Connection & Logout */}
         <div className="sidebar-bottom">
@@ -399,17 +460,26 @@ export const AppShell: React.FC = () => {
             </span>
             <span style={{ color: 'var(--border-medium)' }}>/</span>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-              {location.pathname === '/app'
-                ? 'Daily Training Brief'
-                : location.pathname.startsWith('/app/workouts')
-                ? 'Workout Execution & Plans'
-                : location.pathname.startsWith('/app/exercises')
-                ? 'Exercise Library'
-                : location.pathname.startsWith('/app/nutrition')
-                ? 'Nutrition & Targets'
-                : location.pathname.startsWith('/app/progress')
-                ? 'Progress & Analytics'
-                : 'Athlete Profile & Settings'}
+              {(() => {
+                const p = location.pathname;
+                if (p === '/app') return 'Daily Training Brief';
+                if (p.startsWith('/app/workouts')) return 'Workout Execution & Plans';
+                if (p.startsWith('/app/exercises')) return 'Exercise Library';
+                if (p.startsWith('/app/nutrition')) return 'Nutrition & Targets';
+                if (p.startsWith('/app/progress')) return 'Progress & Analytics';
+                if (p.startsWith('/app/streaks')) return 'Consistency & Streaks';
+                if (p.startsWith('/app/rewards')) return 'Rewards & Perks Shop';
+                if (p === '/app/gym') return isIntegratedGym ? 'My Gym Home' : 'Gym Discovery & Directory';
+                if (p.startsWith('/app/gym/community')) return 'Gym Community Feed';
+                if (p.startsWith('/app/gym/buddies')) return 'Gym Buddy Matching';
+                if (p.startsWith('/app/gym/challenges')) return 'Gym Challenges & Leaderboard';
+                if (p.startsWith('/app/gym/events')) return 'Gym Events & Workshops';
+                if (p.startsWith('/app/gym/safety')) return 'Facility Safety & SPS';
+                if (p.startsWith('/app/gym/check-in')) return 'Attendance & QR Check-In';
+                if (p.startsWith('/app/gym/history')) return 'Gym Attendance History';
+                if (p.startsWith('/app/profile')) return 'Athlete Profile & Settings';
+                return 'Athlete Hub';
+              })()}
             </span>
           </div>
 
@@ -448,7 +518,7 @@ export const AppShell: React.FC = () => {
 
         {/* Mobile Bottom Navigation Bar (Strictly 5 items on < 1024px) */}
         <nav className="bottom-nav">
-          {primaryNavItems.map(tab => {
+          {mobilePrimaryItems.map(tab => {
             const Icon = tab.icon;
             const isActive =
               tab.end
@@ -471,7 +541,121 @@ export const AppShell: React.FC = () => {
               </NavLink>
             );
           })}
+
+          {/* 5th slot: More Sheet Launcher */}
+          <button
+            type="button"
+            className={`nav-tab ${isMoreSheetOpen ? 'active' : ''}`}
+            onClick={() => setIsMoreSheetOpen(prev => !prev)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              outline: 'none',
+              color: isMoreSheetOpen ? 'var(--accent-primary)' : 'var(--text-muted)',
+            }}
+            aria-label="Open More Menu"
+          >
+            <MoreHorizontal size={20} strokeWidth={isMoreSheetOpen ? 2.5 : 1.8} />
+            <span>More</span>
+          </button>
         </nav>
+
+        {/* Mobile More Bottom Sheet (Native-Feeling Drawer) */}
+        {isMoreSheetOpen && (
+          <div className="mobile-sheet-backdrop" onClick={() => setIsMoreSheetOpen(false)}>
+            <div className="mobile-sheet-content" onClick={e => e.stopPropagation()}>
+              <div className="mobile-sheet-handle" />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {isIntegratedGym ? `${memberGymContext?.activeGym?.name || 'Gym'} & Personal Utilities` : 'Personal Utilities'}
+                </span>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setIsMoreSheetOpen(false)}
+                  style={{ minWidth: '32px', minHeight: '32px', padding: 0 }}
+                  aria-label="Close menu"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="mobile-sheet-grid">
+                {isIntegratedGym ? (
+                  <>
+                    <NavLink to="/app/nutrition" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <Utensils size={20} />
+                      <span>Nutrition</span>
+                    </NavLink>
+                    <NavLink to="/app/streaks" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <Flame size={20} />
+                      <span>Streaks</span>
+                    </NavLink>
+                    <NavLink to="/app/progress" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <TrendingUp size={20} />
+                      <span>Progress</span>
+                    </NavLink>
+                    <NavLink to="/app/rewards" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <Coins size={20} />
+                      <span>Rewards</span>
+                    </NavLink>
+                    <NavLink to="/app/exercises" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <BookOpen size={20} />
+                      <span>Exercises</span>
+                    </NavLink>
+                    <NavLink to="/app/gym/buddies" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <Users size={20} />
+                      <span>Buddies</span>
+                    </NavLink>
+                    <NavLink to="/app/gym/challenges" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <Trophy size={20} />
+                      <span>Challenges</span>
+                    </NavLink>
+                    <NavLink to="/app/gym/events" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <Calendar size={20} />
+                      <span>Events</span>
+                    </NavLink>
+                    <NavLink to="/app/gym/safety" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <ShieldAlert size={20} />
+                      <span>Safety SOS</span>
+                    </NavLink>
+                    <NavLink to="/app/gym/check-in" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <QrCode size={20} />
+                      <span>Check In</span>
+                    </NavLink>
+                    <NavLink to="/app/profile" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <Settings size={20} />
+                      <span>Settings</span>
+                    </NavLink>
+                  </>
+                ) : (
+                  <>
+                    <NavLink to="/app/progress" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <TrendingUp size={20} />
+                      <span>Progress</span>
+                    </NavLink>
+                    <NavLink to="/app/rewards" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <Coins size={20} />
+                      <span>Rewards</span>
+                    </NavLink>
+                    <NavLink to="/app/exercises" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <BookOpen size={20} />
+                      <span>Exercises</span>
+                    </NavLink>
+                    <NavLink to="/app/gym" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <Compass size={20} />
+                      <span>Find Gym</span>
+                    </NavLink>
+                    <NavLink to="/app/profile" className={({ isActive }) => `mobile-sheet-item ${isActive ? 'active' : ''}`}>
+                      <Settings size={20} />
+                      <span>Settings</span>
+                    </NavLink>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

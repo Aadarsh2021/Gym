@@ -68,6 +68,9 @@ export const MemberGymDiscoveryView: React.FC = () => {
   // Phase G1: Facility Announcements
   const [announcements, setAnnouncements] = useState<GymAnnouncement[]>([]);
 
+  // Toggle for integrated members to optionally browse other gyms
+  const [showAllGyms, setShowAllGyms] = useState<boolean>(false);
+
   useEffect(() => {
     let mounted = true;
     if (memberGymCtx?.mode === 'integrated' && memberGymCtx.activeGym?.id) {
@@ -233,122 +236,165 @@ export const MemberGymDiscoveryView: React.FC = () => {
     <div className="container animate-fade-in" style={{ padding: 'var(--space-6) var(--space-4)', maxWidth: '1200px' }}>
       {/* Page Header */}
       <div style={{ marginBottom: 'var(--space-8)' }}>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'rgba(79, 140, 255, 0.12)',
-            color: 'var(--accent-primary)',
-            padding: '4px 12px',
-            borderRadius: 'var(--radius-full)',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            marginBottom: 'var(--space-2)',
-          }}
-        >
-          <Building2 size={14} />
-          <span>GYM INTEGRATION & DIRECTORY</span>
-        </div>
-        <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 'var(--space-2)' }}>
-          Find Your Gym
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '640px', marginBottom: 'var(--space-4)' }}>
-          Connect your account to a FitBoost-integrated training center to unlock digital QR attendance, verified gym workouts, and facility access.
-        </p>
+        {memberGymCtx?.mode === 'integrated' && memberGymCtx.activeGym ? (
+          <div>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(34, 197, 94, 0.15)',
+                color: 'var(--color-success)',
+                padding: '4px 12px',
+                borderRadius: 'var(--radius-full)',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                marginBottom: 'var(--space-2)',
+              }}
+            >
+              <Building2 size={14} />
+              <span>MY CONNECTED GYM</span>
+            </div>
+            <h1 style={{ fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 'var(--space-1)', color: 'var(--text-primary)' }}>
+              {memberGymCtx.activeGym.name}
+            </h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '640px', marginBottom: 'var(--space-4)' }}>
+              {memberGymCtx.activeGym.address}, {memberGymCtx.activeGym.city} • Active Facility Portal
+            </p>
+          </div>
+        ) : (
+          <div>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(79, 140, 255, 0.12)',
+                color: 'var(--accent-primary)',
+                padding: '4px 12px',
+                borderRadius: 'var(--radius-full)',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                marginBottom: 'var(--space-2)',
+              }}
+            >
+              <Building2 size={14} />
+              <span>GYM INTEGRATION & DIRECTORY</span>
+            </div>
+            <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>
+              Find Your Gym
+            </h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '640px', marginBottom: 'var(--space-4)' }}>
+              Connect your account to a FitSphere-integrated training center to unlock digital QR attendance, verified gym workouts, and facility access.
+            </p>
+          </div>
+        )}
 
-        {/* Integrated Gym Status & Quick Check-In CTA */}
+        {/* Integrated Gym Status & Quick Action Grid */}
         {memberGymCtx?.mode === 'integrated' && memberGymCtx.activeGym && (
           <div
-            className="card card-elevated"
+            className="card-gym-command animate-fade-in"
             style={{
-              padding: 'var(--space-4) var(--space-5)',
-              borderRadius: 'var(--radius-lg)',
-              background: 'rgba(34, 197, 94, 0.08)',
-              border: '1px solid rgba(34, 197, 94, 0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 'var(--space-3)',
+              padding: 'var(--space-5)',
+              marginBottom: 'var(--space-5)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'rgba(34, 197, 94, 0.15)',
-                  color: 'var(--color-success)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(34, 197, 94, 0.18)',
+                    color: 'var(--color-success)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Building2 size={24} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--text-primary)' }}>{memberGymCtx.activeGym.name}</span>
+                    <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.18)', color: 'var(--color-success)', fontSize: '0.72rem', fontWeight: 700 }}>
+                      Active Member
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.84rem' }}>
+                    {memberGymCtx.activeGym.address}, {memberGymCtx.activeGym.city}
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                to="/app/gym/check-in"
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '44px', padding: '0 var(--space-5)', fontWeight: 700 }}
               >
-                <Building2 size={20} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: 800, fontSize: '1rem' }}>{memberGymCtx.activeGym.name}</span>
-                  <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.18)', color: 'var(--color-success)', fontSize: '0.72rem' }}>
-                    Active Integrated Gym
-                  </span>
-                </div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                  {memberGymCtx.activeGym.address}, {memberGymCtx.activeGym.city}
-                </div>
-              </div>
+                <QrCode size={18} />
+                <span>Scan QR to Check In</span>
+              </Link>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Hub Quick Action Grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                gap: 'var(--space-3)',
+                paddingTop: 'var(--space-3)',
+                borderTop: '1px solid var(--border-subtle)',
+              }}
+            >
               <Link
                 to="/app/gym/community"
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                className="btn btn-secondary"
+                style={{ display: 'flex', flexDirection: 'column', padding: 'var(--space-3)', height: 'auto', gap: '4px', textAlign: 'center' }}
               >
-                <MessageSquare size={15} />
-                <span>Community</span>
+                <MessageSquare size={20} color="var(--accent-primary)" />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>Community Feed</span>
               </Link>
               <Link
                 to="/app/gym/buddies"
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                className="btn btn-secondary"
+                style={{ display: 'flex', flexDirection: 'column', padding: 'var(--space-3)', height: 'auto', gap: '4px', textAlign: 'center' }}
               >
-                <Users size={15} />
-                <span>Gym Buddies</span>
+                <Users size={20} color="var(--accent-primary)" />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>Gym Buddies</span>
               </Link>
               <Link
                 to="/app/gym/challenges"
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                className="btn btn-secondary"
+                style={{ display: 'flex', flexDirection: 'column', padding: 'var(--space-3)', height: 'auto', gap: '4px', textAlign: 'center' }}
               >
-                <Trophy size={15} />
-                <span>Challenges</span>
+                <Trophy size={20} color="var(--accent-gold)" />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>Challenges</span>
               </Link>
               <Link
                 to="/app/gym/events"
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                className="btn btn-secondary"
+                style={{ display: 'flex', flexDirection: 'column', padding: 'var(--space-3)', height: 'auto', gap: '4px', textAlign: 'center' }}
               >
-                <Calendar size={15} />
-                <span>Events</span>
+                <Calendar size={20} color="var(--color-info)" />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>Events & Classes</span>
               </Link>
               <Link
                 to="/app/gym/safety"
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                className="btn btn-secondary"
+                style={{ display: 'flex', flexDirection: 'column', padding: 'var(--space-3)', height: 'auto', gap: '4px', textAlign: 'center' }}
               >
-                <ShieldAlert size={15} />
-                <span>Safety & SPS</span>
+                <ShieldAlert size={20} color="var(--color-error)" />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>Safety & SOS</span>
               </Link>
               <Link
-                to="/app/gym/check-in"
-                className="btn btn-primary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                to="/app/gym/history"
+                className="btn btn-secondary"
+                style={{ display: 'flex', flexDirection: 'column', padding: 'var(--space-3)', height: 'auto', gap: '4px', textAlign: 'center' }}
               >
-                <QrCode size={15} />
-                <span>Scan QR to Check In</span>
+                <Clock size={20} color="var(--text-muted)" />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>Attendance History</span>
               </Link>
             </div>
           </div>
@@ -440,10 +486,48 @@ export const MemberGymDiscoveryView: React.FC = () => {
         )}
       </div>
 
-      {/* Search & Filter Bar */}
-      <div
-        className="card card-elevated"
-        style={{
+      {/* Toggle for Integrated Members to Browse Additional Facilities */}
+      {memberGymCtx?.mode === 'integrated' && memberGymCtx.activeGym && (
+        <div
+          style={{
+            marginBottom: 'var(--space-6)',
+            padding: 'var(--space-3) var(--space-4)',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+              Explore Other Partner Facilities
+            </div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+              Browse the certified FitSphere facility network or request multi-gym access.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setShowAllGyms(prev => !prev)}
+            style={{ fontWeight: 600 }}
+          >
+            {showAllGyms ? 'Hide Partner Directory ▲' : 'Browse All Partner Gyms ▼'}
+          </button>
+        </div>
+      )}
+
+      {/* Search & Directory Grid (Visible if non-integrated OR user toggles showAllGyms) */}
+      {(!memberGymCtx || memberGymCtx.mode !== 'integrated' || showAllGyms) && (
+        <>
+          {/* Search & Filter Bar */}
+          <div
+            className="card card-elevated"
+            style={{
           padding: 'var(--space-4) var(--space-5)',
           background: 'var(--bg-surface)',
           borderRadius: 'var(--radius-lg)',
@@ -773,6 +857,8 @@ export const MemberGymDiscoveryView: React.FC = () => {
           )}
         </div>
       </div>
+      </>
+      )}
 
       {/* Facility Inspection Modal */}
       {selectedGym && (
