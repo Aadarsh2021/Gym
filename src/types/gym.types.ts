@@ -581,4 +581,63 @@ export interface ReportSafetyIncidentPayload {
   triggerBlock?: boolean;
 }
 
+// ==============================================================================
+// GYM EVENTS & RSVP TYPES
+// ==============================================================================
+
+export type GymEventType = 'workshop' | 'bootcamp' | 'class' | 'competition' | 'social' | 'seminar' | 'other';
+
+export type GymEventStatus = 'draft' | 'published' | 'cancelled' | 'completed';
+
+export type GymEventRsvpStatus = 'attending' | 'cancelled';
+
+export interface GymEvent {
+  id: string;
+  gymId: string;
+  createdBy: string;
+  title: string;
+  description?: string | null;
+  eventType: GymEventType;
+  startsAt: string;
+  endsAt: string;
+  capacity?: number | null;
+  locationText?: string | null;
+  status: GymEventStatus;
+  attendeeCount?: number;
+  userRsvpStatus?: GymEventRsvpStatus | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GymEventRsvp {
+  id: string;
+  eventId: string;
+  gymId: string;
+  userId: string;
+  status: GymEventRsvpStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GymEventAttendee {
+  rsvpId: string;
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  rsvpStatus: GymEventRsvpStatus;
+  rsvpCreatedAt: string;
+}
+
+export interface CreateGymEventInput {
+  gymId: string;
+  title: string;
+  description?: string;
+  eventType: GymEventType;
+  startsAt: string;
+  endsAt?: string;
+  capacity?: number | null;
+  locationText?: string;
+}
+
+
 

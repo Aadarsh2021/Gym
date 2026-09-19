@@ -108,7 +108,8 @@ export const AppShell: React.FC = () => {
     { to: '/app/gym', label: 'Gym', icon: Building2, end: false },
     { to: '/app/nutrition', label: 'Nutrition', icon: Utensils, end: false },
     { to: '/app/progress', label: 'Progress', icon: TrendingUp, end: false },
-    { to: '/app/streaks', label: 'Streaks & Rewards', icon: Flame, end: false },
+    { to: '/app/streaks', label: 'Streaks', icon: Flame, end: false },
+    { to: '/app/rewards', label: 'Rewards Shop', icon: Coins, end: false },
     { to: '/app/profile', label: 'Profile & Settings', icon: Settings, end: false },
   ];
 
@@ -344,8 +345,8 @@ export const AppShell: React.FC = () => {
             <div
               className="badge hide-on-xs"
               style={{ cursor: 'pointer', minHeight: '36px', padding: '0 10px', fontFamily: 'var(--font-mono)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-              onClick={() => navigate('/app/progress')}
-              title="Fitness Coins"
+              onClick={() => navigate('/app/rewards')}
+              title="Fitness Coins Rewards Shop"
             >
               <Coins size={14} />
               <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{coins}</span>

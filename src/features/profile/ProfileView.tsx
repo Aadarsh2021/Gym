@@ -26,6 +26,7 @@ import {
   AlarmMotivationStyle,
   MOTIVATION_TEMPLATES,
 } from '@/services/reminder.service';
+import { WorkoutAlarmCountdown } from '@/components/WorkoutAlarmCountdown';
 import { ExperienceLevel, FitnessGoal, Gender, WorkoutEnvironment } from '@/types/user.types';
 import { calculateBMR, calculateTDEE, calculateCalorieTarget } from '@/domain/calories';
 import { calculateProteinTarget, calculateMacroSplit } from '@/domain/protein';
@@ -71,6 +72,7 @@ export const ProfileView: React.FC = () => {
   const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus>('default');
   const [testNoticeMsg, setTestNoticeMsg] = useState<{ success: boolean; text: string } | null>(null);
   const [snoozeNoticeMsg, setSnoozeNoticeMsg] = useState<string | null>(null);
+  const [snoozedUntil, setSnoozedUntil] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -213,6 +215,7 @@ export const ProfileView: React.FC = () => {
       },
       minutes
     );
+    setSnoozedUntil(res.snoozedUntil);
     const date = new Date(res.snoozedUntil);
     setSnoozeNoticeMsg(
       `Alarm snoozed for ${minutes} minutes (fires at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
@@ -828,6 +831,25 @@ export const ProfileView: React.FC = () => {
               })}
             </div>
           </div>
+
+          {/* Live Workout Alarm Countdown */}
+          {reminderEnabled && (
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <WorkoutAlarmCountdown
+                preference={{
+                  id: reminderId,
+                  userId,
+                  enabled: reminderEnabled,
+                  time: reminderTime,
+                  days: reminderDays,
+                  title: 'Workout Alarm',
+                  message: 'Time for training',
+                  snoozedUntil,
+                }}
+                onSnooze={() => handleSnooze(10)}
+              />
+            </div>
+          )}
 
           {/* Browser Permission Status & Action Controls */}
           <div

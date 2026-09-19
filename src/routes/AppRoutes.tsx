@@ -58,7 +58,9 @@ import { MemberGymCommunityView } from '@/features/gym/MemberGymCommunityView';
 import { MemberGymBuddiesView } from '@/features/gym/MemberGymBuddiesView';
 import { MemberGymBuddyChatView } from '@/features/gym/MemberGymBuddyChatView';
 import { MemberGymChallengesView } from '@/features/gym/MemberGymChallengesView';
+import { MemberGymEventsView } from '@/features/gym/MemberGymEventsView';
 import { MemberGymSafetyView } from '@/features/gym/MemberGymSafetyView';
+import { RewardsShopView } from '@/features/rewards/RewardsShopView';
 import { OwnerSafetyView } from '@/features/owner/OwnerSafetyView';
 
 // Route Guard
@@ -194,7 +196,9 @@ export const AppRoutes: React.FC = () => {
         <Route path="gym/buddies" element={<MemberGymBuddiesView />} />
         <Route path="gym/buddies/:connectionId/chat" element={<MemberGymBuddyChatView />} />
         <Route path="gym/challenges" element={<MemberGymChallengesView />} />
+        <Route path="gym/events" element={<MemberGymEventsView />} />
         <Route path="gym/safety" element={<MemberGymSafetyView />} />
+        <Route path="rewards" element={<RewardsShopView />} />
         <Route path="nutrition" element={<NutritionRouteView />} />
         <Route path="progress" element={<ProgressView />} />
         <Route path="streaks" element={<StreaksRouteView />} />

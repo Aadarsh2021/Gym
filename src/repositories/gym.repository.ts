@@ -41,11 +41,16 @@ import {
   GymSafetyNoticeType,
   GymSafetyNotice,
   ReportSafetyIncidentPayload,
+  GymEvent,
+  GymEventType,
+  GymEventStatus,
+  GymEventAttendee,
 } from '@/types/gym.types';
 import { logger } from '@/lib/logger';
 import { platform } from '@/platform';
 import { getTodayRangeIST } from '@/utils/date';
 import { OwnerDashboardOverview } from '@/types/owner-dashboard.types';
+import { FitnessRewardItem, FitnessRewardRedemption, FitnessCoinBalance } from '@/types/rewards.types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -5540,6 +5545,355 @@ export class GymRepository {
     } catch (err) {
       logger.error('GymRepository: getOwnerDashboardOverview exception', { err, gymId });
       return null;
+    }
+  }
+
+  // ── 27. Gym Events & RSVP System ──────────────────────────────────────────
+  async fetchGymEvents(gymId: string, status?: GymEventStatus): Promise<GymEvent[]> {
+    if (!gymId || !isSupabaseConfigured) return [];
+    try {
+      let query = supabase
+        .from('gym_events')
+        .select('*')
+        .eq('gym_id', gymId)
+        .order('starts_at', { ascending: true });
+
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      const { data, error } = await query;
+      if (error || !data) return [];
+
+      // Fetch attendee counts
+      const eventIds = data.map((e: any) => e.id);
+      let countsMap: Record<string, number> = {};
+      if (eventIds.length > 0) {
+        const { data: rsvps } = await supabase
+          .from('gym_event_rsvps')
+          .select('event_id')
+          .in('event_id', eventIds)
+          .eq('status', 'attending');
+
+        if (rsvps) {
+          rsvps.forEach((r: any) => {
+            countsMap[r.event_id] = (countsMap[r.event_id] || 0) + 1;
+          });
+        }
+      }
+
+      return data.map((row: any) => ({
+        id: row.id,
+        gymId: row.gym_id,
+        createdBy: row.created_by,
+        title: row.title,
+        description: row.description,
+        eventType: row.event_type as GymEventType,
+        startsAt: row.starts_at,
+        endsAt: row.ends_at,
+        capacity: row.capacity,
+        locationText: row.location_text,
+        status: row.status as GymEventStatus,
+        attendeeCount: countsMap[row.id] || 0,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: fetchGymEvents error', { err, gymId });
+      return [];
+    }
+  }
+
+  async fetchPublishedGymEvents(gymId: string, userId?: string): Promise<GymEvent[]> {
+    if (!gymId || !isSupabaseConfigured) return [];
+    try {
+      const { data, error } = await supabase
+        .from('gym_events')
+        .select('*')
+        .eq('gym_id', gymId)
+        .in('status', ['published', 'completed'])
+        .order('starts_at', { ascending: true });
+
+      if (error || !data) return [];
+
+      const eventIds = data.map((e: any) => e.id);
+      let countsMap: Record<string, number> = {};
+      let userRsvpMap: Record<string, 'attending' | 'cancelled'> = {};
+
+      if (eventIds.length > 0) {
+        const { data: rsvps } = await supabase
+          .from('gym_event_rsvps')
+          .select('event_id, user_id, status')
+          .in('event_id', eventIds);
+
+        if (rsvps) {
+          rsvps.forEach((r: any) => {
+            if (r.status === 'attending') {
+              countsMap[r.event_id] = (countsMap[r.event_id] || 0) + 1;
+            }
+            if (userId && r.user_id === userId) {
+              userRsvpMap[r.event_id] = r.status;
+            }
+          });
+        }
+      }
+
+      return data.map((row: any) => ({
+        id: row.id,
+        gymId: row.gym_id,
+        createdBy: row.created_by,
+        title: row.title,
+        description: row.description,
+        eventType: row.event_type as GymEventType,
+        startsAt: row.starts_at,
+        endsAt: row.ends_at,
+        capacity: row.capacity,
+        locationText: row.location_text,
+        status: row.status as GymEventStatus,
+        attendeeCount: countsMap[row.id] || 0,
+        userRsvpStatus: userRsvpMap[row.id] || null,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: fetchPublishedGymEvents error', { err, gymId });
+      return [];
+    }
+  }
+
+  async createGymEvent(payload: {
+    gymId: string;
+    title: string;
+    description: string;
+    eventType: GymEventType;
+    startsAt: string;
+    endsAt: string;
+    capacity?: number | null;
+    locationText?: string | null;
+    publishImmediately?: boolean;
+  }): Promise<{ success: boolean; eventId?: string; status?: GymEventStatus; error?: string }> {
+    if (!isSupabaseConfigured) return { success: false, error: 'Database not configured' };
+    try {
+      const { data, error } = await supabase.rpc('create_gym_event', {
+        p_gym_id: payload.gymId,
+        p_title: payload.title,
+        p_description: payload.description,
+        p_event_type: payload.eventType,
+        p_starts_at: payload.startsAt,
+        p_ends_at: payload.endsAt,
+        p_capacity: payload.capacity || null,
+        p_location_text: payload.locationText || null,
+        p_publish_immediately: !!payload.publishImmediately,
+      });
+
+      if (error || !data || !data.success) {
+        return { success: false, error: error?.message || data?.error || 'Failed to create event' };
+      }
+
+      return {
+        success: true,
+        eventId: data.eventId,
+        status: data.status,
+      };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Error creating gym event' };
+    }
+  }
+
+  async updateGymEventStatus(
+    eventId: string,
+    status: GymEventStatus
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured) return { success: false, error: 'Database not configured' };
+    try {
+      const { data, error } = await supabase.rpc('update_gym_event_status', {
+        p_event_id: eventId,
+        p_status: status,
+      });
+
+      if (error || !data || !data.success) {
+        return { success: false, error: error?.message || 'Failed to update event status' };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Error updating event status' };
+    }
+  }
+
+  async rsvpGymEvent(
+    eventId: string
+  ): Promise<{ success: boolean; attendeeCount?: number; capacity?: number | null; error?: string }> {
+    if (!isSupabaseConfigured) return { success: false, error: 'Database not configured' };
+    try {
+      const { data, error } = await supabase.rpc('rsvp_gym_event', {
+        p_event_id: eventId,
+      });
+
+      if (error || !data || !data.success) {
+        return { success: false, error: error?.message || 'Failed to RSVP' };
+      }
+
+      return {
+        success: true,
+        attendeeCount: data.attendeeCount,
+        capacity: data.capacity,
+      };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Error RSVPing for event' };
+    }
+  }
+
+  async cancelGymEventRsvp(
+    eventId: string
+  ): Promise<{ success: boolean; attendeeCount?: number; error?: string }> {
+    if (!isSupabaseConfigured) return { success: false, error: 'Database not configured' };
+    try {
+      const { data, error } = await supabase.rpc('cancel_gym_event_rsvp', {
+        p_event_id: eventId,
+      });
+
+      if (error || !data || !data.success) {
+        return { success: false, error: error?.message || 'Failed to cancel RSVP' };
+      }
+
+      return {
+        success: true,
+        attendeeCount: data.attendeeCount,
+      };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Error cancelling RSVP' };
+    }
+  }
+
+  async fetchGymEventAttendees(eventId: string): Promise<GymEventAttendee[]> {
+    if (!eventId || !isSupabaseConfigured) return [];
+    try {
+      const { data, error } = await supabase.rpc('get_gym_event_attendees', {
+        p_event_id: eventId,
+      });
+
+      if (error || !data) return [];
+
+      return data.map((row: any) => ({
+        rsvpId: row.rsvp_id,
+        userId: row.user_id,
+        displayName: row.display_name,
+        avatarUrl: row.avatar_url,
+        rsvpStatus: row.rsvp_status,
+        rsvpCreatedAt: row.rsvp_created_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: fetchGymEventAttendees error', { err, eventId });
+      return [];
+    }
+  }
+
+  // ── 28. Fitness Coin Rewards Shop ─────────────────────────────────────────
+  async fetchFitnessRewardCatalog(): Promise<FitnessRewardItem[]> {
+    if (!isSupabaseConfigured) return [];
+    try {
+      const { data, error } = await supabase
+        .from('fitness_reward_catalog')
+        .select('*')
+        .eq('is_active', true)
+        .order('coin_cost', { ascending: true });
+
+      if (error || !data) return [];
+
+      return data.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        category: row.category,
+        coinCost: row.coin_cost,
+        imageUrl: row.image_url,
+        isActive: row.is_active,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: fetchFitnessRewardCatalog error', { err });
+      return [];
+    }
+  }
+
+  async redeemFitnessReward(rewardId: string): Promise<{
+    success: boolean;
+    redemptionId?: string;
+    redemptionCode?: string;
+    rewardTitle?: string;
+    coinSpent?: number;
+    remainingBalance?: number;
+    error?: string;
+  }> {
+    if (!isSupabaseConfigured) return { success: false, error: 'Database not configured' };
+    try {
+      const { data, error } = await supabase.rpc('redeem_fitness_reward', {
+        p_reward_id: rewardId,
+      });
+
+      if (error || !data || !data.success) {
+        return { success: false, error: error?.message || 'Failed to redeem reward' };
+      }
+
+      return {
+        success: true,
+        redemptionId: data.redemptionId,
+        redemptionCode: data.redemptionCode,
+        rewardTitle: data.rewardTitle,
+        coinSpent: data.coinSpent,
+        remainingBalance: data.remainingBalance,
+      };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Error redeeming reward' };
+    }
+  }
+
+  async fetchFitnessCoinBalance(): Promise<FitnessCoinBalance> {
+    if (!isSupabaseConfigured) {
+      return { balance: 0, lifetimeEarned: 0, lifetimeSpent: 0 };
+    }
+    try {
+      const { data, error } = await supabase.rpc('get_fitness_coin_balance');
+      if (error || !data) {
+        return { balance: 0, lifetimeEarned: 0, lifetimeSpent: 0 };
+      }
+      return {
+        balance: data.balance || 0,
+        lifetimeEarned: data.lifetimeEarned || 0,
+        lifetimeSpent: data.lifetimeSpent || 0,
+      };
+    } catch (err) {
+      logger.error('GymRepository: fetchFitnessCoinBalance error', { err });
+      return { balance: 0, lifetimeEarned: 0, lifetimeSpent: 0 };
+    }
+  }
+
+  async fetchUserRewardRedemptions(userId: string): Promise<FitnessRewardRedemption[]> {
+    if (!userId || !isSupabaseConfigured) return [];
+    try {
+      const { data, error } = await supabase
+        .from('fitness_reward_redemptions')
+        .select('*, fitness_reward_catalog(title, category)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return [];
+
+      return data.map((row: any) => ({
+        id: row.id,
+        userId: row.user_id,
+        rewardId: row.reward_id,
+        coinSpent: row.coin_spent,
+        redemptionCode: row.redemption_code,
+        status: row.status,
+        createdAt: row.created_at,
+        rewardTitle: row.fitness_reward_catalog?.title || 'Reward Perk',
+        rewardCategory: row.fitness_reward_catalog?.category || 'digital_badge',
+      }));
+    } catch (err) {
+      logger.error('GymRepository: fetchUserRewardRedemptions error', { err, userId });
+      return [];
     }
   }
 }

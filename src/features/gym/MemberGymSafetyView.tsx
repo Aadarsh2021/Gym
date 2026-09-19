@@ -11,6 +11,7 @@ import {
   Info,
   RefreshCw,
   BellRing,
+  ShieldCheck,
 } from 'lucide-react';
 import { useMemberGymContext } from '@/hooks/useMemberGymContext';
 import { gymSafetyService } from '@/services/gym-safety.service';
@@ -931,6 +932,52 @@ export const MemberGymSafetyView: React.FC = () => {
               </button>
             </div>
           </form>
+
+          {/* Safe Departure Protocol & Share */}
+          <div
+            className="card card-elevated"
+            style={{
+              marginTop: 'var(--space-6)',
+              padding: 'var(--space-5)',
+              background: 'var(--color-surface-subtle)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-md)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-2)' }}>
+              <ShieldCheck size={20} color="var(--accent-primary)" />
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>
+                Safe Departure &amp; Session Check-Out Share
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
+              Reassure your trusted emergency contact when leaving after late-evening workouts. User-initiated, zero invasive tracking, directly opens your device&apos;s messaging app.
+            </p>
+
+            <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+              <a
+                href={`https://wa.me/${(phoneNumber || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                  `Hi ${contactName || 'there'}, I've finished my workout session at ${activeGym?.name || 'the gym'} and am heading home safely now.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span>Share via WhatsApp</span>
+              </a>
+
+              <a
+                href={`sms:${(phoneNumber || '').replace(/[^0-9+]/g, '')}?body=${encodeURIComponent(
+                  `Hi ${contactName || 'there'}, I've finished my workout session at ${activeGym?.name || 'the gym'} and am heading home safely now.`
+                )}`}
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span>Share via SMS</span>
+              </a>
+            </div>
+          </div>
         </div>
       )}
 

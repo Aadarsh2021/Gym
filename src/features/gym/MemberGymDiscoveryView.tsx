@@ -23,6 +23,7 @@ import {
   Users,
   Trophy,
   ShieldAlert,
+  Calendar,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { gymRepository } from '@/repositories/gym.repository';
@@ -324,6 +325,14 @@ export const MemberGymDiscoveryView: React.FC = () => {
               >
                 <Trophy size={15} />
                 <span>Challenges</span>
+              </Link>
+              <Link
+                to="/app/gym/events"
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Calendar size={15} />
+                <span>Events</span>
               </Link>
               <Link
                 to="/app/gym/safety"

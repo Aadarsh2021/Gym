@@ -326,6 +326,35 @@ export const reminderService = {
   },
 
   /**
+   * Returns exact days, hours, minutes, seconds breakdown for live second-by-second countdown
+   */
+  getDetailedCountdown(ms: number | null): {
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    totalSeconds: number;
+    formatted: string;
+  } {
+    if (ms === null || ms <= 0) {
+      return { days: 0, hours: 0, minutes: 0, seconds: 0, totalSeconds: 0, formatted: ms === null ? 'Not scheduled' : 'Due now' };
+    }
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    let formatted = '';
+    if (days > 0) {
+      formatted += `${days}d `;
+    }
+    formatted += `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    return { days, hours, minutes, seconds, totalSeconds, formatted };
+  },
+
+  /**
    * Reschedule active same-session timer
    */
   rescheduleSameSessionTimer(
@@ -395,9 +424,23 @@ export const reminderService = {
   },
 
   /**
-   * Dispatch notification via platform adapter
+   * Dispatch notification via platform adapter with audio chime and haptics
    */
   triggerNotification(title: string, body: string): boolean {
+    try {
+      platform.audio.playRestTimerChime();
+    } catch {
+      // Audio autoplay policy might require prior user interaction
+    }
+
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate([200, 100, 200]);
+      } catch {
+        // Safe vibration fallback
+      }
+    }
+
     if (platform.notifications.getPermissionStatus() !== 'granted') return false;
     platform.notifications.dispatchImmediate({ title, body });
     return true;
