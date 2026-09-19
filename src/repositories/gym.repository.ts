@@ -45,6 +45,7 @@ import {
 import { logger } from '@/lib/logger';
 import { platform } from '@/platform';
 import { getTodayRangeIST } from '@/utils/date';
+import { OwnerDashboardOverview } from '@/types/owner-dashboard.types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -5514,6 +5515,31 @@ export class GymRepository {
     } catch (err) {
       logger.error('GymRepository: fetchActiveSafetyNotices error', { err });
       return [];
+    }
+  }
+
+  // ── 26. Operations Intelligence Dashboard (Phase G7) ──────────────────────
+  async getOwnerDashboardOverview(gymId: string): Promise<OwnerDashboardOverview | null> {
+    if (!gymId) return null;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_owner_dashboard_overview', {
+        p_gym_id: gymId,
+      });
+
+      if (error || !data) {
+        logger.error('GymRepository: get_owner_dashboard_overview RPC error', { error, gymId });
+        return null;
+      }
+
+      return data as OwnerDashboardOverview;
+    } catch (err) {
+      logger.error('GymRepository: getOwnerDashboardOverview exception', { err, gymId });
+      return null;
     }
   }
 }

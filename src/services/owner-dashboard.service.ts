@@ -11,6 +11,9 @@ import {
   GymMembershipStatus,
 } from '@/types/gym.types';
 import { logger } from '@/lib/logger';
+import { OwnerDashboardOverview } from '@/types/owner-dashboard.types';
+
+export * from '@/types/owner-dashboard.types';
 
 export interface OwnerFloorSyncResult {
   activeSessions: GymAttendanceSession[];
@@ -218,6 +221,90 @@ export class OwnerDashboardService {
       const msg = err instanceof Error ? err.message : 'Failed to update membership status';
       logger.error('OwnerDashboardService: Error updating membership status', { err, membershipId });
       return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * Fetches and normalizes the high-level Operations Intelligence Overview (Phase G7).
+   * Aggregates live occupancy, today's attendance, 30d retention streaks,
+   * peak hours distribution, and actionable alerts.
+   */
+  async getOverview(gymId: string): Promise<OwnerDashboardOverview | null> {
+    if (!gymId) return null;
+
+    try {
+      const raw = await gymRepository.getOwnerDashboardOverview(gymId);
+      if (!raw) return null;
+
+      // Validate & normalize payload
+      const maxCapacity = Math.max(1, raw.facility?.maxCapacity || 100);
+      const occupancy = Math.max(0, raw.live?.occupancy || 0);
+      const occupancyRate = Math.min(100, Math.max(0, Number(raw.live?.occupancyRate) || 0));
+      const status = occupancyRate >= 100 ? 'at_capacity' : occupancyRate >= 80 ? 'crowded' : 'normal';
+
+      // Ensure 24 buckets exist for peak hours
+      const rawBuckets = Array.isArray(raw.attendance?.peakHoursDistribution)
+        ? raw.attendance.peakHoursDistribution
+        : [];
+      const bucketMap = new Map<number, number>();
+      rawBuckets.forEach(b => {
+        if (typeof b?.hour === 'number' && typeof b?.checkins === 'number') {
+          bucketMap.set(b.hour, Math.max(0, b.checkins));
+        }
+      });
+      const peakHoursDistribution = Array.from({ length: 24 }, (_, hour) => ({
+        hour,
+        checkins: bucketMap.get(hour) || 0,
+      }));
+
+      const activeMembers30d = Math.max(0, raw.members?.activeMembers30d || 0);
+      const streakMembersCount = Math.max(0, raw.members?.streakMembersCount || 0);
+      const retentionHealthPercentage =
+        activeMembers30d > 0
+          ? Math.min(100, Math.max(0, Number(raw.members?.retentionHealthPercentage) || 0))
+          : 0;
+
+      return {
+        facility: {
+          gymId: raw.facility?.gymId || gymId,
+          gymName: raw.facility?.gymName || 'Facility',
+          timezone: raw.facility?.timezone || 'Asia/Kolkata',
+          maxCapacity,
+        },
+        live: {
+          occupancy,
+          occupancyRate,
+          status,
+        },
+        attendance: {
+          todayCheckins: Math.max(0, raw.attendance?.todayCheckins || 0),
+          todayCompletedVisits: Math.max(0, raw.attendance?.todayCompletedVisits || 0),
+          todayAvgDurationMinutes: Math.max(0, Number(raw.attendance?.todayAvgDurationMinutes) || 0),
+          peakHoursDistribution,
+        },
+        members: {
+          activeMembers30d,
+          streakMembersCount,
+          retentionHealthPercentage,
+          pendingMembershipsCount: Math.max(0, raw.members?.pendingMembershipsCount || 0),
+        },
+        engagement: {
+          activeChallengesCount: Math.max(0, raw.engagement?.activeChallengesCount || 0),
+          challengeParticipantsCount: Math.max(0, raw.engagement?.challengeParticipantsCount || 0),
+          activeBuddyConnectionsCount: Math.max(0, raw.engagement?.activeBuddyConnectionsCount || 0),
+        },
+        safety: {
+          openSafetyIncidentsCount: Math.max(0, raw.safety?.openSafetyIncidentsCount || 0),
+          criticalSafetyIncidentsCount: Math.max(0, raw.safety?.criticalSafetyIncidentsCount || 0),
+          activeSafetyNoticesCount: Math.max(0, raw.safety?.activeSafetyNoticesCount || 0),
+        },
+        moderation: {
+          unresolvedFlagsCount: Math.max(0, raw.moderation?.unresolvedFlagsCount || 0),
+        },
+      };
+    } catch (err) {
+      logger.error('OwnerDashboardService: getOverview failed', { err, gymId });
+      return null;
     }
   }
 }
