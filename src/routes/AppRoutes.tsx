@@ -58,6 +58,8 @@ import { MemberGymCommunityView } from '@/features/gym/MemberGymCommunityView';
 import { MemberGymBuddiesView } from '@/features/gym/MemberGymBuddiesView';
 import { MemberGymBuddyChatView } from '@/features/gym/MemberGymBuddyChatView';
 import { MemberGymChallengesView } from '@/features/gym/MemberGymChallengesView';
+import { MemberGymSafetyView } from '@/features/gym/MemberGymSafetyView';
+import { OwnerSafetyView } from '@/features/owner/OwnerSafetyView';
 
 // Route Guard
 import { ProtectedRoute } from './ProtectedRoute';
@@ -192,6 +194,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="gym/buddies" element={<MemberGymBuddiesView />} />
         <Route path="gym/buddies/:connectionId/chat" element={<MemberGymBuddyChatView />} />
         <Route path="gym/challenges" element={<MemberGymChallengesView />} />
+        <Route path="gym/safety" element={<MemberGymSafetyView />} />
         <Route path="nutrition" element={<NutritionRouteView />} />
         <Route path="progress" element={<ProgressView />} />
         <Route path="streaks" element={<StreaksRouteView />} />
@@ -214,6 +217,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="members" element={<OwnerMembersView />} />
         <Route path="community" element={<OwnerCommunityView />} />
         <Route path="challenges" element={<OwnerChallengesView />} />
+        <Route path="safety" element={<OwnerSafetyView />} />
         <Route path="events" element={<OwnerEventsView />} />
         <Route path="announcements" element={<OwnerAnnouncementsView />} />
         <Route path="rewards" element={<OwnerRewardsView />} />

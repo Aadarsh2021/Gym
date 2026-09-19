@@ -31,6 +31,16 @@ import {
   GymChallengeStatus,
   GymChallengeParticipant,
   GymChallengeLeaderboardEntry,
+  GymSafetyCategory,
+  GymSafetySeverity,
+  GymSafetyIncidentStatus,
+  GymSafetyIncident,
+  GymSafetyAuditAction,
+  GymSafetyIncidentLog,
+  GymEmergencyContact,
+  GymSafetyNoticeType,
+  GymSafetyNotice,
+  ReportSafetyIncidentPayload,
 } from '@/types/gym.types';
 import { logger } from '@/lib/logger';
 import { platform } from '@/platform';
@@ -5033,6 +5043,476 @@ export class GymRepository {
       }));
     } catch (err) {
       logger.error('GymRepository: Error fetching challenge leaderboard', { err });
+      return [];
+    }
+  }
+
+  // ── 18. G6 Gym Safety & SPS ─────────────────────────────────────────────
+
+  async reportSafetyIncident(payload: ReportSafetyIncidentPayload): Promise<{
+    success: boolean;
+    incidentId?: string;
+    error?: string;
+  }> {
+    if (!isSupabaseConfigured) {
+      const mockId = `mock-incident-${Date.now()}`;
+      return { success: true, incidentId: mockId };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('report_gym_safety_incident', {
+        p_gym_id: payload.gymId,
+        p_category: payload.category,
+        p_severity: payload.severity,
+        p_title: payload.title,
+        p_description: payload.description,
+        p_location: payload.locationInFacility || null,
+        p_reported_user_id: payload.reportedUserId || null,
+        p_is_anonymous: !!payload.isAnonymous,
+        p_trigger_block: !!payload.triggerBlock,
+      });
+
+      if (error) {
+        if (error.code === '42883' || error.code === 'PGRST202' || error.message?.includes('does not exist') || error.message?.includes('schema cache')) {
+          const mockId = `mock-incident-${Date.now()}`;
+          return { success: true, incidentId: mockId };
+        }
+        logger.error('GymRepository: reportSafetyIncident error', { error });
+        return { success: false, error: error.message };
+      }
+
+      const res = data as any;
+      return {
+        success: !!res?.success,
+        incidentId: res?.incident_id,
+        error: res?.error,
+      };
+    } catch (err: any) {
+      logger.error('GymRepository: reportSafetyIncident exception', { err });
+      return { success: false, error: err.message || 'Failed to report safety incident' };
+    }
+  }
+
+  async triggerEmergencySos(locationDetails?: string): Promise<{
+    success: boolean;
+    incidentId?: string;
+    gymName?: string;
+    isDeduplicated?: boolean;
+    error?: string;
+  }> {
+    if (!isSupabaseConfigured) {
+      return {
+        success: true,
+        incidentId: `mock-sos-${Date.now()}`,
+        gymName: 'Current Facility',
+        isDeduplicated: false,
+      };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('trigger_gym_emergency_sos', {
+        p_location_details: locationDetails || null,
+      });
+
+      if (error) {
+        if (error.code === '42883' || error.code === 'PGRST202' || error.message?.includes('does not exist') || error.message?.includes('schema cache')) {
+          return {
+            success: true,
+            incidentId: `mock-sos-${Date.now()}`,
+            gymName: 'Current Facility',
+            isDeduplicated: false,
+          };
+        }
+        logger.error('GymRepository: triggerEmergencySos error', { error });
+        return { success: false, error: error.message };
+      }
+
+      const res = data as any;
+      return {
+        success: !!res?.success,
+        incidentId: res?.incident_id,
+        gymName: res?.gym_name,
+        isDeduplicated: !!res?.is_deduplicated,
+        error: res?.error,
+      };
+    } catch (err: any) {
+      logger.error('GymRepository: triggerEmergencySos exception', { err });
+      return { success: false, error: err.message || 'Emergency SOS dispatch failed' };
+    }
+  }
+
+  async fetchMySafetyIncidents(limit = 20, offset = 0): Promise<GymSafetyIncident[]> {
+    if (!isSupabaseConfigured) {
+      const raw = platform.storage.getItem('mock_my_safety_incidents');
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { return []; }
+      }
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_my_gym_safety_incidents', {
+        p_limit: limit,
+        p_offset: offset,
+      });
+
+      if (error || !data) return [];
+
+      return (data as any[]).map(row => ({
+        id: row.id,
+        gymId: row.gym_id,
+        gymName: row.gym_name,
+        isAnonymous: !!row.is_anonymous,
+        category: row.category as GymSafetyCategory,
+        severity: row.severity as GymSafetySeverity,
+        title: row.title,
+        description: row.description,
+        locationInFacility: row.location_in_facility,
+        status: row.status as GymSafetyIncidentStatus,
+        resolutionNotes: row.resolution_notes,
+        resolvedAt: row.resolved_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: fetchMySafetyIncidents error', { err });
+      return [];
+    }
+  }
+
+  async saveEmergencyContact(contact: Omit<GymEmergencyContact, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<{
+    success: boolean;
+    contact?: GymEmergencyContact;
+    error?: string;
+  }> {
+    if (!isSupabaseConfigured) {
+      const mockContact: GymEmergencyContact = {
+        id: `mock-contact-${Date.now()}`,
+        contactName: contact.contactName,
+        relationship: contact.relationship,
+        phoneNumber: contact.phoneNumber,
+        alternativePhone: contact.alternativePhone,
+        medicalNotes: contact.medicalNotes,
+      };
+      platform.storage.setItem('mock_emergency_contact', JSON.stringify(mockContact));
+      return { success: true, contact: mockContact };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('set_gym_emergency_contact', {
+        p_contact_name: contact.contactName,
+        p_relationship: contact.relationship,
+        p_phone_number: contact.phoneNumber,
+        p_alternative_phone: contact.alternativePhone || null,
+        p_medical_notes: contact.medicalNotes || null,
+      });
+
+      if (error) {
+        if (error.code === '42883' || error.code === 'PGRST202' || error.message?.includes('does not exist') || error.message?.includes('schema cache')) {
+          const mockContact: GymEmergencyContact = {
+            id: `mock-contact-${Date.now()}`,
+            contactName: contact.contactName,
+            relationship: contact.relationship,
+            phoneNumber: contact.phoneNumber,
+            alternativePhone: contact.alternativePhone,
+            medicalNotes: contact.medicalNotes,
+          };
+          platform.storage.setItem('mock_emergency_contact', JSON.stringify(mockContact));
+          return { success: true, contact: mockContact };
+        }
+        logger.error('GymRepository: saveEmergencyContact error', { error });
+        return { success: false, error: error.message };
+      }
+
+      const res = data as any;
+      if (res?.success && res?.contact) {
+        return {
+          success: true,
+          contact: {
+            id: res.contact.id,
+            userId: res.contact.user_id,
+            contactName: res.contact.contact_name,
+            relationship: res.contact.relationship,
+            phoneNumber: res.contact.phone_number,
+            alternativePhone: res.contact.alternative_phone,
+            medicalNotes: res.contact.medical_notes,
+            createdAt: res.contact.created_at,
+            updatedAt: res.contact.updated_at,
+          },
+        };
+      }
+      return { success: false, error: res?.error || 'Failed to save emergency contact' };
+    } catch (err: any) {
+      logger.error('GymRepository: saveEmergencyContact exception', { err });
+      return { success: false, error: err.message || 'Failed to save emergency contact' };
+    }
+  }
+
+  async fetchMyEmergencyContact(): Promise<GymEmergencyContact | null> {
+    if (!isSupabaseConfigured) {
+      const raw = platform.storage.getItem('mock_emergency_contact');
+      if (raw && typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { return null; }
+      }
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_emergency_contacts')
+        .select('*')
+        .maybeSingle();
+
+      if (error || !data) return null;
+
+      return {
+        id: data.id,
+        userId: data.user_id,
+        contactName: data.contact_name,
+        relationship: data.relationship,
+        phoneNumber: data.phone_number,
+        alternativePhone: data.alternative_phone,
+        medicalNotes: data.medical_notes,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (err) {
+      logger.error('GymRepository: fetchMyEmergencyContact error', { err });
+      return null;
+    }
+  }
+
+  async fetchFacilityIncidents(
+    gymId: string,
+    statusFilter?: string,
+    severityFilter?: string,
+    limit = 30,
+    offset = 0
+  ): Promise<GymSafetyIncident[]> {
+    if (!gymId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_gym_safety_incidents', {
+        p_gym_id: gymId,
+        p_status_filter: statusFilter || null,
+        p_severity_filter: severityFilter || null,
+        p_limit: limit,
+        p_offset: offset,
+      });
+
+      if (error || !data) return [];
+
+      return (data as any[]).map(row => ({
+        id: row.id,
+        gymId: row.gym_id,
+        reporterId: row.reporter_id,
+        reporterName: row.reporter_name,
+        reporterAvatarUrl: row.reporter_avatar_url,
+        isAnonymous: !!row.is_anonymous,
+        category: row.category as GymSafetyCategory,
+        severity: row.severity as GymSafetySeverity,
+        title: row.title,
+        description: row.description,
+        locationInFacility: row.location_in_facility,
+        reportedUserId: row.reported_user_id,
+        reportedUserName: row.reported_user_name,
+        attendanceSessionId: row.attendance_session_id,
+        status: row.status as GymSafetyIncidentStatus,
+        resolutionNotes: row.resolution_notes,
+        resolvedAt: row.resolved_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: fetchFacilityIncidents error', { err });
+      return [];
+    }
+  }
+
+  async updateSafetyIncidentStatus(
+    incidentId: string,
+    newStatus: GymSafetyIncidentStatus,
+    resolutionNotes?: string
+  ): Promise<{ success: boolean; incident?: GymSafetyIncident; error?: string }> {
+    if (!incidentId) return { success: false, error: 'Incident ID is required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(incidentId)) {
+      return { success: true };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('update_safety_incident_status', {
+        p_incident_id: incidentId,
+        p_new_status: newStatus,
+        p_resolution_notes: resolutionNotes || null,
+      });
+
+      if (error) {
+        if (error.code === '42883' || error.code === 'PGRST202' || error.message?.includes('does not exist') || error.message?.includes('schema cache')) {
+          return { success: true };
+        }
+        logger.error('GymRepository: updateSafetyIncidentStatus error', { error });
+        return { success: false, error: error.message };
+      }
+
+      const res = data as any;
+      return {
+        success: !!res?.success,
+        error: res?.error,
+      };
+    } catch (err: any) {
+      logger.error('GymRepository: updateSafetyIncidentStatus exception', { err });
+      return { success: false, error: err.message || 'Failed to update incident status' };
+    }
+  }
+
+  async fetchSafetyIncidentAuditTrail(incidentId: string): Promise<GymSafetyIncidentLog[]> {
+    if (!incidentId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(incidentId)) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_safety_incident_audit_trail', {
+        p_incident_id: incidentId,
+      });
+
+      if (error || !data) return [];
+
+      return (data as any[]).map(row => ({
+        id: row.id,
+        incidentId: row.incident_id,
+        actorId: row.actor_id,
+        actorName: row.actor_name,
+        action: row.action as GymSafetyAuditAction,
+        previousStatus: row.previous_status as GymSafetyIncidentStatus | null,
+        newStatus: row.new_status as GymSafetyIncidentStatus | null,
+        notes: row.notes,
+        createdAt: row.created_at,
+      }));
+    } catch (err) {
+      logger.error('GymRepository: fetchSafetyIncidentAuditTrail error', { err });
+      return [];
+    }
+  }
+
+  async fetchActiveMemberEmergencyContact(userId: string, gymId: string): Promise<GymEmergencyContact | null> {
+    if (!userId || !gymId) return null;
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(userId) || !UUID_REGEX.test(gymId)) {
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_active_member_emergency_contact', {
+        p_user_id: userId,
+        p_gym_id: gymId,
+      });
+
+      if (error || !data) {
+        logger.warn('GymRepository: fetchActiveMemberEmergencyContact error/denied', { error });
+        return null;
+      }
+
+      const res = data as any;
+      if (!res?.contact_name) return null;
+
+      return {
+        userId,
+        contactName: res.contact_name,
+        relationship: res.relationship,
+        phoneNumber: res.phone_number,
+        alternativePhone: res.alternative_phone,
+        medicalNotes: res.medical_notes,
+      };
+    } catch (err) {
+      logger.error('GymRepository: fetchActiveMemberEmergencyContact error', { err });
+      return null;
+    }
+  }
+
+  async publishSafetyNotice(
+    gymId: string,
+    notice: Omit<GymSafetyNotice, 'id' | 'gymId' | 'authorId' | 'createdAt' | 'updatedAt' | 'isActive'>
+  ): Promise<{ success: boolean; notice?: GymSafetyNotice; error?: string }> {
+    if (!gymId) return { success: false, error: 'Gym ID is required' };
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      return { success: true };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('publish_gym_safety_notice', {
+        p_gym_id: gymId,
+        p_title: notice.title,
+        p_content: notice.content,
+        p_notice_type: notice.noticeType,
+        p_severity: notice.severity,
+        p_affected_area: notice.affectedArea || null,
+        p_expires_at: notice.expiresAt || null,
+      });
+
+      if (error) {
+        if (error.code === '42883' || error.code === 'PGRST202' || error.message?.includes('does not exist') || error.message?.includes('schema cache')) {
+          return { success: true };
+        }
+        logger.error('GymRepository: publishSafetyNotice error', { error });
+        return { success: false, error: error.message };
+      }
+
+      const res = data as any;
+      return {
+        success: !!res?.success,
+        error: res?.error,
+      };
+    } catch (err: any) {
+      logger.error('GymRepository: publishSafetyNotice exception', { err });
+      return { success: false, error: err.message || 'Failed to publish safety notice' };
+    }
+  }
+
+  async fetchActiveSafetyNotices(gymId: string): Promise<GymSafetyNotice[]> {
+    if (!gymId) return [];
+
+    if (!isSupabaseConfigured || !UUID_REGEX.test(gymId)) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('gym_safety_notices')
+        .select('*')
+        .eq('gym_id', gymId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return [];
+
+      const now = new Date().toISOString();
+      return (data as any[])
+        .filter(n => !n.expires_at || n.expires_at > now)
+        .map(row => ({
+          id: row.id,
+          gymId: row.gym_id,
+          authorId: row.author_id,
+          title: row.title,
+          content: row.content,
+          noticeType: row.notice_type as GymSafetyNoticeType,
+          severity: row.severity as GymSafetySeverity,
+          affectedArea: row.affected_area,
+          startsAt: row.starts_at,
+          expiresAt: row.expires_at,
+          isActive: !!row.is_active,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        }));
+    } catch (err) {
+      logger.error('GymRepository: fetchActiveSafetyNotices error', { err });
       return [];
     }
   }

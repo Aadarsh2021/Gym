@@ -9,7 +9,9 @@ import {
   List,
   LayoutGrid,
   Zap,
+  ShieldAlert,
 } from 'lucide-react';
+import { gymSafetyService } from '@/services/gym-safety.service';
 import { WorkoutSession, WorkoutSet, SetType, Exercise } from '@/types/workout.types';
 import { useRestTimer } from '@/hooks/useRestTimer';
 import { formatTimerClock } from '@/utils/formatters';
@@ -85,6 +87,12 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
   const [sessionNotes, setSessionNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Phase G6: Emergency SOS State
+  const [showSosModal, setShowSosModal] = useState(false);
+  const [sosLocationDetails, setSosLocationDetails] = useState('');
+  const [isTriggeringSos, setIsTriggeringSos] = useState(false);
+  const [sosFeedback, setSosFeedback] = useState<string | null>(null);
 
   // Exercise Substitution & Addition
   const [exerciseToSwapIndex, setExerciseToSwapIndex] = useState<number | null>(null);
@@ -516,6 +524,29 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
+            {/* Phase G6: Emergency Floor SOS */}
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => {
+                setSosFeedback(null);
+                setShowSosModal(true);
+              }}
+              style={{
+                height: '34px',
+                padding: '0 10px',
+                fontSize: '0.78rem',
+                color: '#ef4444',
+                background: 'rgba(239, 68, 68, 0.12)',
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+                fontWeight: 700,
+              }}
+              title="Emergency Facility SOS"
+            >
+              <ShieldAlert size={14} color="#ef4444" />
+              <span>SOS</span>
+            </button>
+
             {/* Short on Time Toggle */}
             <button
               type="button"
@@ -1252,6 +1283,130 @@ export const WorkoutTrackerView: React.FC<WorkoutTrackerViewProps> = ({
               onSelectExerciseForWorkout={handleAddExerciseToWorkout}
               isSelectionMode={true}
             />
+          </div>
+        </div>
+      )}
+
+      {/* PHASE G6: ACTIVE WORKOUT EMERGENCY SOS MODAL */}
+      {showSosModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'var(--space-4)',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            className="card card-elevated"
+            style={{
+              maxWidth: '460px',
+              width: '100%',
+              padding: 'var(--space-6)',
+              background: 'var(--bg-surface)',
+              borderRadius: 'var(--radius-xl)',
+              border: '2px solid #ef4444',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--space-3)' }}>
+              <ShieldAlert size={26} color="#ef4444" />
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#ef4444' }}>
+                Floor Emergency SOS
+              </h3>
+            </div>
+
+            <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 'var(--space-4)' }}>
+              Broadcast an immediate high-priority alert to gym floor staff and management.
+            </p>
+
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <label htmlFor="active-sos-loc" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', marginBottom: '4px' }}>
+                Floor Location / Rack # (Optional)
+              </label>
+              <input
+                id="active-sos-loc"
+                type="text"
+                className="input"
+                placeholder="e.g., Squat Rack 3, Dumbbell area"
+                value={sosLocationDetails}
+                onChange={e => setSosLocationDetails(e.target.value)}
+                maxLength={200}
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            {sosFeedback && (
+              <div
+                style={{
+                  padding: '8px 12px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  borderRadius: 'var(--radius-md)',
+                  color: '#ef4444',
+                  fontSize: '0.82rem',
+                  marginBottom: 'var(--space-4)',
+                }}
+              >
+                {sosFeedback}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setShowSosModal(false)}
+                disabled={isTriggeringSos}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={isTriggeringSos}
+                onClick={async () => {
+                  setIsTriggeringSos(true);
+                  setSosFeedback(null);
+                  try {
+                    const res = await gymSafetyService.triggerEmergencySos(sosLocationDetails);
+                    if (!res.success) {
+                      setSosFeedback(res.error || 'Emergency SOS failed');
+                    } else {
+                      setSosFeedback(
+                        res.isDeduplicated
+                          ? 'Alert updated! Staff are already actively responding.'
+                          : 'SOS Alert dispatched! Staff have been notified.'
+                      );
+                      setTimeout(() => {
+                        setShowSosModal(false);
+                        setSosLocationDetails('');
+                      }, 2000);
+                    }
+                  } catch (err: any) {
+                    setSosFeedback(err.message || 'SOS dispatch error');
+                  } finally {
+                    setIsTriggeringSos(false);
+                  }
+                }}
+                style={{
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                }}
+              >
+                {isTriggeringSos ? 'Broadcasting...' : 'CONFIRM SOS ALERT'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -458,3 +458,127 @@ export interface GymChallengeLeaderboardEntry {
   lastProgressAt?: string | null;
 }
 
+// ==============================================================================
+// PHASE G6: GYM SAFETY & SPS TYPES
+// ==============================================================================
+
+export type GymSafetyCategory =
+  | 'equipment_hazard'
+  | 'facility_damage'
+  | 'hygiene_sanitation'
+  | 'member_harassment'
+  | 'theft_security'
+  | 'medical_emergency'
+  | 'staff_conduct'
+  | 'other';
+
+export type GymSafetySeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export type GymSafetyIncidentStatus =
+  | 'reported'
+  | 'acknowledged'
+  | 'investigating'
+  | 'action_taken'
+  | 'resolved'
+  | 'dismissed';
+
+export type GymSafetyAuditAction =
+  | 'created'
+  | 'status_changed'
+  | 'notes_updated'
+  | 'resolved'
+  | 'dismissed';
+
+export type GymSafetyNoticeType =
+  | 'hazard_warning'
+  | 'maintenance_closure'
+  | 'safety_guideline'
+  | 'emergency_advisory';
+
+export interface GymSafetyIncident {
+  id: string;
+  gymId: string;
+  gymName?: string;
+  reporterId?: string | null;
+  reporterName?: string;
+  reporterAvatarUrl?: string | null;
+  isAnonymous: boolean;
+  category: GymSafetyCategory;
+  severity: GymSafetySeverity;
+  title: string;
+  description: string;
+  locationInFacility?: string | null;
+  reportedUserId?: string | null;
+  reportedUserName?: string | null;
+  attendanceSessionId?: string | null;
+  status: GymSafetyIncidentStatus;
+  resolutionNotes?: string | null;
+  resolvedAt?: string | null;
+  resolvedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GymSafetyIncidentLog {
+  id: string;
+  incidentId: string;
+  actorId?: string | null;
+  actorName?: string;
+  action: GymSafetyAuditAction;
+  previousStatus?: GymSafetyIncidentStatus | null;
+  newStatus?: GymSafetyIncidentStatus | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface GymEmergencyContactAccessLog {
+  id: string;
+  gymId: string;
+  memberUserId: string;
+  viewerOwnerId: string;
+  attendanceSessionId: string;
+  accessedFields: string[];
+  accessedAt: string;
+}
+
+export interface GymEmergencyContact {
+  id?: string;
+  userId?: string;
+  contactName: string;
+  relationship: string;
+  phoneNumber: string;
+  alternativePhone?: string | null;
+  medicalNotes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface GymSafetyNotice {
+  id: string;
+  gymId: string;
+  authorId: string;
+  title: string;
+  content: string;
+  noticeType: GymSafetyNoticeType;
+  severity: GymSafetySeverity;
+  affectedArea?: string | null;
+  startsAt: string;
+  expiresAt?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportSafetyIncidentPayload {
+  gymId: string;
+  category: GymSafetyCategory;
+  severity: GymSafetySeverity;
+  title: string;
+  description: string;
+  locationInFacility?: string;
+  reportedUserId?: string;
+  isAnonymous?: boolean;
+  triggerBlock?: boolean;
+}
+
+
