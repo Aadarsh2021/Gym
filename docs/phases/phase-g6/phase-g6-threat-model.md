@@ -11,7 +11,7 @@
 | Threat # | Vulnerability / Attack Vector | Attack Path | Architectural Defense & Hardening | Verification Test Case |
 | :--- | :--- | :--- | :--- | :--- |
 | **TM-01** | **Direct Table SELECT Deanonymization** | Facility owner executes `supabase.from('gym_safety_incidents').select('*')` to extract raw `reporter_id` from anonymous reports. | Table-level RLS policy on `gym_safety_incidents` **DENIES direct SELECT to facility owners**. Only the reporter can query their own row. Owners MUST use RPC. | Owner executes direct SELECT on `gym_safety_incidents`. Query returns 0 rows. |
-| **TM-02** | **RPC Deanonymization via Output / Projection** | Owner inspects network JSON response of `get_gym_safety_incidents()` looking for hidden reporter metadata. | Server-side PostgreSQL projection sets `reporter_id = NULL`, `reporter_avatar_url = NULL`, and `reporter_name = 'Anonymous Member (Verified Active Membership)'` when `is_anonymous = true`. | Call RPC on anonymous report; inspect raw JSON; assert `reporter_id` is null and no PII exists. |
+| **TM-02** | **RPC Deanonymization via Output / Projection** | Owner inspects network JSON response of `get_gym_safety_incidents()` looking for hidden reporter metadata. | Server-side PostgreSQL projection sets `reporter_id = NULL`, `reporter_avatar_url = NULL`, and `reporter_name = 'Anonymous Member'` when `is_anonymous = true`. | Call RPC on anonymous report; inspect raw JSON; assert `reporter_id` is null and no PII exists. |
 | **TM-03** | **Deanonymization via PostgREST Filter / Order Probing** | Owner calls PostgREST with `?reporter_id=eq.<victim_uuid>` or `order=reporter_id` to infer whether a specific athlete filed an anonymous report. | Direct PostgREST table SELECT is completely denied to owners (`USING (reporter_id = auth.uid())`). Filters and ordering on non-selectable rows leak zero information. | Owner attempts PostgREST query with `reporter_id=eq...`. Returns 0 rows. |
 | **TM-04** | **Deanonymization via Database Error Messages** | Owner crafts invalid RPC inputs or foreign keys to force PostgreSQL to output `reporter_id` in constraint error messages. | RPC parameters do not accept reporter ID from callers; `reporter_id` is bound exclusively from `auth.uid()` during insertion. Error messages reveal zero caller IDs. | Execute RPC with malformed inputs. Verify error detail contains no UUID leaks. |
 | **TM-05** | **Retaliatory Harassment by Reported Party** | Reported member queries database to find out who filed a conduct complaint against them. | Reported parties have **zero** SELECT privileges on `gym_safety_incidents` and `gym_safety_incident_logs`. | Reported user queries incident table. Query returns 0 rows. |
@@ -47,7 +47,7 @@ ATTACK PATH PROVEN IMPOSSIBLE:
 4. Owner calls RPC: get_gym_safety_incidents(:my_gym)
    --> Result: PostgreSQL projection forces:
        CASE WHEN is_anonymous THEN NULL ELSE reporter_id END AS reporter_id
-       CASE WHEN is_anonymous THEN 'Anonymous Member (Verified Active Membership)' ELSE p.display_name END AS reporter_name
+       CASE WHEN is_anonymous THEN 'Anonymous Member' ELSE p.display_name END AS reporter_name
        CASE WHEN is_anonymous THEN NULL ELSE p.avatar_url END AS reporter_avatar_url
    --> Raw reporter_id never leaves PostgreSQL buffer pool.
 

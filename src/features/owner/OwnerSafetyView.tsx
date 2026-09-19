@@ -486,7 +486,7 @@ export const OwnerSafetyView: React.FC = () => {
                         {inc.isAnonymous ? (
                           <>
                             <EyeOff size={13} color="var(--text-muted)" />
-                            <span style={{ fontStyle: 'italic', fontWeight: 600 }}>Anonymous Member (Active Verified)</span>
+                            <span style={{ fontStyle: 'italic', fontWeight: 600 }}>Anonymous Member</span>
                           </>
                         ) : (
                           <>
@@ -597,7 +597,7 @@ export const OwnerSafetyView: React.FC = () => {
                 <div>
                   <strong>Reporter:</strong>{' '}
                   {selectedIncident.isAnonymous ? (
-                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Anonymous Member (Masked)</span>
+                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Anonymous Member</span>
                   ) : (
                     <span>{selectedIncident.reporterName || 'Member'}</span>
                   )}

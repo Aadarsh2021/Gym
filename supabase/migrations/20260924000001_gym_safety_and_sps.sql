@@ -893,7 +893,7 @@ BEGIN
         i.gym_id,
         -- ANONYMOUS MASKING: Never expose reporter_id, name, or avatar when is_anonymous is true
         CASE WHEN i.is_anonymous THEN NULL ELSE i.reporter_id END AS reporter_id,
-        CASE WHEN i.is_anonymous THEN 'Anonymous Member (Verified Active Membership)' ELSE COALESCE(p.display_name, 'Athlete') END AS reporter_name,
+        CASE WHEN i.is_anonymous THEN 'Anonymous Member' ELSE COALESCE(p.display_name, 'Athlete') END AS reporter_name,
         CASE WHEN i.is_anonymous THEN NULL ELSE p.avatar_url END AS reporter_avatar_url,
         i.is_anonymous,
         i.category,
@@ -910,7 +910,7 @@ BEGIN
         i.created_at,
         i.updated_at
     FROM public.gym_safety_incidents i
-    LEFT JOIN public.profiles p ON p.id = i.reporter_id
+    LEFT JOIN public.profiles p ON p.id = (CASE WHEN i.is_anonymous THEN NULL ELSE i.reporter_id END)
     LEFT JOIN public.profiles ru ON ru.id = i.reported_user_id
     WHERE i.gym_id = p_gym_id
       AND (p_status_filter IS NULL OR i.status = p_status_filter)

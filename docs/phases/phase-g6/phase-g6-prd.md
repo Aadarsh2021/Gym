@@ -45,7 +45,7 @@
 
 ### 2.4 Feature 4: Owner Safety Operations Console (`/owner/safety`)
 - **Queue Management**: Filterable by status (`reported`, `acknowledged`, `investigating`, `action_taken`, `resolved`, `dismissed`) and severity (`critical`, `high`, `medium`, `low`).
-- **Anonymous Protection Invariant**: Anonymous reports render `reporter_id: null` and `"Anonymous Member (Verified Active Member)"`.
+- **Anonymous Protection Invariant**: Anonymous reports render `reporter_id: null` and `"Anonymous Member"`.
 - **State Machine Enforcement**: State transitions are strictly validated. Reopening a resolved or dismissed incident is prohibited.
 - **Immutable Audit Trail**: Every status change or investigation note appends an immutable record to `gym_safety_incident_logs`.
 

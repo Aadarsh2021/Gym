@@ -28,13 +28,13 @@ describe('Phase G6: Anonymous Reporter Privacy & De-anonymization Defense', () =
 
       // Server-side RPC projection logic from 20260924000001_gym_safety_and_sps.sql:
       // CASE WHEN i.is_anonymous THEN NULL ELSE i.reporter_id END AS reporter_id,
-      // CASE WHEN i.is_anonymous THEN 'Anonymous Member (Verified Active Membership)' ELSE COALESCE(p.display_name, 'Member') END AS reporter_name,
+      // CASE WHEN i.is_anonymous THEN 'Anonymous Member' ELSE COALESCE(p.display_name, 'Athlete') END AS reporter_name,
       // CASE WHEN i.is_anonymous THEN NULL ELSE p.avatar_url END AS reporter_avatar_url
       const transformForOwnerRpc = (row: typeof rawRow) => ({
         id: row.id,
         gymId: row.gym_id,
         reporterId: row.is_anonymous ? null : row.reporter_id,
-        reporterName: row.is_anonymous ? 'Anonymous Member (Verified Active Membership)' : row.reporter_name,
+        reporterName: row.is_anonymous ? 'Anonymous Member' : row.reporter_name,
         reporterAvatarUrl: row.is_anonymous ? null : row.reporter_avatar_url,
         isAnonymous: row.is_anonymous,
         category: row.category,
@@ -47,8 +47,22 @@ describe('Phase G6: Anonymous Reporter Privacy & De-anonymization Defense', () =
 
       expect(projected.reporterId).toBeNull();
       expect(projected.reporterAvatarUrl).toBeNull();
-      expect(projected.reporterName).toBe('Anonymous Member (Verified Active Membership)');
+      expect(projected.reporterName).toBe('Anonymous Member');
       expect(projected.isAnonymous).toBe(true);
+
+      // Regression: No partial UUID substring or hash can appear in serialized output
+      const jsonStr = JSON.stringify(projected);
+      const uuidSubstrings = [
+        REPORTER_ID,
+        REPORTER_ID.slice(0, 6),
+        REPORTER_ID.slice(0, 8),
+        REPORTER_ID.slice(-6),
+        'John Athlete',
+        'https://cdn.example.com/john.jpg',
+      ];
+      for (const leak of uuidSubstrings) {
+        expect(jsonStr).not.toContain(leak);
+      }
     });
 
     it('retains reporter identity for non-anonymous reports', () => {
@@ -69,7 +83,7 @@ describe('Phase G6: Anonymous Reporter Privacy & De-anonymization Defense', () =
         id: row.id,
         gymId: row.gym_id,
         reporterId: row.is_anonymous ? null : row.reporter_id,
-        reporterName: row.is_anonymous ? 'Anonymous Member (Verified Active Membership)' : row.reporter_name,
+        reporterName: row.is_anonymous ? 'Anonymous Member' : row.reporter_name,
         reporterAvatarUrl: row.is_anonymous ? null : row.reporter_avatar_url,
         isAnonymous: row.is_anonymous,
       });
@@ -171,6 +185,13 @@ describe('Phase G6: Anonymous Reporter Privacy & De-anonymization Defense', () =
       expect(ownerView.actorId).toBeNull();
       expect(ownerView.actorName).toBe('Anonymous Member');
       expect(ownerView.notes).toBe('Initial hazard filed');
+
+      // Regression: No reporter UUID or profile display name in audit JSON
+      const auditJson = JSON.stringify(ownerView);
+      expect(auditJson).not.toContain(REPORTER_ID);
+      expect(auditJson).not.toContain(REPORTER_ID.slice(0, 6));
+      expect(auditJson).not.toContain(REPORTER_ID.slice(0, 8));
+      expect(auditJson).not.toContain('John Reporter');
     });
 
     it('prohibits joining profiles table for anonymous reporter audit events', () => {

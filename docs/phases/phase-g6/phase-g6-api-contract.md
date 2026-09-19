@@ -128,7 +128,7 @@ SET search_path = public, auth;
 ```
 - **Anonymous Protection**:
   - `reporter_id`: returned as `NULL` when `is_anonymous = true`.
-  - `reporter_name`: returned as `'Anonymous Member (Verified Active Membership)'` when `is_anonymous = true`.
+  - `reporter_name`: returned as `'Anonymous Member'` when `is_anonymous = true`.
   - `reporter_avatar_url`: returned as `NULL` when `is_anonymous = true`.
 
 #### 5. `public.get_active_member_emergency_contact`

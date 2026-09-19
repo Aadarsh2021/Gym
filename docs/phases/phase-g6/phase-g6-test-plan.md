@@ -38,7 +38,7 @@ tests/
 
 ### 2.2 Anonymous Reporter Privacy Defense Tests (`tests/security/g6-reporter-privacy.test.ts`)
 9. **`PRIV-G6-01: Owner Direct SELECT Returns Zero Rows`**: Proves owner cannot query table to read `reporter_id` column directly.
-10. **`PRIV-G6-02: RPC Response Omits Reporter ID for Anonymous Reports`**: Owner calls `get_gym_safety_incidents()`. For an anonymous incident, `reporter_id` is strictly `null` and `reporter_name` is `'Anonymous Member (Verified Active Membership)'`.
+10. **`PRIV-G6-02: RPC Response Omits Reporter ID for Anonymous Reports`**: Owner calls `get_gym_safety_incidents()`. For an anonymous incident, `reporter_id` is strictly `null` and `reporter_name` is `'Anonymous Member'`.
 11. **`PRIV-G6-03: PostgREST Filter Probing Yields Zero Rows`**: Owner attempts to filter `/gym_safety_incidents?reporter_id=eq.<uuid>` or order by `reporter_id`. Query returns 0 rows (table RLS blocks evaluation).
 12. **`PRIV-G6-04: Reported Party Absolute Invisibility`**: Accused member named in an incident queries the database via PostgREST or RPC. Gets 0 rows and zero knowledge of the complaint.
 13. **`PRIV-G6-05: Database Constraint Errors Reveal No IDs`**: Calling RPCs with invalid arguments returns clean error messages without leaking victim or reporter UUIDs.

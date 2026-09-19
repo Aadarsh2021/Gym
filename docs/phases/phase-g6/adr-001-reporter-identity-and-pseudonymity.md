@@ -16,7 +16,7 @@ We enforce a **Zero-Trust Table Privacy Architecture**:
    - Facility owners triage incidents exclusively through `public.get_gym_safety_incidents()`.
    - For anonymous reports (`is_anonymous = true`), the query projection forces:
      - `reporter_id = NULL`
-     - `reporter_name = 'Anonymous Member (Verified Active Membership)'`
+     - `reporter_name = 'Anonymous Member'`
      - `reporter_avatar_url = NULL`
    - The raw `reporter_id` UUID never enters the output projection or client bundle.
 3. **Database Identity Retention for Abuse Defense**:

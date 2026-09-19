@@ -162,7 +162,7 @@
       i.id,
       i.gym_id,
       CASE WHEN i.is_anonymous THEN NULL ELSE i.reporter_id END AS reporter_id,
-      CASE WHEN i.is_anonymous THEN 'Anonymous Member (Verified Active Membership)' ELSE p.display_name END AS reporter_name,
+      CASE WHEN i.is_anonymous THEN 'Anonymous Member' ELSE p.display_name END AS reporter_name,
       CASE WHEN i.is_anonymous THEN NULL ELSE p.avatar_url END AS reporter_avatar_url,
       i.is_anonymous,
       i.category,
