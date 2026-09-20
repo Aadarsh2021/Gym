@@ -239,65 +239,68 @@ export const AppShell: React.FC = () => {
           </div>
         </NavLink>
 
-        {/* Navigation Links - Section 1: Personal Training Core */}
-        <nav className="sidebar-nav-group" style={{ marginBottom: 'var(--space-2)' }}>
-          <span className="sidebar-section-title">Personal Training</span>
-          {personalNavItems.map(item => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `sidebar-link ${isActive ? 'active' : ''}`
-                }
-              >
-                <Icon size={17} />
-                <span style={{ flex: 1 }}>{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
+        {/* Dedicated Navigation Container */}
+        <div className="sidebar-nav-container">
+          {/* Navigation Links - Section 1: Personal Training Core */}
+          <nav className="sidebar-nav-group">
+            <span className="sidebar-section-title">Personal Training</span>
+            {personalNavItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    `sidebar-link ${isActive ? 'active' : ''}`
+                  }
+                >
+                  <Icon size={17} />
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
 
-        {/* Navigation Links - Section 2: Gym & Community Layer */}
-        <nav className="sidebar-nav-group">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 var(--space-3)' }}>
-            <span className="sidebar-section-title" style={{ padding: 0, margin: 0 }}>
-              {isIntegratedGym ? 'My Gym & Community' : 'Partner Gyms'}
-            </span>
-            {isIntegratedGym && (
-              <span
-                className="badge"
-                style={{
-                  fontSize: '0.62rem',
-                  padding: '1px 5px',
-                  background: 'rgba(34, 197, 94, 0.18)',
-                  color: 'var(--color-success)',
-                  fontWeight: 700,
-                }}
-              >
-                Active
+          {/* Navigation Links - Section 2: Gym & Community Layer */}
+          <nav className="sidebar-nav-group" style={{ marginTop: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 var(--space-3)' }}>
+              <span className="sidebar-section-title" style={{ padding: 0, margin: 0 }}>
+                {isIntegratedGym ? 'My Gym & Community' : 'Partner Gyms'}
               </span>
-            )}
-          </div>
-          {gymNavItems.map(item => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `sidebar-link ${isActive ? 'active' : ''}`
-                }
-              >
-                <Icon size={17} />
-                <span style={{ flex: 1 }}>{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
+              {isIntegratedGym && (
+                <span
+                  className="badge"
+                  style={{
+                    fontSize: '0.62rem',
+                    padding: '1px 5px',
+                    background: 'rgba(34, 197, 94, 0.18)',
+                    color: 'var(--color-success)',
+                    fontWeight: 700,
+                  }}
+                >
+                  Active
+                </span>
+              )}
+            </div>
+            {gymNavItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    `sidebar-link ${isActive ? 'active' : ''}`
+                  }
+                >
+                  <Icon size={17} />
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+        </div>
 
 
         {/* Sidebar Footer / Connection & Logout */}

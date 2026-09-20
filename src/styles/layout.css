@@ -377,13 +377,41 @@ body {
   margin-top: 2px;
 }
 
+.sidebar-nav-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
+  padding-right: 2px;
+}
+
+.sidebar-nav-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: var(--radius-full);
+}
+
+.sidebar-nav-container::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
 .sidebar-nav-group {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden; /* STRICTLY NO VERTICAL SCROLLING */
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .sidebar-section-title {

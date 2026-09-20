@@ -184,8 +184,10 @@ export const OwnerEventsView: React.FC = () => {
             <Calendar className="h-4 w-4" />
             <span>Facility Schedule &amp; Events</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Gym Events &amp; Workshops</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1 className="text-2xl sm:text-3xl font-extrabold" style={{ color: 'var(--text-primary)' }}>
+            Gym Events &amp; Workshops
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
             Organize group fitness sessions, coaching workshops, and bootcamps for {activeGym.name}.
           </p>
         </div>
@@ -197,7 +199,8 @@ export const OwnerEventsView: React.FC = () => {
               fetchEvents();
             }}
             disabled={refreshing || loading}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700 transition"
+            className="btn btn-secondary btn-sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -205,7 +208,8 @@ export const OwnerEventsView: React.FC = () => {
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-blue-500 transition shadow-sm"
+            className="btn btn-primary btn-sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
           >
             <Plus className="h-4 w-4" />
             <span>Create Event</span>
@@ -240,40 +244,64 @@ export const OwnerEventsView: React.FC = () => {
 
       {/* Metrics Row */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+        <div className="card card-elevated rounded-xl p-5" style={{ background: 'var(--bg-glass-card)', borderColor: 'var(--border-subtle)' }}>
           <div className="flex items-center justify-between text-blue-400">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Upcoming Events</span>
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Upcoming Events
+            </span>
             <Calendar className="h-5 w-5" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-white">{upcomingEvents.length}</div>
-          <div className="mt-1 text-xs text-slate-500">Scheduled ahead</div>
+          <div className="mt-2 text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            {upcomingEvents.length}
+          </div>
+          <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+            Scheduled ahead
+          </div>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+        <div className="card card-elevated rounded-xl p-5" style={{ background: 'var(--bg-glass-card)', borderColor: 'var(--border-subtle)' }}>
           <div className="flex items-center justify-between text-emerald-400">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total RSVPs</span>
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Total RSVPs
+            </span>
             <Users className="h-5 w-5" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-white">{totalRsvps}</div>
-          <div className="mt-1 text-xs text-slate-500">Attending members</div>
+          <div className="mt-2 text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            {totalRsvps}
+          </div>
+          <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+            Attending members
+          </div>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+        <div className="card card-elevated rounded-xl p-5" style={{ background: 'var(--bg-glass-card)', borderColor: 'var(--border-subtle)' }}>
           <div className="flex items-center justify-between text-purple-400">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Completed Sessions</span>
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Completed Sessions
+            </span>
             <CheckCircle2 className="h-5 w-5" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-white">{completedEvents.length}</div>
-          <div className="mt-1 text-xs text-slate-500">Past conducted events</div>
+          <div className="mt-2 text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            {completedEvents.length}
+          </div>
+          <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+            Past conducted events
+          </div>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+        <div className="card card-elevated rounded-xl p-5" style={{ background: 'var(--bg-glass-card)', borderColor: 'var(--border-subtle)' }}>
           <div className="flex items-center justify-between text-amber-400">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">All Time</span>
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              All Time
+            </span>
             <Clock className="h-5 w-5" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-white">{events.length}</div>
-          <div className="mt-1 text-xs text-slate-500">Total events created</div>
+          <div className="mt-2 text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            {events.length}
+          </div>
+          <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+            Total events created
+          </div>
         </div>
       </div>
 
@@ -283,15 +311,24 @@ export const OwnerEventsView: React.FC = () => {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
         </div>
       ) : events.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-12 text-center">
-          <Calendar className="mx-auto mb-4 h-12 w-12 text-slate-600" />
-          <h3 className="text-base font-semibold text-slate-200">No Events Scheduled Yet</h3>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-slate-400">
+        <div
+          className="rounded-2xl p-12 text-center"
+          style={{
+            border: '2px dashed var(--border-medium)',
+            background: 'var(--bg-surface)',
+          }}
+        >
+          <Calendar className="mx-auto mb-4 h-12 w-12" style={{ color: 'var(--text-muted)' }} />
+          <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+            No Events Scheduled Yet
+          </h3>
+          <p className="mx-auto mt-1 max-w-sm text-sm" style={{ color: 'var(--text-secondary)' }}>
             Create workshops, bootcamps, or group training sessions for your gym members to join.
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500"
+            className="btn btn-primary btn-sm mt-4"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           >
             <Plus className="h-4 w-4" />
             <span>Create First Event</span>
@@ -306,7 +343,11 @@ export const OwnerEventsView: React.FC = () => {
             return (
               <div
                 key={event.id}
-                className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 transition hover:border-slate-700"
+                className="card card-elevated rounded-xl p-5 transition"
+                style={{
+                  background: 'var(--bg-glass-card)',
+                  borderColor: 'var(--border-subtle)',
+                }}
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1.5">
@@ -324,7 +365,14 @@ export const OwnerEventsView: React.FC = () => {
                       >
                         {event.status}
                       </span>
-                      <span className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300 font-medium capitalize">
+                      <span
+                        className="rounded px-2 py-0.5 text-xs font-medium capitalize"
+                        style={{
+                          background: 'var(--bg-secondary)',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border-subtle)',
+                        }}
+                      >
                         {event.eventType}
                       </span>
                       {isFull && (
@@ -334,12 +382,18 @@ export const OwnerEventsView: React.FC = () => {
                       )}
                     </div>
 
-                    <h3 className="text-lg font-bold text-white">{event.title}</h3>
-                    {event.description && <p className="text-xs text-slate-400 max-w-2xl">{event.description}</p>}
+                    <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                      {event.title}
+                    </h3>
+                    {event.description && (
+                      <p className="text-xs max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
+                        {event.description}
+                      </p>
+                    )}
 
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-1">
+                    <div className="flex flex-wrap items-center gap-4 text-xs pt-1" style={{ color: 'var(--text-muted)' }}>
                       <span className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                        <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
                         {startDate.toLocaleDateString(undefined, {
                           weekday: 'short',
                           month: 'short',
@@ -348,7 +402,7 @@ export const OwnerEventsView: React.FC = () => {
                         })}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-slate-500" />
+                        <Clock className="h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
                         {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {event.endsAt &&
                           ` - ${new Date(event.endsAt).toLocaleTimeString([], {
@@ -358,13 +412,15 @@ export const OwnerEventsView: React.FC = () => {
                       </span>
                       {event.locationText && (
                         <span className="flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5 text-slate-500" />
+                          <MapPin className="h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
                           {event.locationText}
                         </span>
                       )}
                       <span className="flex items-center gap-1.5">
                         <Users className="h-3.5 w-3.5 text-blue-400" />
-                        <span className="font-semibold text-slate-200">{event.attendeeCount || 0}</span>
+                        <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          {event.attendeeCount || 0}
+                        </span>
                         <span>{event.capacity ? `/ ${event.capacity} spots` : 'spots (unlimited)'}</span>
                       </span>
                     </div>
@@ -374,7 +430,8 @@ export const OwnerEventsView: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-2 sm:self-center">
                     <button
                       onClick={() => handleOpenAttendees(event)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700"
+                      className="btn btn-secondary btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}
                     >
                       <Eye className="h-3.5 w-3.5" />
                       <span>Roster ({event.attendeeCount || 0})</span>
@@ -383,7 +440,15 @@ export const OwnerEventsView: React.FC = () => {
                     {event.status === 'draft' && (
                       <button
                         onClick={() => handleStatusChange(event.id, 'published')}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+                        className="btn btn-sm"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '0.75rem',
+                          background: 'var(--color-success)',
+                          color: '#FFFFFF',
+                        }}
                       >
                         <Radio className="h-3.5 w-3.5" />
                         <span>Publish</span>
@@ -394,14 +459,23 @@ export const OwnerEventsView: React.FC = () => {
                       <>
                         <button
                           onClick={() => handleStatusChange(event.id, 'completed')}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500"
+                          className="btn btn-primary btn-sm"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           <span>Mark Done</span>
                         </button>
                         <button
                           onClick={() => handleStatusChange(event.id, 'cancelled')}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-950/20 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-900/40"
+                          className="btn btn-ghost btn-sm"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '0.75rem',
+                            color: 'var(--color-error)',
+                            border: '1px solid rgba(220, 38, 38, 0.3)',
+                          }}
                         >
                           <XCircle className="h-3.5 w-3.5" />
                           <span>Cancel</span>
@@ -410,7 +484,9 @@ export const OwnerEventsView: React.FC = () => {
                     )}
 
                     {event.status === 'cancelled' && (
-                      <span className="text-xs text-red-400 italic">Event Cancelled</span>
+                      <span className="text-xs italic" style={{ color: 'var(--color-error)' }}>
+                        Event Cancelled
+                      </span>
                     )}
                   </div>
                 </div>
@@ -423,12 +499,25 @@ export const OwnerEventsView: React.FC = () => {
       {/* Create Event Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl animate-fade-in max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-bold text-white">Create New Gym Event</h3>
+          <div
+            className="w-full max-w-lg rounded-2xl border p-6 shadow-xl animate-fade-in max-h-[90vh] overflow-y-auto"
+            style={{
+              background: 'var(--bg-surface)',
+              borderColor: 'var(--border-subtle)',
+            }}
+          >
+            <div
+              className="flex items-center justify-between pb-4"
+              style={{ borderBottom: '1px solid var(--border-subtle)' }}
+            >
+              <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                Create New Gym Event
+              </h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white"
+                className="btn btn-ghost btn-sm"
+                style={{ padding: '4px', minWidth: '32px', height: '32px' }}
+                aria-label="Close modal"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -436,7 +525,7 @@ export const OwnerEventsView: React.FC = () => {
 
             <form onSubmit={handleCreateSubmit} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                   Event Title *
                 </label>
                 <input
@@ -445,18 +534,18 @@ export const OwnerEventsView: React.FC = () => {
                   placeholder="e.g. Olympic Lifting Workshop"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                  className="input w-full mt-1.5 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                   Event Type
                 </label>
                 <select
                   value={formData.eventType}
                   onChange={(e: any) => setFormData({ ...formData, eventType: e.target.value })}
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                  className="select w-full mt-1.5 text-sm"
                 >
                   <option value="class">Group Class</option>
                   <option value="workshop">Workshop</option>
@@ -468,7 +557,7 @@ export const OwnerEventsView: React.FC = () => {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                     Starts At *
                   </label>
                   <input
@@ -476,25 +565,25 @@ export const OwnerEventsView: React.FC = () => {
                     required
                     value={formData.startsAt}
                     onChange={(e) => setFormData({ ...formData, startsAt: e.target.value })}
-                    className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                    className="input w-full mt-1.5 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                     Ends At (Optional)
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.endsAt}
                     onChange={(e) => setFormData({ ...formData, endsAt: e.target.value })}
-                    className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                    className="input w-full mt-1.5 text-sm"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                     Capacity (Optional)
                   </label>
                   <input
@@ -503,11 +592,11 @@ export const OwnerEventsView: React.FC = () => {
                     placeholder="Leave empty for unlimited"
                     value={formData.capacity}
                     onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                    className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                    className="input w-full mt-1.5 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                     Location / Zone
                   </label>
                   <input
@@ -515,13 +604,13 @@ export const OwnerEventsView: React.FC = () => {
                     placeholder="e.g. Studio 2 / Turf Area"
                     value={formData.locationText}
                     onChange={(e) => setFormData({ ...formData, locationText: e.target.value })}
-                    className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                    className="input w-full mt-1.5 text-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                   Description
                 </label>
                 <textarea
@@ -529,7 +618,7 @@ export const OwnerEventsView: React.FC = () => {
                   placeholder="Details, prerequisites, required equipment..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                  className="textarea w-full mt-1.5 text-sm"
                 />
               </div>
 
@@ -537,14 +626,14 @@ export const OwnerEventsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-lg border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+                  className="btn btn-secondary btn-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                  className="btn btn-primary btn-sm"
                 >
                   {submitting ? 'Creating...' : 'Save Draft Event'}
                 </button>
@@ -557,15 +646,30 @@ export const OwnerEventsView: React.FC = () => {
       {/* Attendee Roster Modal */}
       {selectedEventForAttendees && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl animate-fade-in max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div
+            className="w-full max-w-md rounded-2xl border p-6 shadow-xl animate-fade-in max-h-[80vh] flex flex-col"
+            style={{
+              background: 'var(--bg-surface)',
+              borderColor: 'var(--border-subtle)',
+            }}
+          >
+            <div
+              className="flex items-center justify-between pb-3"
+              style={{ borderBottom: '1px solid var(--border-subtle)' }}
+            >
               <div>
-                <h3 className="text-base font-bold text-white">Event RSVP Roster</h3>
-                <p className="text-xs text-slate-400">{selectedEventForAttendees.title}</p>
+                <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
+                  Event RSVP Roster
+                </h3>
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  {selectedEventForAttendees.title}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedEventForAttendees(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white"
+                className="btn btn-ghost btn-sm"
+                style={{ padding: '4px', minWidth: '32px', height: '32px' }}
+                aria-label="Close roster"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -577,23 +681,29 @@ export const OwnerEventsView: React.FC = () => {
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
                 </div>
               ) : attendees.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-500">
-                  <Users className="mx-auto mb-2 h-8 w-8 text-slate-600" />
+                <div className="py-8 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
+                  <Users className="mx-auto mb-2 h-8 w-8" style={{ color: 'var(--text-muted)' }} />
                   No members have RSVP&apos;d for this event yet.
                 </div>
               ) : (
                 attendees.map((att) => (
                   <div
                     key={att.rsvpId || att.userId}
-                    className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-800/40 p-3"
+                    className="flex items-center justify-between rounded-lg p-3"
+                    style={{
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-subtle)',
+                    }}
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/20 text-xs font-bold text-blue-400">
                         {(att.displayName || 'M')[0].toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-white">{att.displayName}</p>
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          {att.displayName}
+                        </p>
+                        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                           RSVP: {new Date(att.rsvpCreatedAt).toLocaleString()}
                         </p>
                       </div>
@@ -606,10 +716,10 @@ export const OwnerEventsView: React.FC = () => {
               )}
             </div>
 
-            <div className="mt-4 border-t border-slate-800 pt-3 text-right">
+            <div className="mt-4 pt-3 text-right" style={{ borderTop: '1px solid var(--border-subtle)' }}>
               <button
                 onClick={() => setSelectedEventForAttendees(null)}
-                className="rounded-lg bg-slate-800 px-4 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                className="btn btn-secondary btn-sm"
               >
                 Close
               </button>

@@ -209,26 +209,29 @@ export const OwnerAppShell: React.FC = () => {
           </div>
         </Link>
 
-        {/* Owner Navigation Links */}
-        <nav className="sidebar-nav-group">
-          <span className="sidebar-section-title">Facility Management</span>
-          {ownerNavItems.map(item => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `sidebar-link ${isActive ? 'owner-active' : ''}`
-                }
-              >
-                <Icon size={18} />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
+        {/* Dedicated Navigation Container */}
+        <div className="sidebar-nav-container">
+          {/* Owner Navigation Links */}
+          <nav className="sidebar-nav-group">
+            <span className="sidebar-section-title">Facility Management</span>
+            {ownerNavItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    `sidebar-link ${isActive ? 'owner-active' : ''}`
+                  }
+                >
+                  <Icon size={18} />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+        </div>
 
         {/* Footer Actions */}
         <div className="sidebar-bottom" style={{ marginTop: 'auto', flexDirection: 'column', gap: 'var(--space-2)' }}>
