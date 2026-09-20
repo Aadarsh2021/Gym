@@ -219,13 +219,20 @@ export const NutritionView: React.FC<NutritionViewProps> = ({
     }
   };
 
-  // Load Catalog Foods
+  // Load Catalog Foods with 300ms debounce to prevent per-keystroke query storms
   useEffect(() => {
-    async function loadCatalog() {
+    let isMounted = true;
+    const timer = setTimeout(async () => {
       const data = await nutritionService.getFoods(search, dietFilter);
-      setFoods(data);
-    }
-    loadCatalog();
+      if (isMounted) {
+        setFoods(data);
+      }
+    }, search ? 300 : 0);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, [search, dietFilter]);
 
   useEffect(() => {

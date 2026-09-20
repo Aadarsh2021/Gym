@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { safeRequest } from '@/lib/request-safety';
 import {
   FoodItem,
   NutritionProfile,
@@ -32,7 +33,11 @@ export const FALLBACK_FOODS: FoodItem[] = [
 ];
 
 export class NutritionRepository {
-  // ── 1. Food Catalog ────────────────────────────────────────────────────────
+  // ── 1. Food Catalog with In-Memory Cache ──────────────────────────────────
+  private foodCatalogCache: FoodItem[] | null = null;
+  private foodCatalogCacheTimestamp: number = 0;
+  private readonly FOOD_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
   async fetchFoods(search = '', dietaryType = 'all'): Promise<FoodItem[]> {
     if (!isSupabaseConfigured) {
       return FALLBACK_FOODS.filter(f => {
@@ -42,31 +47,63 @@ export class NutritionRepository {
       });
     }
 
-    try {
-      let query = supabase.from('foods').select('*').eq('is_verified', true);
-      if (search) query = query.ilike('name', `%${search}%`);
-      if (dietaryType !== 'all') query = query.eq('dietary_type', dietaryType);
+    const now = Date.now();
+    let allFoods = this.foodCatalogCache;
 
-      const { data, error } = await query;
-      if (error || !data) return [];
+    if (!allFoods || (now - this.foodCatalogCacheTimestamp > this.FOOD_CACHE_TTL_MS)) {
+      try {
+        allFoods = await safeRequest<FoodItem[]>(
+          'read:foods_verified_catalog',
+          async () => {
+            const { data, error } = await supabase
+              .from('foods')
+              .select('id, name, serving_size, serving_unit, calories, protein_g, carbs_g, fat_g, dietary_type, source, source_reference, is_verified')
+              .eq('is_verified', true)
+              .limit(1000);
 
-      return data.map(d => ({
-        id: d.id,
-        name: d.name,
-        servingSize: d.serving_size,
-        servingUnit: d.serving_unit,
-        calories: Number(d.calories),
-        proteinG: Number(d.protein_g),
-        carbsG: Number(d.carbs_g),
-        fatG: Number(d.fat_g),
-        dietaryType: d.dietary_type,
-        source: d.source,
-        sourceReference: d.source_reference,
-        isVerified: d.is_verified,
-      }));
-    } catch {
-      return [];
+            if (error || !data) {
+              throw error || new Error('Failed to fetch food catalog');
+            }
+
+            return data.map(d => ({
+              id: d.id,
+              name: d.name,
+              servingSize: d.serving_size,
+              servingUnit: d.serving_unit,
+              calories: Number(d.calories),
+              proteinG: Number(d.protein_g),
+              carbsG: Number(d.carbs_g),
+              fatG: Number(d.fat_g),
+              dietaryType: d.dietary_type,
+              source: d.source,
+              sourceReference: d.source_reference,
+              isVerified: d.is_verified,
+            }));
+          },
+          {
+            kind: 'read',
+            retryMode: 'read-only',
+            maxRetries: 2,
+            deduplicate: true,
+            cacheTtlMs: this.FOOD_CACHE_TTL_MS,
+            circuitBreakerKey: 'table:foods',
+            fallbackValue: this.foodCatalogCache || FALLBACK_FOODS,
+          }
+        );
+
+        this.foodCatalogCache = allFoods;
+        this.foodCatalogCacheTimestamp = now;
+      } catch {
+        allFoods = this.foodCatalogCache || FALLBACK_FOODS;
+      }
     }
+
+    // Filter in-memory with zero network overhead
+    return (allFoods || []).filter(f => {
+      const matchesSearch = !search || f.name.toLowerCase().includes(search.toLowerCase());
+      const matchesType = dietaryType === 'all' || f.dietaryType === dietaryType;
+      return matchesSearch && matchesType;
+    });
   }
 
   // ── 2. Nutrition Profiles ──────────────────────────────────────────────────

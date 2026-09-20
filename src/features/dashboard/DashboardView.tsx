@@ -148,11 +148,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [isClaimingMission, setIsClaimingMission] = useState(false);
   const [claimFeedback, setClaimFeedback] = useState<string | null>(null);
 
+  // Stabilize dependencies to prevent infinite re-render query storms
+  const sessionFingerprint = useMemo(
+    () => recentSessions.map(s => `${s.id}:${s.status}`).join('|'),
+    [recentSessions]
+  );
+  const macroFingerprint = dailyTotals ? `${dailyTotals.totalCalories}:${dailyTotals.totalProteinG}` : 'none';
+
   useEffect(() => {
+    let isMounted = true;
     dailyMissionService.getTodayMission().then(mission => {
-      if (mission) setDailyMission(mission);
+      if (isMounted && mission) {
+        setDailyMission(prev => {
+          if (
+            prev &&
+            prev.id === mission.id &&
+            prev.progressValue === mission.progressValue &&
+            prev.isCompleted === mission.isCompleted &&
+            prev.isClaimable === mission.isClaimable
+          ) {
+            return prev;
+          }
+          return mission;
+        });
+      }
     });
-  }, [recentSessions, dailyTotals]);
+    return () => {
+      isMounted = false;
+    };
+  }, [sessionFingerprint, macroFingerprint]);
 
   const handleClaimMission = async () => {
     if (!dailyMission || isClaimingMission) return;

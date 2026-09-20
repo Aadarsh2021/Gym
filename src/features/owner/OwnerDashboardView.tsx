@@ -75,36 +75,47 @@ export const OwnerDashboardView: React.FC = () => {
     return () => clearInterval(ticker);
   }, []);
 
-  // 1. Fetch Operations Intelligence Overview (G7)
+  // Single-flight polling guards & error backoff counters
+  const isPollingOverviewRef = useRef<boolean>(false);
+  const isPollingLiveRef = useRef<boolean>(false);
+  const consecutiveOverviewFailsRef = useRef<number>(0);
+  const consecutiveLiveFailsRef = useRef<number>(0);
+
+  // 1. Fetch Operations Intelligence Overview (G7) with single-flight guard
   const fetchOverview = useCallback(async () => {
-    if (!activeGym?.id) return;
+    if (!activeGym?.id || isPollingOverviewRef.current) return;
+    isPollingOverviewRef.current = true;
     try {
       const data = await ownerDashboardService.getOverview(activeGym.id);
       if (!isMountedRef.current) return;
       if (data) {
         setOverview(data);
         setLastRefreshed(new Date());
+        consecutiveOverviewFailsRef.current = 0;
       }
     } catch {
-      // Graceful fallback to floor sync metrics
+      consecutiveOverviewFailsRef.current += 1;
     } finally {
+      isPollingOverviewRef.current = false;
       if (isMountedRef.current) {
         setLoadingOverview(false);
       }
     }
   }, [activeGym?.id]);
 
-  // 2. Fetch live floor metrics
+  // 2. Fetch live floor metrics with single-flight guard
   const fetchLiveMetrics = useCallback(
     async (isManualRefresh = false) => {
       if (!activeGym) {
         setLoadingMetrics(false);
         return;
       }
+      if (isPollingLiveRef.current) return;
 
       if (isManualRefresh) {
         setIsRefreshing(true);
       }
+      isPollingLiveRef.current = true;
 
       try {
         const res = await ownerDashboardService.getFloorSync(activeGym.id);
@@ -113,21 +124,23 @@ export const OwnerDashboardView: React.FC = () => {
         setActiveSessions(res.activeSessions);
         setTodayCheckins(res.todayCheckins);
         setMemberCount(res.memberCounts.active);
+        consecutiveLiveFailsRef.current = 0;
       } catch {
-        // Fallback gracefully
+        consecutiveLiveFailsRef.current += 1;
       } finally {
+        isPollingLiveRef.current = false;
         if (isMountedRef.current) {
           setLoadingMetrics(false);
           setIsRefreshing(false);
         }
       }
     },
-    [activeGym]
+    [activeGym?.id]
   );
 
   // 3. Fetch completed attendance ledger
   const fetchHistoryLedger = useCallback(async () => {
-    if (!activeGym) return;
+    if (!activeGym?.id) return;
     setHistoryLoading(true);
 
     try {
@@ -153,30 +166,46 @@ export const OwnerDashboardView: React.FC = () => {
         setHistoryLoading(false);
       }
     }
-  }, [activeGym, historyPage, searchQuery, startDateFilter, endDateFilter]);
+  }, [activeGym?.id, historyPage, searchQuery, startDateFilter, endDateFilter]);
 
-  // Initial load and polling sync (every 20s for active floor, 30s for overview with visibility check)
+  // Initial load and polling sync (every 20s for active floor, 30s for overview with visibility check & backoff)
   useEffect(() => {
     fetchOverview();
     fetchLiveMetrics();
 
-    // 20s live floor poll
-    const floorPoll = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchLiveMetrics();
-      }
-    }, 20000);
+    let floorPollTimer: any = null;
+    let overviewPollTimer: any = null;
 
-    // 30s overview poll (respects document visibility)
-    const overviewPoll = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchOverview();
-      }
-    }, 30000);
+    // Recursive timeout with error backoff to avoid fixed rigid hammering
+    const scheduleFloorPoll = () => {
+      const fails = consecutiveLiveFailsRef.current;
+      // Exponential backoff: 20s base, 40s on 1 fail, 80s on 2 fails, max 120s
+      const delayMs = fails > 0 ? Math.min(20000 * Math.pow(2, fails), 120000) : 20000;
+      floorPollTimer = setTimeout(async () => {
+        if (isMountedRef.current && document.visibilityState === 'visible') {
+          await fetchLiveMetrics();
+        }
+        if (isMountedRef.current) scheduleFloorPoll();
+      }, delayMs);
+    };
+
+    const scheduleOverviewPoll = () => {
+      const fails = consecutiveOverviewFailsRef.current;
+      const delayMs = fails > 0 ? Math.min(30000 * Math.pow(2, fails), 120000) : 30000;
+      overviewPollTimer = setTimeout(async () => {
+        if (isMountedRef.current && document.visibilityState === 'visible') {
+          await fetchOverview();
+        }
+        if (isMountedRef.current) scheduleOverviewPoll();
+      }, delayMs);
+    };
+
+    scheduleFloorPoll();
+    scheduleOverviewPoll();
 
     // Refresh immediately when tab returns to visible
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && isMountedRef.current) {
         fetchOverview();
         fetchLiveMetrics();
       }
@@ -184,8 +213,8 @@ export const OwnerDashboardView: React.FC = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      clearInterval(floorPoll);
-      clearInterval(overviewPoll);
+      if (floorPollTimer) clearTimeout(floorPollTimer);
+      if (overviewPollTimer) clearTimeout(overviewPollTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [fetchOverview, fetchLiveMetrics]);

@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { safeRequest } from '@/lib/request-safety';
 import {
   Gym,
   GymMembership,
@@ -5531,21 +5532,33 @@ export class GymRepository {
       return null;
     }
 
-    try {
-      const { data, error } = await supabase.rpc('get_owner_dashboard_overview', {
-        p_gym_id: gymId,
-      });
+    return safeRequest<OwnerDashboardOverview | null>(
+      `rpc:get_owner_dashboard_overview:${gymId}`,
+      async () => {
+        const { data, error } = await supabase.rpc('get_owner_dashboard_overview', {
+          p_gym_id: gymId,
+        });
 
-      if (error || !data) {
-        logger.error('GymRepository: get_owner_dashboard_overview RPC error', { error, gymId });
-        return null;
+        if (error || !data) {
+          logger.error('GymRepository: get_owner_dashboard_overview RPC error', { error, gymId });
+          throw error || new Error('No data returned from get_owner_dashboard_overview');
+        }
+
+        return data as OwnerDashboardOverview;
+      },
+      {
+        kind: 'read',
+        retryMode: 'read-only',
+        maxRetries: 2,
+        timeoutMs: 10000,
+        deduplicate: true,
+        circuitBreakerKey: 'rpc:get_owner_dashboard_overview',
+        fallbackValue: null,
       }
-
-      return data as OwnerDashboardOverview;
-    } catch (err) {
+    ).catch(err => {
       logger.error('GymRepository: getOwnerDashboardOverview exception', { err, gymId });
       return null;
-    }
+    });
   }
 
   // ── 27. Gym Events & RSVP System ──────────────────────────────────────────

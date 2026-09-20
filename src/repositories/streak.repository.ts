@@ -18,7 +18,7 @@ export class StreakRepository {
     try {
       const { data, error } = await supabase
         .from('streaks')
-        .select('*')
+        .select('current_streak, longest_streak, last_activity_date')
         .eq('user_id', userId)
         .maybeSingle();
 

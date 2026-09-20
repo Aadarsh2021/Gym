@@ -45,7 +45,7 @@
   --accent-gold-hover: #E4BC6C;
   --accent-gold-muted: rgba(214, 168, 79, 0.12);
   --accent-gold-glow: rgba(214, 168, 79, 0.20);
-  --accent-fire: #4F8CFF;
+  --accent-fire: #EF4444;
 
   /* Neutral Interactive Accents */
   --accent-cyan: #4F8CFF;
@@ -186,6 +186,7 @@ html[data-theme="light"] {
   --color-danger-muted: rgba(220, 38, 38, 0.12);
   --color-info: #0284C7;
   --color-info-muted: rgba(2, 132, 199, 0.12);
+  --accent-fire: #DC2626;
 
   /* Aliases */
   --accent-secondary: #4F46E5;
